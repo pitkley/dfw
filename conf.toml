@@ -1,0 +1,20 @@
+external_network_interface = "ens3"
+
+[init]
+filter = [
+    "-P INPUT DROP",
+    "-F INPUT",
+]
+
+[container_to_container]
+default_policy = "DROP"
+
+[[container_to_container.rules]]
+network = "some_network"
+external_network_interface = ["ens3", "lxdbr0"]
+action = "ACCEPT"
+
+[[container_to_container.rules]]
+network = "other_network"
+external_network_interface = ["ens2"]
+action = "REFUSE"
