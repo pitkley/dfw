@@ -4,7 +4,8 @@ version = "0.1.0"
 authors = ["Pit Kleyersburg <pitkley@googlemail.com>"]
 
 [dependencies]
-boondock = "0.0.48"
+boondock = { path = "../boondock" } #"0.0.48"
+error-chain = "0.10.0"
 serde = "0.9.13"
 serde_derive = "0.9.13"
 toml = "0.3.2"

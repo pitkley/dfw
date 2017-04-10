@@ -1,4 +1,9 @@
+// Increase the compiler's recursion limit for the `error_chain` crate.
+#![recursion_limit = "1024"]
+
 extern crate boondock;
+#[macro_use]
+extern crate error_chain;
 #[macro_use]
 extern crate serde_derive;
 extern crate toml;
@@ -6,7 +11,13 @@ extern crate toml;
 use std::fs::File;
 use std::io::prelude::*;
 
-//use boondock::{ContainerListOptions, Docker};
+use boondock::{ContainerListOptions, Docker};
+
+mod errors {
+    error_chain! { }
+}
+
+use errors::*;
 
 #[derive(Deserialize)]
 struct Config {
@@ -46,31 +57,15 @@ struct Rule {
     action: String,
 }
 
-fn load() -> Result<DFW, String> {
-    let mut file: File = match File::open("conf.toml") {
-        Ok(file) => file,
-        Err(err) => return Err(format!("f: {}", err.to_string())),
-    };
+fn load() -> Result<DFW> {
+    let mut file = File::open("conf.toml").chain_err(|| "unable to read file conf.toml")?;
     let mut contents = String::new();
-    if let Err(err) = file.read_to_string(&mut contents) {
-        return Err(format!("c: {}", err.to_string()));
-    }
+    file.read_to_string(&mut contents).chain_err(|| "unable to read file contents")?;
 
-    match toml::from_str::<DFW>(&contents) {
-        Ok(toml) => Ok(toml),
-        Err(err) => return Err(format!("f: {}", err.to_string())),
-    }
+    toml::from_str::<DFW>(&contents).chain_err(|| "unable to load TOML")
 }
 
-#[allow(dead_code)]
-fn load2() -> DFW {
-    let mut file = File::open("conf.toml").unwrap();
-    let mut contents = String::new();
-    file.read_to_string(&mut contents);
-    toml::from_str(&contents).unwrap()
-}
-
-fn main() {
+fn run() -> Result<()> {
     let config: Config = toml::from_str(r#"
         ip = "127.0.0.1"
 
@@ -84,16 +79,33 @@ fn main() {
     assert_eq!(config.keys.github, "xxxx");
     assert_eq!(config.keys.travis.as_ref().unwrap(), "yyyy");
 
-    /*let d = Docker::connect_with_defaults().unwrap();
+    println!("--- CONTAINERS ---");
+    let d = Docker::connect_with_defaults().unwrap();
     if let Ok(containers) = d.containers(ContainerListOptions::default().all()) {
         for container in &containers {
             println!("{}: {:?}", container.Id, container.Names);
         }
-    }*/
-
-    match load() {
-        Ok(r) => println!("r: {:?}", r),
-        Err(s) => println!("err: {}", s),
     }
+    println!("\n");
+
+    println!("--- NETWORKS ---");
+    for network in &(d.networks().unwrap()) {
+        println!("{}: {}", network.Id, network.Name);
+        println!();
+    }
+
+    println!("-- single network");
+    let network = d.network("paperless_default").unwrap().unwrap();
+    println!("{}: {}", network.Id, network.Name);
+    println!("{:#?}", network.Containers);
+    println!();
+
+    println!("--- TOML ---");
+    let toml = load()?;
+    println!("{:#?}", toml);
+
+    Ok(())
 }
+
+quick_main!(run);
 
