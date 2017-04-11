@@ -1,7 +1,7 @@
 
 error_chain! {
     links {
-        Another(::boondock::errors::Error, ::boondock::errors::ErrorKind);
+        Boondock(::boondock::errors::Error, ::boondock::errors::ErrorKind);
     }
 
     foreign_links {

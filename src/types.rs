@@ -94,6 +94,9 @@ pub struct ExposePort {
     pub host_port: u16,
     #[builder(default="self.default_container_port()?")]
     pub container_port: Option<u16>,
+
+    // TODO: find better way to use same default for both deserializing and building
+    // maybe just a constant?
     #[serde(default = "default_expose_port_family")]
     #[builder(default = "self.default_family()?")]
     pub family: String,
@@ -128,7 +131,7 @@ impl FromStr for ExposePort {
                        .build()
                        .unwrap()
                }
-               _ => return Err(format!("port string has invalid format '{}'", s))
+               _ => return Err(format!("port string has invalid format '{}'", s)),
            })
     }
 }
