@@ -89,3 +89,20 @@ expose_port = { host_port = 5, family = "tcp" }
 network = "network"
 dst_container = "dst_container"
 expose_port = { host_port = 6, container_port = 102 }
+
+[container_dnat]
+
+[[container_dnat.rules]]
+src_network = "network"
+src_container = "container"
+dst_network = "network"
+dst_container = "container"
+expose_port = "80/tcp"
+
+[[container_dnat.rules]]
+#src_network = "network"
+#src_container = "container"
+dst_network = "network"
+dst_container = "container"
+expose_port = "80/tcp"
+

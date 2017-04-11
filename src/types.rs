@@ -13,6 +13,7 @@ pub struct DFW {
     pub container_to_wider_world: Option<ContainerToWiderWorld>,
     pub container_to_host: Option<ContainerToHost>,
     pub wider_world_to_container: Option<WiderWorldToContainer>,
+    pub container_dnat: Option<ContainerDNAT>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -127,9 +128,26 @@ impl FromStr for ExposePort {
                        .build()
                        .unwrap()
                }
-               _ => return Err("couldn't parse port string".to_string()),
+               _ => return Err(format!("port string has invalid format '{}'", s))
            })
     }
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct ContainerDNAT {
+    pub rules: Option<Vec<ContainerDNATRules>>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct ContainerDNATRules {
+    pub src_network: Option<String>,
+    pub src_container: Option<String>,
+    pub dst_network: String,
+    pub dst_container: String,
+    #[serde(deserialize_with = "string_or_struct")]
+    pub expose_port: ExposePort,
 }
 
 fn default_expose_port_family() -> String {
