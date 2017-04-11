@@ -1,6 +1,6 @@
 external_network_interface = "ens3"
 
-[init]
+[initalization]
 filter = [
     "-P INPUT DROP",
     "-F INPUT",
@@ -11,10 +11,29 @@ default_policy = "DROP"
 
 [[container_to_container.rules]]
 network = "some_network"
-external_network_interface = ["ens3", "lxdbr0"]
+src_container = "srccnt"
+dst_container = "dstcnt"
+filter = "-p tcp --dport 25"
 action = "ACCEPT"
 
 [[container_to_container.rules]]
 network = "other_network"
-external_network_interface = ["ens2"]
 action = "REFUSE"
+
+[container_to_wider_world]
+default_policy = "ACCEPT"
+
+[[container_to_wider_world.rules]]
+network = "jenkins_default"
+src_container = "hi"
+filter = "-p tcp"
+action = "ACCEPT"
+external_network_interface = ["ens3"]
+
+[container_to_host]
+default_policy = "ACCEPT"
+
+[[container_to_host.rules]]
+network = "some"
+action = "OTHER"
+
