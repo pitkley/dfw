@@ -5,7 +5,9 @@ authors = ["Pit Kleyersburg <pitkley@googlemail.com>"]
 
 [dependencies]
 boondock = { path = "../boondock" } #"0.0.48"
+derive_builder = "0.4.2"
 error-chain = "0.10.0"
 serde = "0.9.13"
 serde_derive = "0.9.13"
 toml = "0.3.2"
+
