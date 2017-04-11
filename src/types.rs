@@ -114,17 +114,21 @@ impl FromStr for ExposePort {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let split: Vec<&str> = s.split('/').collect();
         Ok(match split.len() {
-            1 => ExposePortBuilder::default()
-                .host_port(split[0].parse().unwrap())
-                .build()
-                .unwrap(),
-            2 => ExposePortBuilder::default()
-                .host_port(split[0].parse().unwrap())
-                .family(split[1].to_string())
-                .build()
-                .unwrap(),
-            _ => return Err("couldn't parse port string".to_string()),
-        })
+               1 => {
+                   ExposePortBuilder::default()
+                       .host_port(split[0].parse().unwrap())
+                       .build()
+                       .unwrap()
+               }
+               2 => {
+                   ExposePortBuilder::default()
+                       .host_port(split[0].parse().unwrap())
+                       .family(split[1].to_string())
+                       .build()
+                       .unwrap()
+               }
+               _ => return Err("couldn't parse port string".to_string()),
+           })
     }
 }
 

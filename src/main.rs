@@ -52,10 +52,11 @@ fn run() -> Result<()> {
     println!("--- TOML ---");
     let toml = load()?;
     println!("{:#?}", toml);
-    println!("{}", toml.container_to_container.map_or("no ctc policy".to_string(), |e| e.default_policy));
+    println!("{}",
+             toml.container_to_container
+                 .map_or("no ctc policy".to_string(), |e| e.default_policy));
 
     Ok(())
 }
 
 quick_main!(run);
-
