@@ -7,6 +7,7 @@ authors = ["Pit Kleyersburg <pitkley@googlemail.com>"]
 boondock = { git = "https://github.com/pitkley/boondock", branch = "develop" }
 derive_builder = "^0.4.2"
 error-chain = "^0.10.0"
+iptables = "^0.1.2"
 serde = "^0.9.13"
 serde_derive = "^0.9.13"
 toml = "^0.3.2"
