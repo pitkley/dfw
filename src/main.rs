@@ -9,14 +9,12 @@ extern crate serde_derive;
 extern crate toml;
 
 use std::fs::File;
+use std::io::BufReader;
 use std::io::prelude::*;
 
 use boondock::{ContainerListOptions, Docker};
 
-mod errors {
-    error_chain! { }
-}
-
+mod errors;
 use errors::*;
 
 #[derive(Deserialize)]
@@ -58,11 +56,11 @@ struct Rule {
 }
 
 fn load() -> Result<DFW> {
-    let mut file = File::open("conf.toml").chain_err(|| "unable to read file conf.toml")?;
+    let mut file = BufReader::new(File::open("conf.toml")?);
     let mut contents = String::new();
-    file.read_to_string(&mut contents).chain_err(|| "unable to read file contents")?;
+    file.read_to_string(&mut contents)?; //.chain_err(|| "unable to read file contents")?;
 
-    toml::from_str::<DFW>(&contents).chain_err(|| "unable to load TOML")
+    Ok(toml::from_str::<DFW>(&contents)?) //.chain_err(|| "unable to load TOML")
 }
 
 fn run() -> Result<()> {
@@ -93,12 +91,6 @@ fn run() -> Result<()> {
         println!("{}: {}", network.Id, network.Name);
         println!();
     }
-
-    println!("-- single network");
-    let network = d.network("paperless_default").unwrap().unwrap();
-    println!("{}: {}", network.Id, network.Name);
-    println!("{:#?}", network.Containers);
-    println!();
 
     println!("--- TOML ---");
     let toml = load()?;
