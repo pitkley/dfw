@@ -1,6 +1,12 @@
 external_network_interface = "ens3"
 
-[initialization]
+[initialization.v4]
+filter = [
+    "-P INPUT DROP",
+    "-F INPUT",
+]
+
+[initialization.v6]
 filter = [
     "-P INPUT DROP",
     "-F INPUT",
