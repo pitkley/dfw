@@ -54,10 +54,6 @@ fn run() -> Result<()> {
     println!("--- TOML ---");
     let toml: DFW = load()?;
     println!("{:#?}", toml);
-
-    let res: () = dfwrs::process(toml)?;
-    println!("{:?}", res);
-
     println!();
 
     println!("--- IPTABLES ---");
@@ -69,6 +65,10 @@ fn run() -> Result<()> {
     for chain in &chains {
         println!("chain: {}", chain);
     }
+
+    println!("--- PROCESS ---");
+    let res: () = dfwrs::process(&toml, ipt4, ipt6)?;
+    println!("{:?}", res);
 
     Ok(())
 }

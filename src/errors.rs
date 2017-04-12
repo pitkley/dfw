@@ -10,11 +10,4 @@ error_chain! {
         TomlSer(::toml::ser::Error);
         TomlDe(::toml::de::Error);
     }
-
-    errors {
-        EmptyKey(key: String) {
-            description("key is empty")
-            display("key '{}' is empty", key)
-        }
-    }
 }
