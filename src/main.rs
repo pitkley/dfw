@@ -67,7 +67,7 @@ fn run() -> Result<()> {
     }
 
     println!("--- PROCESS ---");
-    let res: () = dfwrs::process(&toml, ipt4, ipt6)?;
+    let res: () = dfwrs::process(&toml, &ipt4, &ipt6)?;
     println!("{:?}", res);
 
     Ok(())
