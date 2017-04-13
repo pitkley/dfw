@@ -9,7 +9,6 @@ use types::*;
 
 pub fn process(dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> Result<()> {
     // TODO: external_network_interface
-    // TODO: initialization
     if let Some(ref init) = dfw.initialization {
         process_initialization(init, dfw, ipt4, ipt6)?;
     }
@@ -35,6 +34,8 @@ fn process_initialization(init: &Initialization,
             println!("table: {}", table);
             for rule in rules {
                 println!("  RULE: {}", rule);
+                let out = ipt4.execute(table, rule)?;
+                println!(" status: {:?}", out.status);
             }
         }
     }
@@ -44,6 +45,8 @@ fn process_initialization(init: &Initialization,
             println!("table: {}", table);
             for rule in rules {
                 println!("  RULE: {}", rule);
+                let out = ipt6.execute(table, rule)?;
+                println!(" status: {:?}", out.status);
             }
         }
     }

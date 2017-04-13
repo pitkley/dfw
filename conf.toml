@@ -2,14 +2,16 @@ external_network_interface = "ens3"
 
 [initialization.v4]
 filter = [
-    "-P INPUT DROP",
+    "-P INPUT ACCEPT",
     "-F INPUT",
+    "-A INPUT -i docker0 -j ACCEPT",
 ]
 
 [initialization.v6]
 filter = [
-    "-P INPUT DROP",
+    "-P INPUT ACCEPT",
     "-F INPUT",
+    "-A INPUT -i docker0 -j ACCEPT",
 ]
 
 [container_to_container]
