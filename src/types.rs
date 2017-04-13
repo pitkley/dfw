@@ -110,7 +110,7 @@ impl ExposePortBuilder {
     }
 
     fn default_family(&self) -> Result<String, String> {
-        Ok("tcp".to_string())
+        Ok("tcp".to_owned())
     }
 }
 
@@ -129,7 +129,7 @@ impl FromStr for ExposePort {
                2 => {
                    ExposePortBuilder::default()
                        .host_port(split[0].parse().unwrap())
-                       .family(split[1].to_string())
+                       .family(split[1].to_owned())
                        .build()
                        .unwrap()
                }
@@ -156,7 +156,7 @@ pub struct ContainerDNATRules {
 }
 
 fn default_expose_port_family() -> String {
-    "tcp".to_string()
+    "tcp".to_owned()
 }
 
 fn string_or_struct<T, D>(d: D) -> Result<T, D::Error>
