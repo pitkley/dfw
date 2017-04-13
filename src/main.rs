@@ -15,6 +15,7 @@ extern crate toml;
 
 // declare modules
 mod dfwrs;
+mod docker;
 mod errors;
 mod types;
 
@@ -67,7 +68,7 @@ fn run() -> Result<()> {
     }
 
     println!("--- PROCESS ---");
-    let res: () = dfwrs::process(&toml, &ipt4, &ipt6)?;
+    let res: () = dfwrs::process(&d, &toml, &ipt4, &ipt6)?;
     println!("{:?}", res);
 
     Ok(())

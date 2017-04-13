@@ -1,3 +1,3 @@
 #!/bin/bash
 
-sudo -E env "PATH=$PATH" cargo run
+sudo -E env "PATH=$PATH" cargo run "$@"

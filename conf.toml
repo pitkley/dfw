@@ -18,17 +18,14 @@ filter = [
 default_policy = "DROP"
 
 [[container_to_container.rules]]
-network = "some_network"
-src_container = "srccnt"
-dst_container = "dstcnt"
-filter = "-p tcp --dport 25"
+network = "dfwrs_proxy"
+src_container = "dfwrs_proxy_1"
 action = "ACCEPT"
 
 [[container_to_container.rules]]
-network = "some_network"
-# OPTIONAL src_container = "srccnt"
-# OPTIONAL dst_container = "dstcnt"
-# OPTIONAL filter = "-p tcp --dport 25"
+network = "dfwrs_a"
+src_container = "dfwrs_a_1"
+dst_container = "dfwrs_b_1"
 action = "ACCEPT"
 
 [container_to_wider_world]
