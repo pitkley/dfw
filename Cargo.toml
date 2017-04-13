@@ -4,7 +4,7 @@ version = "0.0.1"
 authors = ["Pit Kleyersburg <pitkley@googlemail.com>"]
 
 [dependencies]
-boondock = { git = "https://github.com/pitkley/boondock", branch = "extend-api" }
+boondock = { git = "https://github.com/pitkley/boondock", branch = "develop" }
 derive_builder = "^0.4.2"
 error-chain = "^0.10.0"
 serde = "^0.9.13"
