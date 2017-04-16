@@ -91,6 +91,26 @@ fn process_container_to_container(docker: &Docker,
     Ok(())
 }
 
+fn get_network(container_name: &String,
+               network_name: &String,
+               docker: &Docker,
+               container_map: &Map<String, &Container>)
+               -> Result<Option<ContainerNetwork>> {
+    // Check if `container_name` exists
+    if !container_map.contains_key(container_name) {
+        return Ok(None);
+    }
+    let container_info = docker
+        .container_info(container_map.get(container_name).unwrap())?;
+
+    // Get `ContainerNetwork` which matches the `network_name` for `container_name`
+    let container_networks: Map<String, ContainerNetwork> = container_info.NetworkSettings.Networks;
+    match container_networks.get(network_name) {
+        Some(network) => Ok(Some(network.clone())),
+        None => Ok(None),
+    }
+}
+
 fn process_ctc_rules(docker: &Docker,
                      rules: &Vec<ContainerToContainerRule>,
                      container_map: Map<String, &Container>,
@@ -105,18 +125,11 @@ fn process_ctc_rules(docker: &Docker,
         // TODO: refactor into `get_network` (issue #14)
         // Push arguments in regards to the source network
         if let Some(ref src_container) = rule.src_container {
-            // Check if `src_container` exists
-            if !container_map.contains_key(src_container) {
-                continue;
-            }
-            let container_info = docker.container_info(container_map.get(src_container).unwrap())?;
-
-            // Get `ContainerNetwork` for `src_container` which matches the `network` in `rule`
-            let container_networks = &container_info.NetworkSettings.Networks;
-            if !container_networks.contains_key(&rule.network) {
-                continue;
-            }
-            let src_network: &ContainerNetwork = container_networks.get(&rule.network).unwrap();
+            let src_network =
+                match get_network(src_container, &rule.network, docker, &container_map)? {
+                    Some(network) => network,
+                    None => continue,
+                };
 
             // Create the rule
             args.push("-i".to_owned());
@@ -131,18 +144,11 @@ fn process_ctc_rules(docker: &Docker,
 
         // Push arguments in regards to the destination network
         if let Some(ref dst_container) = rule.dst_container {
-            // Check if `dst_container` exists
-            if !container_map.contains_key(dst_container) {
-                continue;
-            }
-            let container_info = docker.container_info(container_map.get(dst_container).unwrap())?;
-
-            // Get `ContainerNetwork` for `dst_container` which matches the `network` in `rule`
-            let container_networks = &container_info.NetworkSettings.Networks;
-            if !container_networks.contains_key(&rule.network) {
-                continue;
-            }
-            let dst_network: &ContainerNetwork = container_networks.get(&rule.network).unwrap();
+            let dst_network =
+                match get_network(dst_container, &rule.network, docker, &container_map)? {
+                    Some(network) => network,
+                    None => continue,
+                };
 
             // Create the rule
             args.push("-o".to_owned());
