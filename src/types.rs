@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 use serde::de::{self, Deserialize, Deserializer};
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct DFW {
     pub external_network_interface: Option<String>,
@@ -17,21 +17,21 @@ pub struct DFW {
     pub container_dnat: Option<ContainerDNAT>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Initialization {
     pub v4: Option<Map<String, Vec<String>>>,
     pub v6: Option<Map<String, Vec<String>>>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerToContainer {
     pub default_policy: String,
     pub rules: Option<Vec<ContainerToContainerRule>>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerToContainerRule {
     pub network: String,
@@ -41,14 +41,14 @@ pub struct ContainerToContainerRule {
     pub action: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerToWiderWorld {
     pub default_policy: String,
     pub rules: Option<Vec<ContainerToWiderWorldRule>>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerToWiderWorldRule {
     pub network: Option<String>,
@@ -58,14 +58,14 @@ pub struct ContainerToWiderWorldRule {
     pub external_network_interface: Option<Vec<String>>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerToHost {
     pub default_policy: String,
     pub rules: Option<Vec<ContainerToHostRule>>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerToHostRule {
     pub network: String,
@@ -74,13 +74,13 @@ pub struct ContainerToHostRule {
     pub action: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct WiderWorldToContainer {
     pub rules: Option<Vec<WiderWorldToContainerRule>>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct WiderWorldToContainerRule {
     pub network: String,
@@ -90,7 +90,7 @@ pub struct WiderWorldToContainerRule {
     pub external_network_interface: Option<Vec<String>>,
 }
 
-#[derive(Deserialize, Debug, Default, Builder)]
+#[derive(Deserialize, Debug, Clone, Default, Builder)]
 #[serde(deny_unknown_fields)]
 pub struct ExposePort {
     pub host_port: u16,
@@ -138,13 +138,13 @@ impl FromStr for ExposePort {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerDNAT {
     pub rules: Option<Vec<ContainerDNATRules>>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerDNATRules {
     pub src_network: Option<String>,
