@@ -11,7 +11,7 @@ use docker::*;
 use errors::*;
 use types::*;
 
-const DFWRS_CTC_CHAIN: &'static str = "DFWRS_FORWARD";
+const DFWRS_FORWARD_CHAIN: &'static str = "DFWRS_FORWARD";
 
 pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> Result<()> {
     // TODO: external_network_interface
@@ -68,10 +68,10 @@ fn process_container_to_container(docker: &Docker,
                                   -> Result<()> {
 
     // Create and flush CTC chain
-    ipt4.new_chain("filter", DFWRS_CTC_CHAIN)?;
-    ipt6.new_chain("filter", DFWRS_CTC_CHAIN)?;
-    ipt4.flush_chain("filter", DFWRS_CTC_CHAIN)?;
-    ipt6.flush_chain("filter", DFWRS_CTC_CHAIN)?;
+    ipt4.new_chain("filter", DFWRS_FORWARD_CHAIN)?;
+    ipt6.new_chain("filter", DFWRS_FORWARD_CHAIN)?;
+    ipt4.flush_chain("filter", DFWRS_FORWARD_CHAIN)?;
+    ipt6.flush_chain("filter", DFWRS_FORWARD_CHAIN)?;
 
     let containers = docker.containers(ContainerListOptions::default().all())?;
     let container_map = get_container_map(&containers)?;
@@ -85,8 +85,10 @@ fn process_container_to_container(docker: &Docker,
     }
 
     // Add default policy as a rule
-    ipt4.append("filter", DFWRS_CTC_CHAIN, "-j DROP")?;
-    ipt6.append("filter", DFWRS_CTC_CHAIN, "-j DROP")?;
+    // FIXME: this inserts the policy to early, since container_to_wider_world uses the
+    // FORWARD-chain too
+    ipt4.append("filter", DFWRS_FORWARD_CHAIN, "-j DROP")?;
+    ipt6.append("filter", DFWRS_FORWARD_CHAIN, "-j DROP")?;
 
     Ok(())
 }
@@ -169,8 +171,8 @@ fn process_ctc_rules(docker: &Docker,
         args.push(rule.action.clone());
 
         // Apply the rule
-        ipt4.append("filter", DFWRS_CTC_CHAIN, &args.join(" "))?;
-        // TODO: verify that the same is needed for ipt6
+        ipt4.append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
+        // TODO: verify what is needed for ipt6
     }
 
     Ok(())
