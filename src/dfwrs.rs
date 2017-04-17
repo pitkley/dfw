@@ -16,11 +16,11 @@ const DFWRS_FORWARD_CHAIN: &'static str = "DFWRS_FORWARD";
 pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> Result<()> {
     // TODO: external_network_interface
     if let Some(ref init) = dfw.initialization {
-        process_initialization(init, dfw, ipt4, ipt6)?;
+        process_initialization(init, ipt4, ipt6)?;
     }
     // TODO: container_to_container
     if let Some(ref ctc) = dfw.container_to_container {
-        process_container_to_container(docker, ctc, dfw, ipt4, ipt6)?;
+        process_container_to_container(docker, ctc, ipt4, ipt6)?;
     }
     // TODO: container_to_wider_world
     // TODO: container_to_host
@@ -30,11 +30,7 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
     Ok(())
 }
 
-fn process_initialization(init: &Initialization,
-                          _dfw: &DFW,
-                          ipt4: &IPTables,
-                          ipt6: &IPTables)
-                          -> Result<()> {
+fn process_initialization(init: &Initialization, ipt4: &IPTables, ipt6: &IPTables) -> Result<()> {
     if let Some(ref v4) = init.v4 {
         for (table, rules) in v4.iter() {
             println!("table: {}", table);
@@ -62,7 +58,6 @@ fn process_initialization(init: &Initialization,
 
 fn process_container_to_container(docker: &Docker,
                                   ctc: &ContainerToContainer,
-                                  _dfw: &DFW,
                                   ipt4: &IPTables,
                                   ipt6: &IPTables)
                                   -> Result<()> {
