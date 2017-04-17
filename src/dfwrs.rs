@@ -94,13 +94,18 @@ impl Rule {
 }
 
 pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> Result<()> {
+    let containers = docker.containers(ContainerListOptions::default().all())?;
+    let container_map = get_container_map(&containers)?;
+    let networks = docker.networks()?;
+    let network_map = get_network_map(&networks)?;
+
     // TODO: external_network_interface
     if let Some(ref init) = dfw.initialization {
         process_initialization(init, ipt4, ipt6)?;
     }
     // TODO: container_to_container
     if let Some(ref ctc) = dfw.container_to_container {
-        process_container_to_container(docker, ctc, ipt4, ipt6)?;
+        process_container_to_container(docker, ctc, &container_map, &network_map, ipt4, ipt6)?;
     }
     // TODO: container_to_wider_world
     // TODO: container_to_host
@@ -138,6 +143,8 @@ fn process_initialization(init: &Initialization, ipt4: &IPTables, ipt6: &IPTable
 
 fn process_container_to_container(docker: &Docker,
                                   ctc: &ContainerToContainer,
+                                  container_map: &Option<Map<String, &Container>>,
+                                  network_map: &Option<Map<String, &Network>>,
                                   ipt4: &IPTables,
                                   ipt6: &IPTables)
                                   -> Result<()> {
@@ -148,16 +155,11 @@ fn process_container_to_container(docker: &Docker,
     ipt4.flush_chain("filter", DFWRS_FORWARD_CHAIN)?;
     ipt6.flush_chain("filter", DFWRS_FORWARD_CHAIN)?;
 
-    let containers = docker.containers(ContainerListOptions::default().all())?;
-    let container_map = get_container_map(&containers)?;
-    let networks = docker.networks()?;
-    let network_map = get_network_map(&networks)?;
-
-    if ctc.rules.is_some() && container_map.is_some() {
+    if ctc.rules.is_some() && container_map.is_some() && network_map.is_some() {
         process_ctc_rules(docker,
                           &ctc.rules.as_ref().unwrap(),
-                          container_map.unwrap(),
-                          network_map.unwrap(),
+                          container_map.as_ref().unwrap(),
+                          network_map.as_ref().unwrap(),
                           ipt4,
                           ipt6)?;
     }
@@ -193,8 +195,8 @@ fn get_network_for_container(container_name: &String,
 
 fn process_ctc_rules(docker: &Docker,
                      rules: &Vec<ContainerToContainerRule>,
-                     container_map: Map<String, &Container>,
-                     network_map: Map<String, &Network>,
+                     container_map: &Map<String, &Container>,
+                     network_map: &Map<String, &Network>,
                      ipt4: &IPTables,
                      _ipt6: &IPTables)
                      -> Result<()> {
