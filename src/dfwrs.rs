@@ -208,7 +208,7 @@ fn process_ctc_rules(docker: &Docker,
             Some(network) => network,
             None => continue,
         };
-        let bridge_name = format!("br-{}", &network.Id[..12]);
+        let bridge_name = get_bridge_name(&network.Id)?;
         ipt_rule
             .in_interface(bridge_name.to_owned())
             .out_interface(bridge_name.to_owned());
@@ -222,7 +222,7 @@ fn process_ctc_rules(docker: &Docker,
                 None => continue,
             };
 
-            let bridge_name = format!("br-{}", &src_network.NetworkID[..12]);
+            let bridge_name = get_bridge_name(&src_network.NetworkID)?;
             ipt_rule
                 .in_interface(bridge_name.to_owned())
                 .out_interface(bridge_name.to_owned())
@@ -238,7 +238,7 @@ fn process_ctc_rules(docker: &Docker,
                 None => continue,
             };
 
-            let bridge_name = format!("br-{}", &dst_network.NetworkID[..12]);
+            let bridge_name = get_bridge_name(&dst_network.NetworkID)?;
             ipt_rule
                 .out_interface(bridge_name.to_owned())
                 .destination(dst_network.IPAddress.to_owned());
@@ -253,4 +253,11 @@ fn process_ctc_rules(docker: &Docker,
     }
 
     Ok(())
+}
+
+fn get_bridge_name(network_id: &str) -> Result<String> {
+    if network_id.len() < 12 {
+        bail!("network has to be longer than 12 characters");
+    }
+    Ok(format!("br-{}", &network_id[..12]))
 }
