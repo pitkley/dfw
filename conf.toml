@@ -28,6 +28,10 @@ src_container = "dfwrs_a_1"
 dst_container = "dfwrs_b_1"
 action = "ACCEPT"
 
+[[container_to_container.rules]]
+network = "dfwrs_b"
+action = "ACCEPT"
+
 [container_to_wider_world]
 default_policy = "ACCEPT"
 
