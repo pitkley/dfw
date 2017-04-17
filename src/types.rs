@@ -55,7 +55,7 @@ pub struct ContainerToWiderWorldRule {
     pub src_container: Option<String>,
     pub filter: Option<String>,
     pub action: String,
-    pub external_network_interface: Option<Vec<String>>,
+    pub external_network_interface: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]

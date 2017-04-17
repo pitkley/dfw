@@ -21,7 +21,8 @@ struct Rule {
     pub in_interface: Option<String>,
     pub out_interface: Option<String>,
     pub protocol: Option<String>,
-    pub jump: String,
+    pub filter: Option<String>,
+    pub jump: Option<String>,
 }
 
 #[allow(dead_code)]
@@ -56,9 +57,15 @@ impl Rule {
         new
     }
 
+    pub fn filter(&mut self, value: String) -> &mut Self {
+        let mut new = self;
+        new.filter = Some(value);
+        new
+    }
+
     pub fn jump(&mut self, value: String) -> &mut Self {
         let mut new = self;
-        new.jump = value;
+        new.jump = Some(value);
         new
     }
 
@@ -81,13 +88,26 @@ impl Rule {
             args.push("-o".to_owned());
             args.push(out_interface.to_owned());
         }
+        if let Some(ref filter) = self.filter {
+            args.push(filter.to_owned());
+        }
+
+        // Bail if none of the above was initialized
+        if args.len() <= 0 {
+            bail!("one of `source`, `destination`, `in_interface`, `out_interface` or `filter` must be initialized");
+        }
+
         if let Some(ref protocol) = self.protocol {
             args.push("-p".to_owned());
             args.push(protocol.to_owned());
         }
 
-        args.push("-j".to_owned());
-        args.push(self.jump.to_owned());
+        if let Some(ref jump) = self.jump {
+            args.push("-j".to_owned());
+            args.push(jump.to_owned());
+        } else {
+            bail!("`jump` must be initialized");
+        }
 
         Ok(args.join(" "))
     }
@@ -100,14 +120,31 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
     let network_map = get_network_map(&networks)?;
 
     // TODO: external_network_interface
+    println!("\n==> process_initialization\n");
     if let Some(ref init) = dfw.initialization {
         process_initialization(init, ipt4, ipt6)?;
     }
     // TODO: container_to_container
+    println!("\n\n==> process_container_to_container\n");
     if let Some(ref ctc) = dfw.container_to_container {
-        process_container_to_container(docker, ctc, &container_map, &network_map, ipt4, ipt6)?;
+        process_container_to_container(docker,
+                                       ctc,
+                                       container_map.as_ref(),
+                                       network_map.as_ref(),
+                                       ipt4,
+                                       ipt6)?;
     }
     // TODO: container_to_wider_world
+    println!("\n\n==> process_container_to_wider_world\n");
+    if let Some(ref ctww) = dfw.container_to_wider_world {
+        process_container_to_wider_world(docker,
+                                         ctww,
+                                         dfw.external_network_interface.as_ref(),
+                                         container_map.as_ref(),
+                                         network_map.as_ref(),
+                                         ipt4,
+                                         ipt6)?;
+    }
     // TODO: container_to_host
     // TODO: wider_world_to_container
     // TODO: container_dnat
@@ -143,8 +180,8 @@ fn process_initialization(init: &Initialization, ipt4: &IPTables, ipt6: &IPTable
 
 fn process_container_to_container(docker: &Docker,
                                   ctc: &ContainerToContainer,
-                                  container_map: &Option<Map<String, &Container>>,
-                                  network_map: &Option<Map<String, &Network>>,
+                                  container_map: Option<&Map<String, &Container>>,
+                                  network_map: Option<&Map<String, &Network>>,
                                   ipt4: &IPTables,
                                   ipt6: &IPTables)
                                   -> Result<()> {
@@ -158,8 +195,8 @@ fn process_container_to_container(docker: &Docker,
     if ctc.rules.is_some() && container_map.is_some() && network_map.is_some() {
         process_ctc_rules(docker,
                           &ctc.rules.as_ref().unwrap(),
-                          container_map.as_ref().unwrap(),
-                          network_map.as_ref().unwrap(),
+                          container_map.unwrap(),
+                          network_map.unwrap(),
                           ipt4,
                           ipt6)?;
     }
@@ -173,32 +210,12 @@ fn process_container_to_container(docker: &Docker,
     Ok(())
 }
 
-fn get_network_for_container(container_name: &String,
-                             network_name: &String,
-                             docker: &Docker,
-                             container_map: &Map<String, &Container>)
-                             -> Result<Option<ContainerNetwork>> {
-    // Check if `container_name` exists
-    if !container_map.contains_key(container_name) {
-        return Ok(None);
-    }
-    let container_info = docker
-        .container_info(container_map.get(container_name).unwrap())?;
-
-    // Get `ContainerNetwork` which matches the `network_name` for `container_name`
-    let container_networks: Map<String, ContainerNetwork> = container_info.NetworkSettings.Networks;
-    match container_networks.get(network_name) {
-        Some(network) => Ok(Some(network.clone())),
-        None => Ok(None),
-    }
-}
-
 fn process_ctc_rules(docker: &Docker,
                      rules: &Vec<ContainerToContainerRule>,
                      container_map: &Map<String, &Container>,
                      network_map: &Map<String, &Network>,
                      ipt4: &IPTables,
-                     _ipt6: &IPTables)
+                     ipt6: &IPTables)
                      -> Result<()> {
     for rule in rules {
         println!("{:#?}", rule);
@@ -247,6 +264,106 @@ fn process_ctc_rules(docker: &Docker,
         // Set jump
         ipt_rule.jump(rule.action.to_owned());
 
+        let rule_str = ipt_rule.build()?;
+        println!("{:#?}", rule_str);
+
+        // Apply the rule
+        ipt4.append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
+        // TODO: verify what is needed for ipt6
+    }
+
+    Ok(())
+}
+
+fn process_container_to_wider_world(docker: &Docker,
+                                    ctww: &ContainerToWiderWorld,
+                                    external_network_interface: Option<&String>,
+                                    container_map: Option<&Map<String, &Container>>,
+                                    network_map: Option<&Map<String, &Network>>,
+                                    ipt4: &IPTables,
+                                    ipt6: &IPTables)
+                                    -> Result<()> {
+    // Rules
+    if ctww.rules.is_some() && container_map.is_some() && network_map.is_some() {
+        process_ctww_rules(docker,
+                           &ctww.rules.as_ref().unwrap(),
+                           external_network_interface,
+                           container_map.unwrap(),
+                           network_map.unwrap(),
+                           ipt4,
+                           ipt6)?;
+    }
+
+    // Default policy
+    if network_map.is_some() && external_network_interface.is_some() {
+        let network_map = network_map.unwrap();
+        let external_network_interface = external_network_interface.unwrap();
+
+        for (_, network) in network_map {
+            let bridge_name = get_bridge_name(&network.Id)?;
+            let rule = Rule::default()
+                .in_interface(bridge_name)
+                .out_interface(external_network_interface.to_owned())
+                .jump(ctww.default_policy.to_owned())
+                .build()?;
+
+            println!("{:?}", rule);
+            ipt4.append("filter", DFWRS_FORWARD_CHAIN, &rule)?;
+            // TODO: verify what is needed for ipt6
+        }
+    }
+
+    Ok(())
+}
+
+fn process_ctww_rules(docker: &Docker,
+                      rules: &Vec<ContainerToWiderWorldRule>,
+                      external_network_interface: Option<&String>,
+                      container_map: &Map<String, &Container>,
+                      network_map: &Map<String, &Network>,
+                      ipt4: &IPTables,
+                      ipt6: &IPTables)
+                      -> Result<()> {
+    for rule in rules {
+        println!("{:#?}", rule);
+        let mut ipt_rule = Rule::default();
+
+        if let Some(ref network) = rule.network {
+            if let Some(network) = network_map.get(network) {
+                let bridge_name = get_bridge_name(&network.Id)?;
+                ipt_rule.in_interface(bridge_name.to_owned());
+            }
+
+            if let Some(ref src_container) = rule.src_container {
+                if let Some(ref src_network) =
+                    get_network_for_container(src_container, network, docker, &container_map)? {
+                    let bridge_name = get_bridge_name(&src_network.NetworkID)?;
+                    ipt_rule
+                        .in_interface(bridge_name.to_owned())
+                        .source(src_network.IPAddress.to_owned());
+                }
+            }
+        }
+
+        if let Some(ref filter) = rule.filter {
+            ipt_rule.filter(filter.to_owned());
+        }
+
+        ipt_rule.jump(rule.action.to_owned());
+
+        // Try to build the rule without the out_interface defined to see if any of the other
+        // mandatory fields has been populated.
+        ipt_rule.build()?; // TODO: maybe add a `verify` method to `Rule`
+
+        if let Some(ref external_network_interface) = rule.external_network_interface {
+            ipt_rule.out_interface(external_network_interface.to_owned());
+        } else if let Some(ref external_network_interface) = external_network_interface {
+            ipt_rule.out_interface(external_network_interface.to_owned().to_owned());
+        }
+
+        let rule_str = ipt_rule.build()?;
+        println!("{:#?}", rule_str);
+
         // Apply the rule
         ipt4.append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
         // TODO: verify what is needed for ipt6
@@ -260,4 +377,24 @@ fn get_bridge_name(network_id: &str) -> Result<String> {
         bail!("network has to be longer than 12 characters");
     }
     Ok(format!("br-{}", &network_id[..12]))
+}
+
+fn get_network_for_container(container_name: &String,
+                             network_name: &String,
+                             docker: &Docker,
+                             container_map: &Map<String, &Container>)
+                             -> Result<Option<ContainerNetwork>> {
+    // Check if `container_name` exists
+    if !container_map.contains_key(container_name) {
+        return Ok(None);
+    }
+    let container_info = docker
+        .container_info(container_map.get(container_name).unwrap())?;
+
+    // Get `ContainerNetwork` which matches the `network_name` for `container_name`
+    let container_networks: Map<String, ContainerNetwork> = container_info.NetworkSettings.Networks;
+    match container_networks.get(network_name) {
+        Some(network) => Ok(Some(network.clone())),
+        None => Ok(None),
+    }
 }

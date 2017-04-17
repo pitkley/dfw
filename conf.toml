@@ -36,18 +36,10 @@ action = "ACCEPT"
 default_policy = "ACCEPT"
 
 [[container_to_wider_world.rules]]
-network = "jenkins_default"
-src_container = "hi"
+network = "dfwrs_proxy"
 filter = "-p tcp"
 action = "ACCEPT"
-external_network_interface = ["ens3"]
-
-[[container_to_wider_world.rules]]
-# OPTIONAL network = "jenkins_default"
-# OPTIONAL src_container = "hi"
-# OPTIONAL filter = "-p tcp"
-action = "ACCEPT"
-# OPTIONAL external_network_interface = ["ens3"]
+external_network_interface = "ens3"
 
 [container_to_host]
 default_policy = "ACCEPT"
