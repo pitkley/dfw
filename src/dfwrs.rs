@@ -94,7 +94,8 @@ impl Rule {
 
         // Bail if none of the above was initialized
         if args.len() <= 0 {
-            bail!("one of `source`, `destination`, `in_interface`, `out_interface` or `filter` must be initialized");
+            bail!("one of `source`, `destination`, `in_interface`, `out_interface` \
+                   or `filter` must be initialized");
         }
 
         if let Some(ref protocol) = self.protocol {
@@ -118,6 +119,8 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
     let container_map = get_container_map(&containers)?;
     let networks = docker.networks()?;
     let network_map = get_network_map(&networks)?;
+
+    create_and_flush_chain(DFWRS_FORWARD_CHAIN, ipt4, ipt6)?;
 
     // TODO: external_network_interface
     println!("\n==> process_initialization\n");
@@ -148,6 +151,24 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
     // TODO: container_to_host
     // TODO: wider_world_to_container
     // TODO: container_dnat
+
+    // Set default policy for forward chain (defined by `container_to_container`)
+    if let Some(ref ctc) = dfw.container_to_container {
+        ipt4.append("filter",
+                    DFWRS_FORWARD_CHAIN,
+                    &format!("-j {}", ctc.default_policy))?;
+        // TODO: verify what is needed for ipt6
+    }
+
+    Ok(())
+}
+
+fn create_and_flush_chain(chain: &str, ipt4: &IPTables, ipt6: &IPTables) -> Result<()> {
+    // Create and flush CTC chain
+    ipt4.new_chain("filter", chain)?;
+    ipt6.new_chain("filter", chain)?;
+    ipt4.flush_chain("filter", chain)?;
+    ipt6.flush_chain("filter", chain)?;
 
     Ok(())
 }
@@ -185,13 +206,6 @@ fn process_container_to_container(docker: &Docker,
                                   ipt4: &IPTables,
                                   ipt6: &IPTables)
                                   -> Result<()> {
-
-    // Create and flush CTC chain
-    ipt4.new_chain("filter", DFWRS_FORWARD_CHAIN)?;
-    ipt6.new_chain("filter", DFWRS_FORWARD_CHAIN)?;
-    ipt4.flush_chain("filter", DFWRS_FORWARD_CHAIN)?;
-    ipt6.flush_chain("filter", DFWRS_FORWARD_CHAIN)?;
-
     if ctc.rules.is_some() && container_map.is_some() && network_map.is_some() {
         process_ctc_rules(docker,
                           &ctc.rules.as_ref().unwrap(),
@@ -200,12 +214,6 @@ fn process_container_to_container(docker: &Docker,
                           ipt4,
                           ipt6)?;
     }
-
-    // Add default policy as a rule
-    // FIXME: this inserts the policy to early, since container_to_wider_world uses the
-    // FORWARD-chain too
-    ipt4.append("filter", DFWRS_FORWARD_CHAIN, "-j DROP")?;
-    ipt6.append("filter", DFWRS_FORWARD_CHAIN, "-j DROP")?;
 
     Ok(())
 }
