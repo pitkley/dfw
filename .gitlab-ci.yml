@@ -1,14 +1,23 @@
 stages:
+    - prepare
     - build
+
+prepare rust image:
+    stage: prepare
+    tags:
+        - docker-available
+    script:
+        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+        - docker pull "$(grep '^FROM' Dockerfile.build | awk '{ print $2; }' | head -n1)"
+        - docker build -t "${CI_REGISTRY_IMAGE}:build" -f Dockerfile.build .
+        - docker push "${CI_REGISTRY_IMAGE}:build"
 
 build:
     stage: build
     tags:
         - docker
-    image: scorpil/rust:1.16
+    image: "${CI_REGISTRY_IMAGE}:build"
     script:
-        - apt-get update
-        - apt-get install -y --no-install-recommends libssl-dev make
         - cargo build --verbose
         - cargo build --release
     artifacts:
