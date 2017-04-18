@@ -27,3 +27,12 @@ build:
             - Cargo.lock
             - target/release/dfwrs
 
+rustfmt:
+    stage: build
+    tags:
+        - docker
+    image: "${CI_REGISTRY_IMAGE}:build"
+    script:
+        - cargo fmt -- --write-mode diff
+    allow_failure: true
+
