@@ -13,6 +13,7 @@ use errors::*;
 use types::*;
 
 const DFWRS_FORWARD_CHAIN: &'static str = "DFWRS_FORWARD";
+const DFWRS_INPUT_CHAIN: &'static str = "DFWRS_INPUT";
 
 #[derive(Debug, Clone, Default)]
 struct Rule {
@@ -121,6 +122,7 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
     let network_map = get_network_map(&networks)?;
 
     create_and_flush_chain(DFWRS_FORWARD_CHAIN, ipt4, ipt6)?;
+    create_and_flush_chain(DFWRS_INPUT_CHAIN, ipt4, ipt6)?;
 
     // TODO: external_network_interface
     println!("\n==> process_initialization\n");
@@ -149,6 +151,15 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
                                          ipt6)?;
     }
     // TODO: container_to_host
+    println!("\n\n==> process_container_to_host\n");
+    if let Some(ref cth) = dfw.container_to_host {
+        process_container_to_host(docker,
+                                  cth,
+                                  container_map.as_ref(),
+                                  network_map.as_ref(),
+                                  ipt4,
+                                  ipt6)?;
+    }
     // TODO: wider_world_to_container
     // TODO: container_dnat
 
@@ -364,6 +375,90 @@ fn process_ctww_rules(docker: &Docker,
 
         // Apply the rule
         ipt4.append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
+        // TODO: verify what is needed for ipt6
+    }
+
+    Ok(())
+}
+
+fn process_container_to_host(docker: &Docker,
+                             cth: &ContainerToHost,
+                             container_map: Option<&Map<String, &Container>>,
+                             network_map: Option<&Map<String, &Network>>,
+                             ipt4: &IPTables,
+                             ipt6: &IPTables)
+                             -> Result<()> {
+    // Rules
+    if cth.rules.is_some() && container_map.is_some() && network_map.is_some() {
+        process_cth_rules(docker,
+                          &cth.rules.as_ref().unwrap(),
+                          container_map.unwrap(),
+                          network_map.unwrap(),
+                          ipt4,
+                          ipt6)?;
+    }
+
+    // Default policy
+    if network_map.is_some() {
+        let network_map = network_map.unwrap();
+
+        for (_, network) in network_map {
+            let bridge_name = get_bridge_name(&network.Id)?;
+            let rule = Rule::default()
+                .in_interface(bridge_name)
+                .jump(cth.default_policy.to_owned())
+                .build()?;
+
+            println!("{:?}", rule);
+            ipt4.append("filter", DFWRS_INPUT_CHAIN, &rule)?;
+            // TODO: verify what is needed for ipt6
+        }
+    }
+
+    Ok(())
+}
+
+fn process_cth_rules(docker: &Docker,
+                     rules: &Vec<ContainerToHostRule>,
+                     container_map: &Map<String, &Container>,
+                     network_map: &Map<String, &Network>,
+                     ipt4: &IPTables,
+                     ipt6: &IPTables)
+                     -> Result<()> {
+    for rule in rules {
+        println!("{:#?}", rule);
+        let mut ipt_rule = Rule::default();
+
+        if let Some(network) = network_map.get(&rule.network) {
+            let bridge_name = get_bridge_name(&network.Id)?;
+            ipt_rule.in_interface(bridge_name.to_owned());
+        } else {
+            // Network has to exist
+            continue;
+        }
+
+        if let Some(ref src_container) = rule.src_container {
+            if let Some(ref src_network) =
+                get_network_for_container(src_container, &rule.network, docker, &container_map)? {
+                ipt_rule.source(src_network.IPAddress.to_owned());
+            }
+        }
+
+        if let Some(ref filter) = rule.filter {
+            ipt_rule.filter(filter.to_owned());
+        }
+
+        ipt_rule.jump(rule.action.to_owned());
+
+        // Try to build the rule without the out_interface defined to see if any of the other
+        // mandatory fields has been populated.
+        ipt_rule.build()?; // TODO: maybe add a `verify` method to `Rule`
+
+        let rule_str = ipt_rule.build()?;
+        println!("{:#?}", rule_str);
+
+        // Apply the rule
+        ipt4.append("filter", DFWRS_INPUT_CHAIN, &rule_str)?;
         // TODO: verify what is needed for ipt6
     }
 

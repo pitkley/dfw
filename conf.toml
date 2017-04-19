@@ -41,20 +41,22 @@ filter = "-p tcp"
 action = "ACCEPT"
 external_network_interface = "ens3"
 
+[[container_to_wider_world.rules]]
+network = "dfwrs_b"
+action = "ACCEPT"
+external_network_interface = "lxdbr0"
+
 [container_to_host]
 default_policy = "ACCEPT"
 
 [[container_to_host.rules]]
-network = "some"
-src_container = "cont"
-filter = "filter"
-action = "OTHER"
+network = "dfwrs_a"
+action = "ACCEPT"
 
 [[container_to_host.rules]]
-network = "some"
-# OPTIONAL src_container = "cont"
-# OPTIONAL filter = "filter"
-action = "OTHER"
+network = "dfwrs_b"
+src_container = "dfwrs_b_1"
+action = "DROP"
 
 [wider_world_to_container]
 
