@@ -14,6 +14,7 @@ use types::*;
 
 const DFWRS_FORWARD_CHAIN: &'static str = "DFWRS_FORWARD";
 const DFWRS_INPUT_CHAIN: &'static str = "DFWRS_INPUT";
+const DFWRS_POSTROUTING_CHAIN: &'static str = "DFWRS_POSTROUTING";
 const DFWRS_PREROUTING_CHAIN: &'static str = "DFWRS_PREROUTING";
 
 #[derive(Debug, Clone, Default)]
@@ -177,17 +178,29 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
     let network_map = get_network_map(&networks)?;
 
     create_and_flush_chain("filter", DFWRS_FORWARD_CHAIN, ipt4, ipt6)?;
-    initialize_chain("filter", DFWRS_FORWARD_CHAIN, ipt4, ipt6)?;
     create_and_flush_chain("filter", DFWRS_INPUT_CHAIN, ipt4, ipt6)?;
-    initialize_chain("filter", DFWRS_INPUT_CHAIN, ipt4, ipt6)?;
     create_and_flush_chain("nat", DFWRS_PREROUTING_CHAIN, ipt4, ipt6)?;
+    create_and_flush_chain("nat", DFWRS_POSTROUTING_CHAIN, ipt4, ipt6)?;
 
     // TODO: external_network_interface
+
     println!("\n==> process_initialization\n");
     if let Some(ref init) = dfw.initialization {
         process_initialization(init, ipt4, ipt6)?;
     }
-    // TODO: container_to_container
+
+    // Setup input and forward chain
+    initialize_chain("filter", DFWRS_INPUT_CHAIN, ipt4, ipt6)?;
+    ipt4.append("filter", "INPUT", &format!("-j {}", DFWRS_INPUT_CHAIN))?;
+    initialize_chain("filter", DFWRS_FORWARD_CHAIN, ipt4, ipt6)?;
+    ipt4.append("filter", "FORWARD", &format!("-j {}", DFWRS_FORWARD_CHAIN))?;
+    // TODO: verify what is needed for ipt6
+
+    // Setup pre- and postrouting
+    ipt4.append("nat", "PREROUTING", &format!("-j {}", DFWRS_PREROUTING_CHAIN))?;
+    ipt4.append("nat", "POSTROUTING", &format!("-j {}", DFWRS_POSTROUTING_CHAIN))?;
+    // TODO: verify what is needed for ipt6
+
     println!("\n\n==> process_container_to_container\n");
     if let Some(ref ctc) = dfw.container_to_container {
         process_container_to_container(docker,
@@ -197,7 +210,6 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
                                        ipt4,
                                        ipt6)?;
     }
-    // TODO: container_to_wider_world
     println!("\n\n==> process_container_to_wider_world\n");
     if let Some(ref ctww) = dfw.container_to_wider_world {
         process_container_to_wider_world(docker,
@@ -208,7 +220,6 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
                                          ipt4,
                                          ipt6)?;
     }
-    // TODO: container_to_host
     println!("\n\n==> process_container_to_host\n");
     if let Some(ref cth) = dfw.container_to_host {
         process_container_to_host(docker,
@@ -218,7 +229,6 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
                                   ipt4,
                                   ipt6)?;
     }
-    // TODO: wider_world_to_container
     println!("\n\n==> process_wider_world_to_container\n");
     if let Some(ref wwtc) = dfw.wider_world_to_container {
         process_wider_world_to_container(docker,
@@ -229,7 +239,6 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
                                          ipt4,
                                          ipt6)?;
     }
-    // TODO: container_dnat
     println!("\n\n==> process_container_dnat\n");
     if let Some(ref cd) = dfw.container_dnat {
         process_container_dnat(docker,
@@ -241,8 +250,8 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
                                ipt6)?;
     }
 
-    // Add accept rules for Docker bridge
     if let Some(ref external_network_interface) = dfw.external_network_interface {
+        // Add accept rules for Docker bridge
         if let Some(network_map) = network_map {
             if let Some(bridge_network) = network_map.get("bridge") {
                 if let Some(bridge_name) =
@@ -268,6 +277,14 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
                 }
             }
         }
+
+        // Configure POSTROUTING
+        let rule_str = Rule::default()
+            .out_interface(external_network_interface.to_owned())
+            .jump("MASQUERADE".to_owned())
+            .build()?;
+        ipt4.append("nat", DFWRS_POSTROUTING_CHAIN, &rule_str)?;
+        // TODO: verify what is needed for ipt6
     }
 
     // Set default policy for forward chain (defined by `container_to_container`)
@@ -618,6 +635,10 @@ fn process_wider_world_to_container(docker: &Docker,
             // Network for container has to exist
             continue;
         }
+
+        // Set correct protocol
+        ipt_forward_rule.protocol(rule.expose_port.family.to_owned());
+        ipt_dnat_rule.protocol(rule.expose_port.family.to_owned());
 
         ipt_forward_rule.jump("ACCEPT".to_owned());
         ipt_dnat_rule.jump("DNAT".to_owned());
