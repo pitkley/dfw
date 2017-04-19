@@ -163,22 +163,6 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
     Ok(())
 }
 
-fn create_and_flush_chain(chain: &str, ipt4: &IPTables, ipt6: &IPTables) -> Result<()> {
-    // Create and flush CTC chain
-    ipt4.new_chain("filter", chain)?;
-    ipt6.new_chain("filter", chain)?;
-    ipt4.flush_chain("filter", chain)?;
-    ipt6.flush_chain("filter", chain)?;
-
-    // Drop INVALID, accept RELATED/ESTABLISHED
-    ipt4.append("filter", chain, "-m state --state INVALID -j DROP")?;
-    ipt6.append("filter", chain, "-m state --state INVALID -j DROP")?;
-    ipt4.append("filter", chain, "-m state --state RELATED,ESTABLISHED -j ACCEPT")?;
-    ipt6.append("filter", chain, "-m state --state RELATED,ESTABLISHED -j ACCEPT")?;
-
-    Ok(())
-}
-
 fn process_initialization(init: &Initialization, ipt4: &IPTables, ipt6: &IPTables) -> Result<()> {
     if let Some(ref v4) = init.v4 {
         for (table, rules) in v4.iter() {
@@ -382,6 +366,26 @@ fn process_ctww_rules(docker: &Docker,
         ipt4.append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
         // TODO: verify what is needed for ipt6
     }
+
+    Ok(())
+}
+
+fn create_and_flush_chain(chain: &str, ipt4: &IPTables, ipt6: &IPTables) -> Result<()> {
+    // Create and flush CTC chain
+    ipt4.new_chain("filter", chain)?;
+    ipt6.new_chain("filter", chain)?;
+    ipt4.flush_chain("filter", chain)?;
+    ipt6.flush_chain("filter", chain)?;
+
+    // Drop INVALID, accept RELATED/ESTABLISHED
+    ipt4.append("filter", chain, "-m state --state INVALID -j DROP")?;
+    ipt6.append("filter", chain, "-m state --state INVALID -j DROP")?;
+    ipt4.append("filter",
+                chain,
+                "-m state --state RELATED,ESTABLISHED -j ACCEPT")?;
+    ipt6.append("filter",
+                chain,
+                "-m state --state RELATED,ESTABLISHED -j ACCEPT")?;
 
     Ok(())
 }
