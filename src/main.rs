@@ -29,6 +29,7 @@ use errors::*;
 use types::*;
 
 fn load() -> Result<DFW> {
+    // TODO: make filename configurable
     let mut file = BufReader::new(File::open("conf.toml")?);
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;

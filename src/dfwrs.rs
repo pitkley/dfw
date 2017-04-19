@@ -241,6 +241,35 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
                                ipt6)?;
     }
 
+    // Add accept rules for Docker bridge
+    if let Some(ref external_network_interface) = dfw.external_network_interface {
+        if let Some(network_map) = network_map {
+            if let Some(bridge_network) = network_map.get("bridge") {
+                if let Some(bridge_name) =
+                    bridge_network
+                        .Options
+                        .get("com.docker.network.bridge.name") {
+                    println!("bridge_name: {}", bridge_name);
+                    let rule_str = Rule::default()
+                        .in_interface(bridge_name.to_owned())
+                        .out_interface(external_network_interface.to_owned())
+                        .jump("ACCEPT".to_owned())
+                        .build()?;
+                    println!("accept-rule: {}", rule_str);
+                    ipt4.append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
+                    // TODO: verify what is needed for ipt6
+
+                    let rule_str = Rule::default()
+                        .in_interface(bridge_name.to_owned())
+                        .jump("ACCEPT".to_owned())
+                        .build()?;
+                    ipt4.append("filter", DFWRS_INPUT_CHAIN, &rule_str)?;
+                    // TODO: verify what is needed for ipt6
+                }
+            }
+        }
+    }
+
     // Set default policy for forward chain (defined by `container_to_container`)
     if let Some(ref ctc) = dfw.container_to_container {
         ipt4.append("filter",
@@ -565,7 +594,7 @@ fn process_wider_world_to_container(docker: &Docker,
 
         if let Some(network) = network_map.get(&rule.network) {
             let bridge_name = get_bridge_name(&network.Id)?;
-            ipt_forward_rule.in_interface(bridge_name.to_owned());
+            ipt_forward_rule.out_interface(bridge_name.to_owned());
         } else {
             // Network has to exist
             continue;
@@ -599,10 +628,10 @@ fn process_wider_world_to_container(docker: &Docker,
         ipt_dnat_rule.build()?; // TODO: maybe add a `verify` method to `Rule`
 
         if let Some(ref external_network_interface) = rule.external_network_interface {
-            ipt_forward_rule.out_interface(external_network_interface.to_owned());
+            ipt_forward_rule.in_interface(external_network_interface.to_owned());
             ipt_dnat_rule.in_interface(external_network_interface.to_owned());
         } else if let Some(ref external_network_interface) = external_network_interface {
-            ipt_forward_rule.out_interface(external_network_interface.to_owned().to_owned());
+            ipt_forward_rule.in_interface(external_network_interface.to_owned().to_owned());
             ipt_dnat_rule.in_interface(external_network_interface.to_owned().to_owned());
         } else {
             // The DNAT rule requires the external interface
