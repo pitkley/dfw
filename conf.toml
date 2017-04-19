@@ -61,37 +61,25 @@ action = "DROP"
 [wider_world_to_container]
 
 [[wider_world_to_container.rules]]
-network = "network"
-dst_container = "dst_container"
-expose_port = 1
-external_network_interface = ["someif"]
+network = "dfwrs_proxy"
+dst_container = "dfwrs_proxy_1"
+expose_port = 80
 
 [[wider_world_to_container.rules]]
-network = "network"
-dst_container = "dst_container"
-expose_port = "2"
-external_network_interface = ["someif"]
+network = "dfwrs_proxy"
+dst_container = "dfwrs_proxy_1"
+expose_port = { host_port = 443 }
 
 [[wider_world_to_container.rules]]
-network = "network"
-dst_container = "dst_container"
-expose_port = "3/tcp"
-# OPTIONAL external_network_interface = ["someif"]
+network = "dfwrs_a"
+dst_container = "dfwrs_a_1"
+expose_port = { host_port = 8080, container_port = 80, family = "tcp" }
+external_network_interface = "lxdbr0"
 
 [[wider_world_to_container.rules]]
-network = "network"
-dst_container = "dst_container"
-expose_port = { host_port = 4, container_port = 101, family = "tcp" }
-
-[[wider_world_to_container.rules]]
-network = "network"
-dst_container = "dst_container"
-expose_port = { host_port = 5, family = "tcp" }
-
-[[wider_world_to_container.rules]]
-network = "network"
-dst_container = "dst_container"
-expose_port = { host_port = 6, container_port = 102 }
+network = "dfwrs_b"
+dst_container = "dfwrs_b_1"
+expose_port = { host_port = 8081, container_port = 80, family = "udp" }
 
 [container_dnat]
 

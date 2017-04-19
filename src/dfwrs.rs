@@ -14,6 +14,7 @@ use types::*;
 
 const DFWRS_FORWARD_CHAIN: &'static str = "DFWRS_FORWARD";
 const DFWRS_INPUT_CHAIN: &'static str = "DFWRS_INPUT";
+const DFWRS_PREROUTING_CHAIN: &'static str = "DFWRS_PREROUTING";
 
 #[derive(Debug, Clone, Default)]
 struct Rule {
@@ -22,6 +23,8 @@ struct Rule {
     pub in_interface: Option<String>,
     pub out_interface: Option<String>,
     pub protocol: Option<String>,
+    pub source_port: Option<String>,
+    pub destination_port: Option<String>,
     pub filter: Option<String>,
     pub jump: Option<String>,
 }
@@ -58,6 +61,18 @@ impl Rule {
         new
     }
 
+    pub fn source_port(&mut self, value: String) -> &mut Self {
+        let mut new = self;
+        new.source_port = Some(value);
+        new
+    }
+
+    pub fn destination_port(&mut self, value: String) -> &mut Self {
+        let mut new = self;
+        new.destination_port = Some(value);
+        new
+    }
+
     pub fn filter(&mut self, value: String) -> &mut Self {
         let mut new = self;
         new.filter = Some(value);
@@ -89,12 +104,9 @@ impl Rule {
             args.push("-o".to_owned());
             args.push(out_interface.to_owned());
         }
-        if let Some(ref filter) = self.filter {
-            args.push(filter.to_owned());
-        }
 
         // Bail if none of the above was initialized
-        if args.len() <= 0 {
+        if args.len() <= 0 && self.filter.is_none() {
             bail!("one of `source`, `destination`, `in_interface`, `out_interface` \
                    or `filter` must be initialized");
         }
@@ -102,6 +114,21 @@ impl Rule {
         if let Some(ref protocol) = self.protocol {
             args.push("-p".to_owned());
             args.push(protocol.to_owned());
+        } else if self.source_port.is_some() || self.destination_port.is_some() {
+            // Source and destination ports require that the protocol is set.
+            // If it hasn't been specified explicitly, use "tcp" as default.
+            args.push("-p".to_owned());
+            args.push("tcp".to_owned());
+        }
+
+        if let Some(ref source_port) = self.source_port {
+            args.push("--sport".to_owned());
+            args.push(source_port.to_owned());
+        }
+
+        if let Some(ref destination_port) = self.destination_port {
+            args.push("--dport".to_owned());
+            args.push(destination_port.to_owned());
         }
 
         if let Some(ref jump) = self.jump {
@@ -109,6 +136,10 @@ impl Rule {
             args.push(jump.to_owned());
         } else {
             bail!("`jump` must be initialized");
+        }
+
+        if let Some(ref filter) = self.filter {
+            args.push(filter.to_owned());
         }
 
         Ok(args.join(" "))
@@ -121,8 +152,11 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
     let networks = docker.networks()?;
     let network_map = get_network_map(&networks)?;
 
-    create_and_flush_chain(DFWRS_FORWARD_CHAIN, ipt4, ipt6)?;
-    create_and_flush_chain(DFWRS_INPUT_CHAIN, ipt4, ipt6)?;
+    create_and_flush_chain("filter", DFWRS_FORWARD_CHAIN, ipt4, ipt6)?;
+    initialize_chain("filter", DFWRS_FORWARD_CHAIN, ipt4, ipt6)?;
+    create_and_flush_chain("filter", DFWRS_INPUT_CHAIN, ipt4, ipt6)?;
+    initialize_chain("filter", DFWRS_INPUT_CHAIN, ipt4, ipt6)?;
+    create_and_flush_chain("nat", DFWRS_PREROUTING_CHAIN, ipt4, ipt6)?;
 
     // TODO: external_network_interface
     println!("\n==> process_initialization\n");
@@ -161,6 +195,16 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
                                   ipt6)?;
     }
     // TODO: wider_world_to_container
+    println!("\n\n==> process_wider_world_to_container\n");
+    if let Some(ref wwtc) = dfw.wider_world_to_container {
+        process_wider_world_to_container(docker,
+                                         wwtc,
+                                         dfw.external_network_interface.as_ref(),
+                                         container_map.as_ref(),
+                                         network_map.as_ref(),
+                                         ipt4,
+                                         ipt6)?;
+    }
     // TODO: container_dnat
 
     // Set default policy for forward chain (defined by `container_to_container`)
@@ -465,20 +509,108 @@ fn process_cth_rules(docker: &Docker,
     Ok(())
 }
 
-fn create_and_flush_chain(chain: &str, ipt4: &IPTables, ipt6: &IPTables) -> Result<()> {
-    // Create and flush CTC chain
-    ipt4.new_chain("filter", chain)?;
-    ipt6.new_chain("filter", chain)?;
-    ipt4.flush_chain("filter", chain)?;
-    ipt6.flush_chain("filter", chain)?;
+fn process_wider_world_to_container(docker: &Docker,
+                                    wwtc: &WiderWorldToContainer,
+                                    external_network_interface: Option<&String>,
+                                    container_map: Option<&Map<String, &Container>>,
+                                    network_map: Option<&Map<String, &Network>>,
+                                    ipt4: &IPTables,
+                                    ipt6: &IPTables)
+                                    -> Result<()> {
+    if wwtc.rules.is_none() || container_map.is_none() || network_map.is_none() {
+        return Ok(());
+    }
+    let rules = wwtc.rules.as_ref().unwrap();
+    let container_map = container_map.unwrap();
+    let network_map = network_map.unwrap();
 
+    for rule in rules {
+        println!("{:#?}", rule);
+        let mut ipt_forward_rule = Rule::default();
+        let mut ipt_dnat_rule = Rule::default();
+
+        if let Some(network) = network_map.get(&rule.network) {
+            let bridge_name = get_bridge_name(&network.Id)?;
+            ipt_forward_rule.in_interface(bridge_name.to_owned());
+        } else {
+            // Network has to exist
+            continue;
+        }
+
+        if let Some(ref dst_network) =
+            get_network_for_container(&rule.dst_container, &rule.network, docker, &container_map)? {
+            ipt_forward_rule.destination(dst_network.IPAddress.to_owned());
+
+            let destination_port = match rule.expose_port.container_port {
+                Some(destination_port) => destination_port.to_string(),
+                None => rule.expose_port.host_port.to_string(),
+            };
+            ipt_forward_rule.destination_port(destination_port.to_owned());
+            ipt_dnat_rule.destination_port(destination_port.to_owned());
+            ipt_dnat_rule.filter(format!("--to-destination {}:{}",
+                                         dst_network.IPAddress,
+                                         destination_port));
+
+        } else {
+            // Network for container has to exist
+            continue;
+        }
+
+        ipt_forward_rule.jump("ACCEPT".to_owned());
+        ipt_dnat_rule.jump("DNAT".to_owned());
+
+        // Try to build the rule without the out_interface defined to see if any of the other
+        // mandatory fields has been populated.
+        ipt_forward_rule.build()?; // TODO: maybe add a `verify` method to `Rule`
+        ipt_dnat_rule.build()?; // TODO: maybe add a `verify` method to `Rule`
+
+        if let Some(ref external_network_interface) = rule.external_network_interface {
+            ipt_forward_rule.out_interface(external_network_interface.to_owned());
+            ipt_dnat_rule.in_interface(external_network_interface.to_owned());
+        } else if let Some(ref external_network_interface) = external_network_interface {
+            ipt_forward_rule.out_interface(external_network_interface.to_owned().to_owned());
+            ipt_dnat_rule.in_interface(external_network_interface.to_owned().to_owned());
+        } else {
+            // The DNAT rule requires the external interface
+            continue;
+        }
+
+        let forward_rule_str = ipt_forward_rule.build()?;
+        println!("{:#?}", forward_rule_str);
+        let dnat_rule_str = ipt_dnat_rule.build()?;
+        println!("{:#?}", dnat_rule_str);
+
+        // Apply the rule
+        ipt4.append("filter", DFWRS_FORWARD_CHAIN, &forward_rule_str)?;
+        ipt4.append("nat", DFWRS_PREROUTING_CHAIN, &dnat_rule_str)?;
+        // TODO: verify what is needed for ipt6
+    }
+
+    Ok(())
+}
+
+fn create_and_flush_chain(table: &str,
+                          chain: &str,
+                          ipt4: &IPTables,
+                          ipt6: &IPTables)
+                          -> Result<()> {
+    // Create and flush CTC chain
+    ipt4.new_chain(table, chain)?;
+    ipt6.new_chain(table, chain)?;
+    ipt4.flush_chain(table, chain)?;
+    ipt6.flush_chain(table, chain)?;
+
+    Ok(())
+}
+
+fn initialize_chain(table: &str, chain: &str, ipt4: &IPTables, ipt6: &IPTables) -> Result<()> {
     // Drop INVALID, accept RELATED/ESTABLISHED
-    ipt4.append("filter", chain, "-m state --state INVALID -j DROP")?;
-    ipt6.append("filter", chain, "-m state --state INVALID -j DROP")?;
-    ipt4.append("filter",
+    ipt4.append(table, chain, "-m state --state INVALID -j DROP")?;
+    ipt6.append(table, chain, "-m state --state INVALID -j DROP")?;
+    ipt4.append(table,
                 chain,
                 "-m state --state RELATED,ESTABLISHED -j ACCEPT")?;
-    ipt6.append("filter",
+    ipt6.append(table,
                 chain,
                 "-m state --state RELATED,ESTABLISHED -j ACCEPT")?;
 

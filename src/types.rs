@@ -87,7 +87,7 @@ pub struct WiderWorldToContainerRule {
     pub dst_container: String,
     #[serde(deserialize_with = "string_or_struct")]
     pub expose_port: ExposePort,
-    pub external_network_interface: Option<Vec<String>>,
+    pub external_network_interface: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone, Default, Builder)]
