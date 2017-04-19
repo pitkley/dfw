@@ -20,11 +20,17 @@ const DFWRS_PREROUTING_CHAIN: &'static str = "DFWRS_PREROUTING";
 struct Rule {
     pub source: Option<String>,
     pub destination: Option<String>,
+
     pub in_interface: Option<String>,
     pub out_interface: Option<String>,
+
+    pub not_in_interface: bool,
+    pub not_out_interface: bool,
+
     pub protocol: Option<String>,
     pub source_port: Option<String>,
     pub destination_port: Option<String>,
+
     pub filter: Option<String>,
     pub jump: Option<String>,
 }
@@ -52,6 +58,18 @@ impl Rule {
     pub fn out_interface(&mut self, value: String) -> &mut Self {
         let mut new = self;
         new.out_interface = Some(value);
+        new
+    }
+
+    pub fn not_in_interface(&mut self, value: bool) -> &mut Self {
+        let mut new = self;
+        new.not_in_interface = value;
+        new
+    }
+
+    pub fn not_out_interface(&mut self, value: bool) -> &mut Self {
+        let mut new = self;
+        new.not_out_interface = value;
         new
     }
 
@@ -97,10 +115,16 @@ impl Rule {
             args.push(destination.to_owned());
         }
         if let Some(ref in_interface) = self.in_interface {
+            if self.not_in_interface {
+                args.push("!".to_owned());
+            }
             args.push("-i".to_owned());
             args.push(in_interface.to_owned());
         }
         if let Some(ref out_interface) = self.out_interface {
+            if self.not_out_interface {
+                args.push("!".to_owned());
+            }
             args.push("-o".to_owned());
             args.push(out_interface.to_owned());
         }
@@ -206,6 +230,16 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
                                          ipt6)?;
     }
     // TODO: container_dnat
+    println!("\n\n==> process_container_dnat\n");
+    if let Some(ref cd) = dfw.container_dnat {
+        process_container_dnat(docker,
+                               cd,
+                               dfw.external_network_interface.as_ref(),
+                               container_map.as_ref(),
+                               network_map.as_ref(),
+                               ipt4,
+                               ipt6)?;
+    }
 
     // Set default policy for forward chain (defined by `container_to_container`)
     if let Some(ref ctc) = dfw.container_to_container {
@@ -583,6 +617,90 @@ fn process_wider_world_to_container(docker: &Docker,
         // Apply the rule
         ipt4.append("filter", DFWRS_FORWARD_CHAIN, &forward_rule_str)?;
         ipt4.append("nat", DFWRS_PREROUTING_CHAIN, &dnat_rule_str)?;
+        // TODO: verify what is needed for ipt6
+    }
+
+    Ok(())
+}
+
+fn process_container_dnat(docker: &Docker,
+                          cd: &ContainerDNAT,
+                          external_network_interface: Option<&String>,
+                          container_map: Option<&Map<String, &Container>>,
+                          network_map: Option<&Map<String, &Network>>,
+                          ipt4: &IPTables,
+                          ipt6: &IPTables)
+                          -> Result<()> {
+    if cd.rules.is_none() || container_map.is_none() || network_map.is_none() {
+        return Ok(());
+    }
+    let rules = cd.rules.as_ref().unwrap();
+    let container_map = container_map.unwrap();
+    let network_map = network_map.unwrap();
+
+    for rule in rules {
+        println!("{:#?}", rule);
+        let mut ipt_rule = Rule::default();
+
+        if let Some(ref network) = rule.src_network {
+            if let Some(network) = network_map.get(network) {
+                let bridge_name = get_bridge_name(&network.Id)?;
+                ipt_rule.in_interface(bridge_name.to_owned());
+            }
+
+            if let Some(ref src_container) = rule.src_container {
+                if let Some(ref src_network) =
+                    get_network_for_container(src_container, network, docker, &container_map)? {
+                    let bridge_name = get_bridge_name(&src_network.NetworkID)?;
+                    ipt_rule
+                        .in_interface(bridge_name.to_owned())
+                        .source(src_network.IPAddress.to_owned());
+                }
+            }
+        }
+
+        if let Some(ref dst_network) =
+            get_network_for_container(&rule.dst_container,
+                                      &rule.dst_network,
+                                      docker,
+                                      &container_map)? {
+            let destination_port = match rule.expose_port.container_port {
+                Some(destination_port) => destination_port.to_string(),
+                None => rule.expose_port.host_port.to_string(),
+            };
+            ipt_rule.destination_port(destination_port.to_owned());
+            ipt_rule.filter(format!("--to-destination {}:{}",
+                                    dst_network.IPAddress,
+                                    destination_port));
+
+        } else {
+            // Network for container has to exist
+            continue;
+        }
+
+        ipt_rule.jump("DNAT".to_owned());
+
+        // Try to build the rule without the out_interface defined to see if any of the other
+        // mandatory fields has been populated.
+        ipt_rule.build()?; // TODO: maybe add a `verify` method to `Rule`
+
+        if ipt_rule.out_interface.is_none() {
+            if let Some(ref external_network_interface) = external_network_interface {
+                ipt_rule
+                    .in_interface(external_network_interface.to_owned().to_owned())
+                    .not_in_interface(true);
+            } else {
+                // We need to specify a external network interface.
+                // If it is not defined, skip the rule.
+                continue;
+            }
+        }
+
+        let rule_str = ipt_rule.build()?;
+        println!("{:#?}", rule_str);
+
+        // Apply the rule
+        ipt4.append("nat", DFWRS_PREROUTING_CHAIN, &rule_str)?;
         // TODO: verify what is needed for ipt6
     }
 

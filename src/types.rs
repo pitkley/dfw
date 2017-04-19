@@ -141,12 +141,12 @@ impl FromStr for ExposePort {
 #[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerDNAT {
-    pub rules: Option<Vec<ContainerDNATRules>>,
+    pub rules: Option<Vec<ContainerDNATRule>>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ContainerDNATRules {
+pub struct ContainerDNATRule {
     pub src_network: Option<String>,
     pub src_container: Option<String>,
     pub dst_network: String,

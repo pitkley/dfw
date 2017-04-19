@@ -84,16 +84,14 @@ expose_port = { host_port = 8081, container_port = 80, family = "udp" }
 [container_dnat]
 
 [[container_dnat.rules]]
-src_network = "network"
-src_container = "container"
-dst_network = "network"
-dst_container = "container"
-expose_port = "80/tcp"
+src_network = "dfwrs_a"
+src_container = "dfwrs_a_1"
+dst_network = "dfwrs_b"
+dst_container = "dfwrs_b_1"
+expose_port = { host_port = 80, family = "tcp" }
 
 [[container_dnat.rules]]
-#src_network = "network"
-#src_container = "container"
-dst_network = "network"
-dst_container = "container"
-expose_port = "80/tcp"
+dst_network = "dfwrs_a"
+dst_container = "dfwrs_a_1"
+expose_port = "53/udp"
 
