@@ -170,6 +170,12 @@ fn create_and_flush_chain(chain: &str, ipt4: &IPTables, ipt6: &IPTables) -> Resu
     ipt4.flush_chain("filter", chain)?;
     ipt6.flush_chain("filter", chain)?;
 
+    // Drop INVALID, accept RELATED/ESTABLISHED
+    ipt4.append("filter", chain, "-m state --state INVALID -j DROP")?;
+    ipt6.append("filter", chain, "-m state --state INVALID -j DROP")?;
+    ipt4.append("filter", chain, "-m state --state RELATED,ESTABLISHED -j ACCEPT")?;
+    ipt6.append("filter", chain, "-m state --state RELATED,ESTABLISHED -j ACCEPT")?;
+
     Ok(())
 }
 
