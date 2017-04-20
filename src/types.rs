@@ -55,7 +55,7 @@ pub struct ContainerToWiderWorldRule {
     pub src_container: Option<String>,
     pub filter: Option<String>,
     pub action: String,
-    pub external_network_interface: Option<Vec<String>>,
+    pub external_network_interface: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -87,7 +87,7 @@ pub struct WiderWorldToContainerRule {
     pub dst_container: String,
     #[serde(deserialize_with = "string_or_struct")]
     pub expose_port: ExposePort,
-    pub external_network_interface: Option<Vec<String>>,
+    pub external_network_interface: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone, Default, Builder)]
@@ -141,12 +141,12 @@ impl FromStr for ExposePort {
 #[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerDNAT {
-    pub rules: Option<Vec<ContainerDNATRules>>,
+    pub rules: Option<Vec<ContainerDNATRule>>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ContainerDNATRules {
+pub struct ContainerDNATRule {
     pub src_network: Option<String>,
     pub src_container: Option<String>,
     pub dst_network: String,

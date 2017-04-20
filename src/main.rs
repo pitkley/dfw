@@ -7,12 +7,15 @@ extern crate boondock;
 extern crate derive_builder;
 #[macro_use]
 extern crate error_chain;
+extern crate iptables;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde;
 extern crate toml;
 
 // declare modules
+mod dfwrs;
+mod docker;
 mod errors;
 mod types;
 
@@ -26,11 +29,12 @@ use errors::*;
 use types::*;
 
 fn load() -> Result<DFW> {
+    // TODO: make filename configurable
     let mut file = BufReader::new(File::open("conf.toml")?);
     let mut contents = String::new();
-    file.read_to_string(&mut contents)?; //.chain_err(|| "unable to read file contents")?;
+    file.read_to_string(&mut contents)?;
 
-    Ok(toml::from_str::<DFW>(&contents)?) //.chain_err(|| "unable to load TOML")
+    Ok(toml::from_str::<DFW>(&contents)?)
 }
 
 fn run() -> Result<()> {
@@ -50,8 +54,23 @@ fn run() -> Result<()> {
     }
 
     println!("--- TOML ---");
-    let toml = load()?;
+    let toml: DFW = load()?;
     println!("{:#?}", toml);
+    println!();
+
+    println!("--- IPTABLES ---");
+    let ipt4 = iptables::new(false).unwrap();
+    let ipt6 = iptables::new(true).unwrap();
+    println!("4: {}, 6: {}", ipt4.cmd, ipt6.cmd);
+
+    let chains: Vec<String> = ipt4.list_chains("filter")?;
+    for chain in &chains {
+        println!("chain: {}", chain);
+    }
+
+    println!("--- PROCESS ---");
+    let res: () = dfwrs::process(&d, &toml, &ipt4, &ipt6)?;
+    println!("{:?}", res);
 
     Ok(())
 }
