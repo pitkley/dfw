@@ -182,8 +182,6 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
     create_and_flush_chain("nat", DFWRS_PREROUTING_CHAIN, ipt4, ipt6)?;
     create_and_flush_chain("nat", DFWRS_POSTROUTING_CHAIN, ipt4, ipt6)?;
 
-    // TODO: external_network_interface
-
     println!("\n==> process_initialization\n");
     if let Some(ref init) = dfw.initialization {
         process_initialization(init, ipt4, ipt6)?;
@@ -197,8 +195,12 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
     // TODO: verify what is needed for ipt6
 
     // Setup pre- and postrouting
-    ipt4.append("nat", "PREROUTING", &format!("-j {}", DFWRS_PREROUTING_CHAIN))?;
-    ipt4.append("nat", "POSTROUTING", &format!("-j {}", DFWRS_POSTROUTING_CHAIN))?;
+    ipt4.append("nat",
+                "PREROUTING",
+                &format!("-j {}", DFWRS_PREROUTING_CHAIN))?;
+    ipt4.append("nat",
+                "POSTROUTING",
+                &format!("-j {}", DFWRS_POSTROUTING_CHAIN))?;
     // TODO: verify what is needed for ipt6
 
     println!("\n\n==> process_container_to_container\n");
