@@ -2,13 +2,11 @@
 
 use std::collections::HashMap as Map;
 
-use boondock::{ContainerListOptions, Docker};
-use boondock::container::Container;
-use boondock::container::Network as ContainerNetwork;
-use boondock::network::Network;
 use iptables::IPTables;
+use shiplift::Docker;
+use shiplift::rep::Container;
+use shiplift::rep::{NetworkDetails, NetworkContainerDetails};
 
-use docker::*;
 use errors::*;
 use types::*;
 
@@ -172,9 +170,9 @@ impl Rule {
 }
 
 pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> Result<()> {
-    let containers = docker.containers(ContainerListOptions::default().all())?;
+    let containers = docker.containers().list(&Default::default())?;
     let container_map = get_container_map(&containers)?;
-    let networks = docker.networks()?;
+    let networks = docker.networks().list(&Default::default())?;
     let network_map = get_network_map(&networks)?;
 
     create_and_flush_chain("filter", DFWRS_FORWARD_CHAIN, ipt4, ipt6)?;
@@ -259,6 +257,8 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
                 if let Some(bridge_name) =
                     bridge_network
                         .Options
+                        .as_ref()
+                        .ok_or("error")?
                         .get("com.docker.network.bridge.name") {
                     println!("bridge_name: {}", bridge_name);
                     let rule_str = Rule::default()
@@ -329,7 +329,7 @@ fn process_initialization(init: &Initialization, ipt4: &IPTables, ipt6: &IPTable
 fn process_container_to_container(docker: &Docker,
                                   ctc: &ContainerToContainer,
                                   container_map: Option<&Map<String, &Container>>,
-                                  network_map: Option<&Map<String, &Network>>,
+                                  network_map: Option<&Map<String, &NetworkDetails>>,
                                   ipt4: &IPTables,
                                   ipt6: &IPTables)
                                   -> Result<()> {
@@ -348,7 +348,7 @@ fn process_container_to_container(docker: &Docker,
 fn process_ctc_rules(docker: &Docker,
                      rules: &Vec<ContainerToContainerRule>,
                      container_map: &Map<String, &Container>,
-                     network_map: &Map<String, &Network>,
+                     network_map: &Map<String, &NetworkDetails>,
                      ipt4: &IPTables,
                      ipt6: &IPTables)
                      -> Result<()> {
@@ -366,34 +366,44 @@ fn process_ctc_rules(docker: &Docker,
             .out_interface(bridge_name.to_owned());
 
         if let Some(ref src_container) = rule.src_container {
-            let src_network = match get_network_for_container(src_container,
-                                                              &rule.network,
-                                                              docker,
-                                                              &container_map)? {
-                Some(network) => network,
+            let src_network = match get_network_for_container(docker,
+                                                              container_map,
+                                                              &src_container,
+                                                              &network.Id)? {
+                Some(src_network) => src_network,
                 None => continue,
             };
 
-            let bridge_name = get_bridge_name(&src_network.NetworkID)?;
+            let bridge_name = get_bridge_name(&network.Id)?;
             ipt_rule
                 .in_interface(bridge_name.to_owned())
                 .out_interface(bridge_name.to_owned())
-                .source(src_network.IPAddress.to_owned());
+                .source(src_network
+                            .IPv4Address
+                            .split("/")
+                            .next()
+                            .unwrap()
+                            .to_owned());
         }
 
         if let Some(ref dst_container) = rule.dst_container {
-            let dst_network = match get_network_for_container(dst_container,
-                                                              &rule.network,
-                                                              docker,
-                                                              &container_map)? {
-                Some(network) => network,
+            let dst_network = match get_network_for_container(docker,
+                                                              container_map,
+                                                              &dst_container,
+                                                              &network.Id)? {
+                Some(dst_network) => dst_network,
                 None => continue,
             };
 
-            let bridge_name = get_bridge_name(&dst_network.NetworkID)?;
+            let bridge_name = get_bridge_name(&network.Id)?;
             ipt_rule
                 .out_interface(bridge_name.to_owned())
-                .destination(dst_network.IPAddress.to_owned());
+                .destination(dst_network
+                                 .IPv4Address
+                                 .split("/")
+                                 .next()
+                                 .unwrap()
+                                 .to_owned());
         }
 
         // Set jump
@@ -414,7 +424,7 @@ fn process_container_to_wider_world(docker: &Docker,
                                     ctww: &ContainerToWiderWorld,
                                     external_network_interface: Option<&String>,
                                     container_map: Option<&Map<String, &Container>>,
-                                    network_map: Option<&Map<String, &Network>>,
+                                    network_map: Option<&Map<String, &NetworkDetails>>,
                                     ipt4: &IPTables,
                                     ipt6: &IPTables)
                                     -> Result<()> {
@@ -455,7 +465,7 @@ fn process_ctww_rules(docker: &Docker,
                       rules: &Vec<ContainerToWiderWorldRule>,
                       external_network_interface: Option<&String>,
                       container_map: &Map<String, &Container>,
-                      network_map: &Map<String, &Network>,
+                      network_map: &Map<String, &NetworkDetails>,
                       ipt4: &IPTables,
                       ipt6: &IPTables)
                       -> Result<()> {
@@ -467,15 +477,23 @@ fn process_ctww_rules(docker: &Docker,
             if let Some(network) = network_map.get(network) {
                 let bridge_name = get_bridge_name(&network.Id)?;
                 ipt_rule.in_interface(bridge_name.to_owned());
-            }
 
-            if let Some(ref src_container) = rule.src_container {
-                if let Some(ref src_network) =
-                    get_network_for_container(src_container, network, docker, &container_map)? {
-                    let bridge_name = get_bridge_name(&src_network.NetworkID)?;
-                    ipt_rule
-                        .in_interface(bridge_name.to_owned())
-                        .source(src_network.IPAddress.to_owned());
+                if let Some(ref src_container) = rule.src_container {
+                    if let Some(src_network) =
+                        get_network_for_container(docker,
+                                                  container_map,
+                                                  &src_container,
+                                                  &network.Id)? {
+                        let bridge_name = get_bridge_name(&network.Id)?;
+                        ipt_rule
+                            .in_interface(bridge_name.to_owned())
+                            .source(src_network
+                                        .IPv4Address
+                                        .split("/")
+                                        .next()
+                                        .unwrap()
+                                        .to_owned());
+                    }
                 }
             }
         }
@@ -510,7 +528,7 @@ fn process_ctww_rules(docker: &Docker,
 fn process_container_to_host(docker: &Docker,
                              cth: &ContainerToHost,
                              container_map: Option<&Map<String, &Container>>,
-                             network_map: Option<&Map<String, &Network>>,
+                             network_map: Option<&Map<String, &NetworkDetails>>,
                              ipt4: &IPTables,
                              ipt6: &IPTables)
                              -> Result<()> {
@@ -547,7 +565,7 @@ fn process_container_to_host(docker: &Docker,
 fn process_cth_rules(docker: &Docker,
                      rules: &Vec<ContainerToHostRule>,
                      container_map: &Map<String, &Container>,
-                     network_map: &Map<String, &Network>,
+                     network_map: &Map<String, &NetworkDetails>,
                      ipt4: &IPTables,
                      ipt6: &IPTables)
                      -> Result<()> {
@@ -555,18 +573,22 @@ fn process_cth_rules(docker: &Docker,
         println!("{:#?}", rule);
         let mut ipt_rule = Rule::default();
 
-        if let Some(network) = network_map.get(&rule.network) {
-            let bridge_name = get_bridge_name(&network.Id)?;
-            ipt_rule.in_interface(bridge_name.to_owned());
-        } else {
-            // Network has to exist
-            continue;
-        }
+        let network = match network_map.get(&rule.network) {
+            Some(network) => network,
+            None => continue,
+        };
+        let bridge_name = get_bridge_name(&network.Id)?;
+        ipt_rule.in_interface(bridge_name.to_owned());
 
         if let Some(ref src_container) = rule.src_container {
-            if let Some(ref src_network) =
-                get_network_for_container(src_container, &rule.network, docker, &container_map)? {
-                ipt_rule.source(src_network.IPAddress.to_owned());
+            if let Some(src_network) =
+                get_network_for_container(docker, container_map, &src_container, &network.Id)? {
+                ipt_rule.source(src_network
+                                    .IPv4Address
+                                    .split("/")
+                                    .next()
+                                    .unwrap()
+                                    .to_owned());
             }
         }
 
@@ -595,7 +617,7 @@ fn process_wider_world_to_container(docker: &Docker,
                                     wwtc: &WiderWorldToContainer,
                                     external_network_interface: Option<&String>,
                                     container_map: Option<&Map<String, &Container>>,
-                                    network_map: Option<&Map<String, &Network>>,
+                                    network_map: Option<&Map<String, &NetworkDetails>>,
                                     ipt4: &IPTables,
                                     ipt6: &IPTables)
                                     -> Result<()> {
@@ -611,17 +633,21 @@ fn process_wider_world_to_container(docker: &Docker,
         let mut ipt_forward_rule = Rule::default();
         let mut ipt_dnat_rule = Rule::default();
 
-        if let Some(network) = network_map.get(&rule.network) {
-            let bridge_name = get_bridge_name(&network.Id)?;
-            ipt_forward_rule.out_interface(bridge_name.to_owned());
-        } else {
-            // Network has to exist
-            continue;
-        }
+        let network = match network_map.get(&rule.network) {
+            Some(network) => network,
+            None => continue,
+        };
+        let bridge_name = get_bridge_name(&network.Id)?;
+        ipt_forward_rule.out_interface(bridge_name.to_owned());
 
-        if let Some(ref dst_network) =
-            get_network_for_container(&rule.dst_container, &rule.network, docker, &container_map)? {
-            ipt_forward_rule.destination(dst_network.IPAddress.to_owned());
+        if let Some(dst_network) =
+            get_network_for_container(docker, container_map, &rule.dst_container, &network.Id)? {
+            ipt_forward_rule.destination(dst_network
+                                             .IPv4Address
+                                             .split("/")
+                                             .next()
+                                             .unwrap()
+                                             .to_owned());
 
             let destination_port = match rule.expose_port.container_port {
                 Some(destination_port) => destination_port.to_string(),
@@ -630,9 +656,8 @@ fn process_wider_world_to_container(docker: &Docker,
             ipt_forward_rule.destination_port(destination_port.to_owned());
             ipt_dnat_rule.destination_port(destination_port.to_owned());
             ipt_dnat_rule.filter(format!("--to-destination {}:{}",
-                                         dst_network.IPAddress,
+                                         dst_network.IPv4Address.split("/").next().unwrap(),
                                          destination_port));
-
         } else {
             // Network for container has to exist
             continue;
@@ -679,7 +704,7 @@ fn process_container_dnat(docker: &Docker,
                           cd: &ContainerDNAT,
                           external_network_interface: Option<&String>,
                           container_map: Option<&Map<String, &Container>>,
-                          network_map: Option<&Map<String, &Network>>,
+                          network_map: Option<&Map<String, &NetworkDetails>>,
                           ipt4: &IPTables,
                           ipt6: &IPTables)
                           -> Result<()> {
@@ -698,37 +723,46 @@ fn process_container_dnat(docker: &Docker,
             if let Some(network) = network_map.get(network) {
                 let bridge_name = get_bridge_name(&network.Id)?;
                 ipt_rule.in_interface(bridge_name.to_owned());
-            }
 
-            if let Some(ref src_container) = rule.src_container {
-                if let Some(ref src_network) =
-                    get_network_for_container(src_container, network, docker, &container_map)? {
-                    let bridge_name = get_bridge_name(&src_network.NetworkID)?;
-                    ipt_rule
-                        .in_interface(bridge_name.to_owned())
-                        .source(src_network.IPAddress.to_owned());
+                if let Some(ref src_container) = rule.src_container {
+                    if let Some(src_network) =
+                        get_network_for_container(docker,
+                                                  container_map,
+                                                  &src_container,
+                                                  &network.Id)? {
+                        let bridge_name = get_bridge_name(&network.Id)?;
+                        ipt_rule
+                            .in_interface(bridge_name.to_owned())
+                            .source(src_network
+                                        .IPv4Address
+                                        .split("/")
+                                        .next()
+                                        .unwrap()
+                                        .to_owned());
+                    }
                 }
             }
         }
 
-        if let Some(ref dst_network) =
-            get_network_for_container(&rule.dst_container,
-                                      &rule.dst_network,
-                                      docker,
-                                      &container_map)? {
-            let destination_port = match rule.expose_port.container_port {
-                Some(destination_port) => destination_port.to_string(),
-                None => rule.expose_port.host_port.to_string(),
-            };
-            ipt_rule.destination_port(destination_port.to_owned());
-            ipt_rule.filter(format!("--to-destination {}:{}",
-                                    dst_network.IPAddress,
-                                    destination_port));
-
-        } else {
-            // Network for container has to exist
-            continue;
-        }
+        let network = match network_map.get(&rule.dst_network) {
+            Some(network) => network,
+            None => continue,
+        };
+        let dst_network = match get_network_for_container(docker,
+                                                          container_map,
+                                                          &rule.dst_container,
+                                                          &network.Id)? {
+            Some(dst_network) => dst_network,
+            None => continue,
+        };
+        let destination_port = match rule.expose_port.container_port {
+            Some(destination_port) => destination_port.to_string(),
+            None => rule.expose_port.host_port.to_string(),
+        };
+        ipt_rule.destination_port(destination_port.to_owned());
+        ipt_rule.filter(format!("--to-destination {}:{}",
+                                dst_network.IPv4Address.split("/").next().unwrap(),
+                                destination_port));
 
         ipt_rule.jump("DNAT".to_owned());
 
@@ -794,22 +828,51 @@ fn get_bridge_name(network_id: &str) -> Result<String> {
     Ok(format!("br-{}", &network_id[..12]))
 }
 
-fn get_network_for_container(container_name: &String,
-                             network_name: &String,
-                             docker: &Docker,
-                             container_map: &Map<String, &Container>)
-                             -> Result<Option<ContainerNetwork>> {
-    // Check if `container_name` exists
-    if !container_map.contains_key(container_name) {
-        return Ok(None);
-    }
-    let container_info = docker
-        .container_info(container_map.get(container_name).unwrap())?;
+fn get_network_for_container(docker: &Docker,
+                             container_map: &Map<String, &Container>,
+                             container_name: &str,
+                             network_id: &str)
+                             -> Result<Option<NetworkContainerDetails>> {
+    Ok(match container_map.get(container_name) {
+           Some(container) => {
+               match docker
+                         .networks()
+                         .get(network_id)
+                         .inspect()?
+                         .Containers
+                         .get(&container.Id) {
+                   Some(network) => Some(network.clone()),
+                   None => None,
+               }
+           }
+           None => None,
+       })
+}
 
-    // Get `ContainerNetwork` which matches the `network_name` for `container_name`
-    let container_networks: Map<String, ContainerNetwork> = container_info.NetworkSettings.Networks;
-    match container_networks.get(network_name) {
-        Some(network) => Ok(Some(network.clone())),
-        None => Ok(None),
+fn get_container_map(containers: &Vec<Container>) -> Result<Option<Map<String, &Container>>> {
+    let mut container_map: Map<String, &Container> = Map::new();
+    for container in containers {
+        for name in &container.Names {
+            container_map.insert(name.clone().trim_left_matches("/").to_owned(), &container);
+        }
+    }
+
+    if container_map.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(container_map))
+    }
+}
+
+fn get_network_map(networks: &Vec<NetworkDetails>) -> Result<Option<Map<String, &NetworkDetails>>> {
+    let mut network_map: Map<String, &NetworkDetails> = Map::new();
+    for network in networks {
+        network_map.insert(network.Name.clone(), &network);
+    }
+
+    if network_map.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(network_map))
     }
 }
