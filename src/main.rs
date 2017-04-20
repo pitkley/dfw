@@ -2,7 +2,6 @@
 #![recursion_limit = "1024"]
 
 // Import external libraries
-extern crate boondock;
 #[macro_use]
 extern crate derive_builder;
 #[macro_use]
@@ -11,11 +10,11 @@ extern crate iptables;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde;
+extern crate shiplift;
 extern crate toml;
 
 // declare modules
 mod dfwrs;
-mod docker;
 mod errors;
 mod types;
 
@@ -23,7 +22,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::io::prelude::*;
 
-use boondock::{ContainerListOptions, Docker};
+use shiplift::Docker;
 
 use errors::*;
 use types::*;
@@ -39,8 +38,8 @@ fn load() -> Result<DFW> {
 
 fn run() -> Result<()> {
     println!("--- CONTAINERS ---");
-    let d = Docker::connect_with_defaults().unwrap();
-    if let Ok(containers) = d.containers(ContainerListOptions::default().all()) {
+    let d = Docker::new();
+    if let Ok(containers) = d.containers().list(&Default::default()) {
         for container in &containers {
             println!("{}: {:?}", container.Id, container.Names);
         }
@@ -48,7 +47,7 @@ fn run() -> Result<()> {
     println!("\n");
 
     println!("--- NETWORKS ---");
-    for network in &(d.networks().unwrap()) {
+    for network in &(d.networks().list(&Default::default()).unwrap()) {
         println!("{}: {}", network.Id, network.Name);
         println!();
     }

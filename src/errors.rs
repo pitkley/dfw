@@ -1,10 +1,7 @@
 
 error_chain! {
-    links {
-        Boondock(::boondock::errors::Error, ::boondock::errors::ErrorKind);
-    }
-
     foreign_links {
+        Docker(::shiplift::errors::Error);
         IPTError(::iptables::error::IPTError);
         Io(::std::io::Error);
         TomlSer(::toml::ser::Error);
