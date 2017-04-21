@@ -1,6 +1,7 @@
 stages:
     - prepare
     - build
+    - package
 
 prepare rust image:
     stage: prepare
@@ -27,18 +28,19 @@ build dynamic binary:
             - Cargo.lock
             - target/release/dfwrs
 
-build static library:
+build static binary:
     stage: build
     tags:
         - rust-cross
     script:
         - cross build --target x86_64-unknown-linux-musl --release
+        - cp target/x86_64-unknown-linux-musl/release/dfwrs dfwrs
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
             - Cargo.toml
             - Cargo.lock
-            - target/x86_64-unknown-linux-musl/release/dfwrs
+            - dfwrs
 
 rustfmt:
     stage: build
@@ -48,4 +50,15 @@ rustfmt:
     script:
         - cargo fmt -- --write-mode diff
     allow_failure: true
+
+package image:
+    stage: package
+    tags:
+        - docker-available
+    dependencies:
+        - build static binary
+    script:
+        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+        - docker build -t $CI_REGISTRY_IMAGE .
+        - docker push $CI_REGISTRY_IMAGE
 
