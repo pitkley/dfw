@@ -3,6 +3,8 @@
 
 // Import external libraries
 #[macro_use]
+extern crate clap;
+#[macro_use]
 extern crate derive_builder;
 #[macro_use]
 extern crate error_chain;
@@ -12,6 +14,7 @@ extern crate serde_derive;
 extern crate serde;
 extern crate shiplift;
 extern crate toml;
+extern crate url;
 
 // declare modules
 mod dfwrs;
@@ -22,54 +25,63 @@ use std::fs::File;
 use std::io::BufReader;
 use std::io::prelude::*;
 
+use clap::{App, Arg};
+use serde::Deserialize;
 use shiplift::Docker;
 
 use errors::*;
 use types::*;
 
-fn load() -> Result<DFW> {
-    // TODO: make filename configurable
-    let mut file = BufReader::new(File::open("conf.toml")?);
+fn load<T>(filepath: &str) -> Result<T>
+    where T: Deserialize
+{
+    let mut file = BufReader::new(File::open(filepath)?);
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
 
-    Ok(toml::from_str::<DFW>(&contents)?)
+    Ok(toml::from_str::<T>(&contents)?)
 }
 
 fn run() -> Result<()> {
-    println!("--- CONTAINERS ---");
-    let d = Docker::new();
-    if let Ok(containers) = d.containers().list(&Default::default()) {
-        for container in &containers {
-            println!("{}: {:?}", container.Id, container.Names);
-        }
-    }
-    println!("\n");
+    let matches = App::new("dfwrs")
+        .version(crate_version!())
+        .author(crate_authors!())
+        .about("Docker Firewall Framework, in Rust")
+        .arg(Arg::with_name("config-file")
+                 .takes_value(true)
+                 .short("c")
+                 .long("config-file")
+                 .value_name("FILE")
+                 .help("Set the configuration file"))
+        //.arg(Arg::with_name("config-path")
+        //         .takes_value(true)
+        //         .long("config-path")
+        //         .value_name("PATH")
+        //         .help("Set a path with multiple TOML configuration files"))
+        //.group(ArgGroup::with_name("config")
+        //           .args(&["config-file", "config-path"])
+        //           .multiple(false)
+        //           .required(true))
+        .arg(Arg::with_name("docker-url")
+                 .takes_value(true)
+                 .short("d")
+                 .long("docker-url")
+                 .value_name("URL")
+                 .help("Set the url to the Docker instance (e.g. unix:///tmp/docker.sock)"))
+        .get_matches();
+    println!("{:#?}", matches);
 
-    println!("--- NETWORKS ---");
-    for network in &(d.networks().list(&Default::default()).unwrap()) {
-        println!("{}: {}", network.Id, network.Name);
-        println!();
-    }
+    let docker = match matches.value_of("docker-url") {
+        Some(docker_url) => Docker::host(docker_url.parse()?),
+        None => Docker::new(),
+    };
 
-    println!("--- TOML ---");
-    let toml: DFW = load()?;
-    println!("{:#?}", toml);
-    println!();
-
-    println!("--- IPTABLES ---");
+    let config_file = matches.value_of("config-file").unwrap();
+    let toml: DFW = load(config_file)?;
     let ipt4 = iptables::new(false).unwrap();
     let ipt6 = iptables::new(true).unwrap();
-    println!("4: {}, 6: {}", ipt4.cmd, ipt6.cmd);
 
-    let chains: Vec<String> = ipt4.list_chains("filter")?;
-    for chain in &chains {
-        println!("chain: {}", chain);
-    }
-
-    println!("--- PROCESS ---");
-    let res: () = dfwrs::process(&d, &toml, &ipt4, &ipt6)?;
-    println!("{:?}", res);
+    dfwrs::process(&docker, &toml, &ipt4, &ipt6)?;
 
     Ok(())
 }

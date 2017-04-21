@@ -4,6 +4,7 @@ error_chain! {
         Docker(::shiplift::errors::Error);
         IPTError(::iptables::error::IPTError);
         Io(::std::io::Error);
+        ParseError(::url::ParseError);
         TomlSer(::toml::ser::Error);
         TomlDe(::toml::de::Error);
     }
