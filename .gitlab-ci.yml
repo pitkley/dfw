@@ -3,6 +3,11 @@ stages:
     - build
     - package
 
+cache:
+    key: "$CI_JOB_NAME"
+    paths:
+        - target/
+
 prepare rust image:
     stage: prepare
     tags:
