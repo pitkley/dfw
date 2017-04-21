@@ -1,3 +1,4 @@
+[defaults]
 external_network_interface = "ens3"
 
 [initialization.v4]

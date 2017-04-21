@@ -201,6 +201,10 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
                 &format!("-j {}", DFWRS_POSTROUTING_CHAIN))?;
     // TODO: verify what is needed for ipt6
 
+    let external_network_interface = dfw.defaults
+        .as_ref()
+        .and_then(|d| d.external_network_interface.clone());
+
     println!("\n\n==> process_container_to_container\n");
     if let Some(ref ctc) = dfw.container_to_container {
         process_container_to_container(docker,
@@ -214,7 +218,7 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
     if let Some(ref ctww) = dfw.container_to_wider_world {
         process_container_to_wider_world(docker,
                                          ctww,
-                                         dfw.external_network_interface.as_ref(),
+                                         external_network_interface.as_ref(),
                                          container_map.as_ref(),
                                          network_map.as_ref(),
                                          ipt4,
@@ -233,7 +237,7 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
     if let Some(ref wwtc) = dfw.wider_world_to_container {
         process_wider_world_to_container(docker,
                                          wwtc,
-                                         dfw.external_network_interface.as_ref(),
+                                         external_network_interface.as_ref(),
                                          container_map.as_ref(),
                                          network_map.as_ref(),
                                          ipt4,
@@ -243,14 +247,14 @@ pub fn process(docker: &Docker, dfw: &DFW, ipt4: &IPTables, ipt6: &IPTables) -> 
     if let Some(ref cd) = dfw.container_dnat {
         process_container_dnat(docker,
                                cd,
-                               dfw.external_network_interface.as_ref(),
+                               external_network_interface.as_ref(),
                                container_map.as_ref(),
                                network_map.as_ref(),
                                ipt4,
                                ipt6)?;
     }
 
-    if let Some(ref external_network_interface) = dfw.external_network_interface {
+    if let Some(external_network_interface) = external_network_interface {
         // Add accept rules for Docker bridge
         if let Some(network_map) = network_map {
             if let Some(bridge_network) = network_map.get("bridge") {
