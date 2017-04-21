@@ -8,13 +8,19 @@ use serde::de::{self, Deserialize, Deserializer};
 #[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct DFW {
-    pub external_network_interface: Option<String>,
+    pub defaults: Option<Defaults>,
     pub initialization: Option<Initialization>,
     pub container_to_container: Option<ContainerToContainer>,
     pub container_to_wider_world: Option<ContainerToWiderWorld>,
     pub container_to_host: Option<ContainerToHost>,
     pub wider_world_to_container: Option<WiderWorldToContainer>,
     pub container_dnat: Option<ContainerDNAT>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct Defaults {
+    pub external_network_interface: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
