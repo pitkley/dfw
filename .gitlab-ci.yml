@@ -51,12 +51,28 @@ rustfmt:
         - cargo fmt -- --write-mode diff
     allow_failure: true
 
-package image:
+package image for feature-branch:
     stage: package
     tags:
         - docker-available
     dependencies:
         - build static binary
+    only:
+        - branches
+    except:
+        - master
+    script:
+        - docker build -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}" .
+        - docker image rm "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}"
+
+package and push image on master:
+    stage: package
+    tags:
+        - docker-available
+    dependencies:
+        - build static binary
+    only:
+        - master
     script:
         - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
         - docker build -t $CI_REGISTRY_IMAGE .
