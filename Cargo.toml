@@ -1,6 +1,6 @@
 [package]
 name = "dfwrs"
-version = "0.1.0"
+version = "0.1.1-pre"
 authors = ["Pit Kleyersburg <pitkley@googlemail.com>"]
 
 [dependencies]
