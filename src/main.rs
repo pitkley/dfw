@@ -125,8 +125,8 @@ fn run() -> Result<()> {
     let ipt4 = iptables::new(false)?;
     let ipt6 = iptables::new(true)?;
 
-    let load_interval: u64 = matches.value_of("load-interval").unwrap().parse()?;
-    let load_interval = chan::tick(Duration::from_secs(load_interval));
+    let load_interval =
+        chan::tick(Duration::from_secs(value_t!(matches.value_of("load-interval"), u64)?));
 
     let process = || dfwrs::process(&docker, &toml, &ipt4, &ipt6);
 
