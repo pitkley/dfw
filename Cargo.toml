@@ -4,6 +4,8 @@ version = "0.0.1"
 authors = ["Pit Kleyersburg <pitkley@googlemail.com>"]
 
 [dependencies]
+chan = "~0.1.19"
+chan-signal = "~0.2.0"
 clap = "~2.23.3"
 derive_builder = "~0.4.2"
 error-chain = "~0.10.0"
