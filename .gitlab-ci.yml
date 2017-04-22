@@ -66,6 +66,7 @@ package image for feature-branch:
         - branches
     except:
         - master
+        - develop
     script:
         - docker build -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}" .
         - docker image rm "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}"
