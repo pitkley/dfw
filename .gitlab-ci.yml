@@ -70,6 +70,32 @@ package image for feature-branch:
         - docker build -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}" .
         - docker image rm "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}"
 
+package and push image for tags:
+    stage: package
+    tags:
+        - docker-available
+    dependencies:
+        - build static binary
+    only:
+        - tags
+    script:
+        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+        - docker build -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}" .
+        - docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}"
+
+package and push image on develop:
+    stage: package
+    tags:
+        - docker-available
+    dependencies:
+        - build static binary
+    only:
+        - develop
+    script:
+        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+        - docker build -t "${CI_REGISTRY_IMAGE}:develop" .
+        - docker push "${CI_REGISTRY_IMAGE}:develop"
+
 package and push image on master:
     stage: package
     tags:
