@@ -31,11 +31,13 @@ use std::io::BufReader;
 use std::io::prelude::*;
 use std::time::Duration;
 
+use chan::Sender;
 use chan_signal::Signal;
 use clap::{App, Arg, ArgGroup, ArgMatches};
 use glob::glob;
 use serde::Deserialize;
 use shiplift::Docker;
+use shiplift::builder::{EventFilter, EventFilterType, EventsOptions};
 
 use errors::*;
 use types::*;
@@ -88,6 +90,38 @@ fn load_config(matches: &ArgMatches) -> Result<DFW> {
     };
 
     Ok(toml)
+}
+
+fn spawn_event_monitor(docker_url: Option<String>, s_event: Sender<()>) {
+    ::std::thread::spawn(move || {
+        let docker = match docker_url {
+            Some(docker_url) => Docker::host(docker_url.parse().unwrap()),
+            None => Docker::new(),
+        };
+        loop {
+            println!("waiting for events");
+            for event in
+                docker
+                    .events(&EventsOptions::builder()
+                                 .filter(vec![EventFilter::Type(EventFilterType::Container)])
+                                 .build())
+                    .unwrap() {
+                println!("got event: '{:?}'", event);
+                match event.status {
+                    Some(status) => {
+                        match &*status {
+                            "create" | "destroy" | "start" | "restart" | "die" | "stop" => {
+                                s_event.send(());
+                                break;
+                            }
+                            _ => continue,
+                        }
+                    }
+                    None => continue,
+                }
+            }
+        }
+    });
 }
 
 fn run() -> Result<()> {
@@ -170,10 +204,19 @@ fn run() -> Result<()> {
     // Initial processing
     process()?;
 
+    // Setup event monitor
+    let (s_event, r_event) = chan::sync(0);
+    let docker_url = matches.value_of("docker-url").map(|s| s.to_owned());
+    spawn_event_monitor(docker_url, s_event);
+
     loop {
         chan_select! {
             load_interval.recv() => {
                 println!("load interval");
+                process()?;
+            },
+            r_event.recv() => {
+                println!("received event trigger");
                 process()?;
             },
             signal.recv() -> signal => {

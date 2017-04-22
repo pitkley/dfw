@@ -5,6 +5,8 @@ use std::str::FromStr;
 
 use serde::de::{self, Deserialize, Deserializer};
 
+const DEFAULT_PROTOCOL: &'static str = "tcp";
+
 #[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct DFW {
@@ -103,8 +105,6 @@ pub struct ExposePort {
     #[builder(default="self.default_container_port()?")]
     pub container_port: Option<u16>,
 
-    // TODO: find better way to use same default for both deserializing and building
-    // maybe just a constant?
     #[serde(default = "default_expose_port_family")]
     #[builder(default = "self.default_family()?")]
     pub family: String,
@@ -116,7 +116,7 @@ impl ExposePortBuilder {
     }
 
     fn default_family(&self) -> Result<String, String> {
-        Ok("tcp".to_owned())
+        Ok(DEFAULT_PROTOCOL.to_owned())
     }
 }
 
@@ -162,7 +162,7 @@ pub struct ContainerDNATRule {
 }
 
 fn default_expose_port_family() -> String {
-    "tcp".to_owned()
+    DEFAULT_PROTOCOL.to_owned()
 }
 
 fn string_or_struct<T, D>(d: D) -> Result<T, D::Error>
