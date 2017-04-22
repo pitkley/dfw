@@ -3,6 +3,9 @@
 
 // Import external libraries
 #[macro_use]
+extern crate chan;
+extern crate chan_signal;
+#[macro_use]
 extern crate clap;
 #[macro_use]
 extern crate derive_builder;
@@ -25,7 +28,9 @@ mod types;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::prelude::*;
+use std::time::Duration;
 
+use chan_signal::Signal;
 use clap::{App, Arg, ArgGroup};
 use glob::glob;
 use serde::Deserialize;
@@ -62,6 +67,9 @@ fn load_path<T>(path: &str) -> Result<T>
 }
 
 fn run() -> Result<()> {
+    // Signals should be set up as early as possible, to set proper signal masks to all threads
+    let signal = chan_signal::notify(&[Signal::INT, Signal::TERM, Signal::HUP]);
+
     let matches = App::new("dfwrs")
         .version(crate_version!())
         .author(crate_authors!())
@@ -87,6 +95,13 @@ fn run() -> Result<()> {
                  .long("docker-url")
                  .value_name("URL")
                  .help("Set the url to the Docker instance (e.g. unix:///tmp/docker.sock)"))
+        .arg(Arg::with_name("load-interval")
+                 .takes_value(true)
+                 .default_value("15")
+                 .short("i")
+                 .long("load-interval")
+                 .value_name("INTERVAL")
+                 .help("Interval between rule processing runs, in seconds"))
         .get_matches();
     println!("{:#?}", matches);
 
@@ -108,7 +123,34 @@ fn run() -> Result<()> {
     let ipt4 = iptables::new(false).unwrap();
     let ipt6 = iptables::new(true).unwrap();
 
-    dfwrs::process(&docker, &toml, &ipt4, &ipt6)?;
+    let load_interval: u64 = matches.value_of("load-interval").unwrap().parse()?;
+    let load_interval = chan::tick(Duration::from_secs(load_interval));
+
+    let process = || dfwrs::process(&docker, &toml, &ipt4, &ipt6);
+
+    // Initial processing
+    process()?;
+
+    loop {
+        chan_select! {
+            load_interval.recv() => {
+                println!("load interval");
+                process()?;
+            },
+            signal.recv() -> signal => {
+                match signal {
+                    Some(Signal::INT) | Some(Signal::TERM) => {
+                        break;
+                    }
+                    Some(Signal::HUP) => {
+                        process()?;
+                    }
+                    Some(_) => { bail!("got unexpected signal '{:?}'", signal); }
+                    None => { bail!("signal was empty"); }
+                }
+            }
+        }
+    }
 
     Ok(())
 }
