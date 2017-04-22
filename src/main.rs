@@ -120,8 +120,8 @@ fn run() -> Result<()> {
         // If we reach this anyway, bail.
         bail!("neither config-file nor config-path specified");
     };
-    let ipt4 = iptables::new(false).unwrap();
-    let ipt6 = iptables::new(true).unwrap();
+    let ipt4 = iptables::new(false)?;
+    let ipt6 = iptables::new(true)?;
 
     let load_interval: u64 = matches.value_of("load-interval").unwrap().parse()?;
     let load_interval = chan::tick(Duration::from_secs(load_interval));
