@@ -109,6 +109,8 @@ fn run() -> Result<()> {
         Some(docker_url) => Docker::host(docker_url.parse()?),
         None => Docker::new(),
     };
+    // Check if the docker instance is reachable
+    docker.ping()?;
 
     let toml: DFW = if matches.is_present("config-file") {
         load_file(matches.value_of("config-file").unwrap())?
