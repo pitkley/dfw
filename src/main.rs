@@ -25,19 +25,28 @@ mod dfwrs;
 mod errors;
 mod types;
 
+use std::ascii::AsciiExt;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::prelude::*;
 use std::time::Duration;
 
 use chan_signal::Signal;
-use clap::{App, Arg, ArgGroup};
+use clap::{App, Arg, ArgGroup, ArgMatches};
 use glob::glob;
 use serde::Deserialize;
 use shiplift::Docker;
 
 use errors::*;
 use types::*;
+
+arg_enum! {
+    #[derive(Debug)]
+    pub enum LoadMode {
+        Once,
+        Always
+    }
+}
 
 fn load_file<T>(file: &str) -> Result<T>
     where T: Deserialize
@@ -64,6 +73,21 @@ fn load_path<T>(path: &str) -> Result<T>
     }
 
     Ok(toml::from_str(&contents)?)
+}
+
+fn load_config(matches: &ArgMatches) -> Result<DFW> {
+    let toml: DFW = if matches.is_present("config-file") {
+        load_file(matches.value_of("config-file").unwrap())?
+    } else if matches.is_present("config-path") {
+        load_path(matches.value_of("config-path").unwrap())?
+    } else {
+        // This statement should be unreachable, since clap verifies that either config-file or
+        // config-path is populated.
+        // If we reach this anyway, bail.
+        bail!("neither config-file nor config-path specified");
+    };
+
+    Ok(toml)
 }
 
 fn run() -> Result<()> {
@@ -102,6 +126,19 @@ fn run() -> Result<()> {
                  .long("load-interval")
                  .value_name("INTERVAL")
                  .help("Interval between rule processing runs, in seconds"))
+        .arg(Arg::with_name("load-mode")
+                 .takes_value(true)
+                 .short("m")
+                 .long("load-mode")
+                 .possible_values(LoadMode::variants()
+                                      .iter()
+                                      .map(|s| s.to_ascii_lowercase())
+                                      .collect::<Vec<_>>()
+                                      .iter()
+                                      .map(|s| &**s)
+                                      .collect::<Vec<_>>()
+                                      .as_slice())
+                 .default_value("once"))
         .get_matches();
     println!("{:#?}", matches);
 
@@ -112,23 +149,23 @@ fn run() -> Result<()> {
     // Check if the docker instance is reachable
     docker.ping()?;
 
-    let toml: DFW = if matches.is_present("config-file") {
-        load_file(matches.value_of("config-file").unwrap())?
-    } else if matches.is_present("config-path") {
-        load_path(matches.value_of("config-path").unwrap())?
-    } else {
-        // This statement should be unreachable, since clap verifies that either config-file or
-        // config-path is populated.
-        // If we reach this anyway, bail.
-        bail!("neither config-file nor config-path specified");
-    };
     let ipt4 = iptables::new(false)?;
     let ipt6 = iptables::new(true)?;
 
     let load_interval =
         chan::tick(Duration::from_secs(value_t!(matches.value_of("load-interval"), u64)?));
 
-    let process = || dfwrs::process(&docker, &toml, &ipt4, &ipt6);
+    let toml = load_config(&matches)?;
+    let process: Box<Fn() -> Result<()>> = match value_t!(matches.value_of("load-mode"),
+                                                          LoadMode)? {
+        LoadMode::Once => Box::new(|| dfwrs::process(&docker, &toml, &ipt4, &ipt6)),
+        LoadMode::Always => {
+            Box::new(|| {
+                         let toml = load_config(&matches)?;
+                         dfwrs::process(&docker, &toml, &ipt4, &ipt6)
+                     })
+        }
+    };
 
     // Initial processing
     process()?;
