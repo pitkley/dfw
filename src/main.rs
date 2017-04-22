@@ -108,14 +108,16 @@ fn spawn_event_monitor(docker_url: Option<String>, s_event: Sender<()>) {
                     .unwrap() {
                 println!("got event: '{:?}'", event);
                 match event.status {
-                    Some(status) => match &*status {
-                        "create" | "destroy" | "start" | "restart" | "die" | "stop" => {
-                            s_event.send(());
-                            break;
+                    Some(status) => {
+                        match &*status {
+                            "create" | "destroy" | "start" | "restart" | "die" | "stop" => {
+                                s_event.send(());
+                                break;
+                            }
+                            _ => continue,
                         }
-                        _ => continue
-                    },
-                    None => continue
+                    }
+                    None => continue,
                 }
             }
         }
