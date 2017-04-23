@@ -222,6 +222,11 @@ fn run() -> Result<()> {
                  .value_name("TIMEOUT")
                  .help("Time to wait after a event was received before processing the rules, in \
                         milliseconds"))
+        .arg(Arg::with_name("disable-event-monitoring")
+                 .takes_value(false)
+                 .long("--disable-event-monitoring")
+                 .help("Disable Docker event monitoring. Use in conjunction with \
+                        `--load-interval 0` to process rules once, then exit."))
         .get_matches();
     println!("{:#?}", matches);
 
@@ -236,7 +241,8 @@ fn run() -> Result<()> {
     let ipt6 = iptables::new(true)?;
 
     // Create a dummy channel
-    let load_interval = {
+    let load_interval = value_t!(matches.value_of("load-interval"), u64)?;
+    let load_interval_chan = {
         let load_interval = value_t!(matches.value_of("load-interval"), u64)?;
 
         if load_interval > 0 {
@@ -252,6 +258,7 @@ fn run() -> Result<()> {
             r_dummy
         }
     };
+    let monitor_events = !matches.is_present("disable-event-monitoring");
 
     let toml = load_config(&matches)?;
     let process: Box<Fn() -> Result<()>> = match value_t!(matches.value_of("load-mode"),
@@ -268,21 +275,35 @@ fn run() -> Result<()> {
     // Initial processing
     process()?;
 
-    // Setup event monitor
-    let (s_trigger, r_trigger) = chan::sync(0);
-    let (s_event, r_event) = chan::sync(0);
-    let docker_url = matches.value_of("docker-url").map(|s| s.to_owned());
-    let burst_timeout = value_t!(matches.value_of("burst-timeout"), u64)?;
-    spawn_burst_monitor(burst_timeout, s_trigger, r_event);
-    spawn_event_monitor(docker_url, s_event);
+    if !monitor_events && load_interval <= 0 {
+        // Events are not monitored and rules aren't processed regularly -- process once, exit.
+        ::std::process::exit(0);
+    }
+
+    let event_trigger = if monitor_events {
+        // Setup event monitoring
+        let (s_trigger, r_trigger) = chan::sync(0);
+        let (s_event, r_event) = chan::sync(0);
+        let docker_url = matches.value_of("docker-url").map(|s| s.to_owned());
+        let burst_timeout = value_t!(matches.value_of("burst-timeout"), u64)?;
+        spawn_burst_monitor(burst_timeout, s_trigger, r_event);
+        spawn_event_monitor(docker_url, s_event);
+
+        r_trigger
+    } else {
+        let (s_dummy, r_dummy) = chan::sync(0);
+        // Leak the send-channel so that it never gets closed and `recv` never synchronizes.
+        ::std::mem::forget(s_dummy);
+        r_dummy
+    };
 
     loop {
         chan_select! {
-            load_interval.recv() => {
+            load_interval_chan.recv() => {
                 println!("load interval");
                 process()?;
             },
-            r_trigger.recv() => {
+            event_trigger.recv() => {
                 println!("received event trigger");
                 process()?;
             },
