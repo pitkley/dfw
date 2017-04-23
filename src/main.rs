@@ -155,7 +155,7 @@ fn run() -> Result<()> {
                  .help("Set the url to the Docker instance (e.g. unix:///tmp/docker.sock)"))
         .arg(Arg::with_name("load-interval")
                  .takes_value(true)
-                 .default_value("15")
+                 .default_value("0")
                  .short("i")
                  .long("load-interval")
                  .value_name("INTERVAL")
