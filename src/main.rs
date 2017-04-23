@@ -31,7 +31,7 @@ use std::io::BufReader;
 use std::io::prelude::*;
 use std::time::Duration;
 
-use chan::Sender;
+use chan::{Receiver, Sender};
 use chan_signal::Signal;
 use clap::{App, Arg, ArgGroup, ArgMatches};
 use glob::glob;
@@ -90,6 +90,48 @@ fn load_config(matches: &ArgMatches) -> Result<DFW> {
     };
 
     Ok(toml)
+}
+
+fn spawn_burst_monitor(burst_timeout: u64, s_trigger: Sender<()>, r_event: Receiver<()>) {
+    enum Trigger {
+        Event,
+        After,
+        None,
+    }
+    ::std::thread::spawn(move || {
+        let dummy: Receiver<()> = {
+            let (s_dummy, r_dummy) = chan::sync(0);
+            // Leak the send-channel so that it never gets closed and `recv` never synchronizes.
+            ::std::mem::forget(s_dummy);
+            r_dummy
+        };
+        let mut after: Receiver<()> = dummy.clone();
+
+        loop {
+            // The `unused_assignments` warning for the following variable is wrong, since
+            // `trigger` is read at the match-statement.
+            // Maybe related to:
+            //   https://github.com/rust-lang/rfcs/issues/1710
+            #[allow(unused_assignments)]
+            let mut trigger: Trigger = Trigger::None;
+
+            chan_select! {
+                r_event.recv() => {
+                    trigger = Trigger::Event;
+                },
+                after.recv() => {
+                    trigger = Trigger::After;
+                    s_trigger.send(());
+                }
+            }
+
+            match trigger {
+                Trigger::Event => after = chan::after(Duration::from_millis(burst_timeout)),
+                Trigger::After => after = dummy.clone(),
+                Trigger::None => {}
+            }
+        }
+    });
 }
 
 fn spawn_event_monitor(docker_url: Option<String>, s_event: Sender<()>) {
@@ -173,6 +215,13 @@ fn run() -> Result<()> {
                                       .collect::<Vec<_>>()
                                       .as_slice())
                  .default_value("once"))
+        .arg(Arg::with_name("burst-timeout")
+                 .takes_value(true)
+                 .default_value("500")
+                 .long("burst-timeout")
+                 .value_name("TIMEOUT")
+                 .help("Time to wait after a event was received before processing the rules, in \
+                        milliseconds"))
         .get_matches();
     println!("{:#?}", matches);
 
@@ -187,7 +236,6 @@ fn run() -> Result<()> {
     let ipt6 = iptables::new(true)?;
 
     // Create a dummy channel
-    let (_s_dummy, r_dummy) = chan::sync(0);
     let load_interval = {
         let load_interval = value_t!(matches.value_of("load-interval"), u64)?;
 
@@ -197,6 +245,10 @@ fn run() -> Result<()> {
         } else {
             // Otherwise we use the dummy channel, which will never send and thus never receive any
             // messages to circumvent having multiple `chan_select!`s below.
+            let (s_dummy, r_dummy) = chan::sync(0);
+            // Leak the send-channel so that it never gets closed and `recv` never synchronizes.
+            ::std::mem::forget(s_dummy);
+
             r_dummy
         }
     };
@@ -217,8 +269,11 @@ fn run() -> Result<()> {
     process()?;
 
     // Setup event monitor
+    let (s_trigger, r_trigger) = chan::sync(0);
     let (s_event, r_event) = chan::sync(0);
     let docker_url = matches.value_of("docker-url").map(|s| s.to_owned());
+    let burst_timeout = value_t!(matches.value_of("burst-timeout"), u64)?;
+    spawn_burst_monitor(burst_timeout, s_trigger, r_event);
     spawn_event_monitor(docker_url, s_event);
 
     loop {
@@ -227,7 +282,7 @@ fn run() -> Result<()> {
                 println!("load interval");
                 process()?;
             },
-            r_event.recv() => {
+            r_trigger.recv() => {
                 println!("received event trigger");
                 process()?;
             },
