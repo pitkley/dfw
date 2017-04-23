@@ -159,7 +159,7 @@ fn run() -> Result<()> {
                  .short("i")
                  .long("load-interval")
                  .value_name("INTERVAL")
-                 .help("Interval between rule processing runs, in seconds"))
+                 .help("Interval between rule processing runs, in seconds (0 = disabled)"))
         .arg(Arg::with_name("load-mode")
                  .takes_value(true)
                  .short("m")
@@ -186,8 +186,20 @@ fn run() -> Result<()> {
     let ipt4 = iptables::new(false)?;
     let ipt6 = iptables::new(true)?;
 
-    let load_interval =
-        chan::tick(Duration::from_secs(value_t!(matches.value_of("load-interval"), u64)?));
+    // Create a dummy channel
+    let (_s_dummy, r_dummy) = chan::sync(0);
+    let load_interval = {
+        let load_interval = value_t!(matches.value_of("load-interval"), u64)?;
+
+        if load_interval > 0 {
+            // If the load interval is greater than zero, we use a tick-channel
+            chan::tick(Duration::from_secs(load_interval))
+        } else {
+            // Otherwise we use the dummy channel, which will never send and thus never receive any
+            // messages to circumvent having multiple `chan_select!`s below.
+            r_dummy
+        }
+    };
 
     let toml = load_config(&matches)?;
     let process: Box<Fn() -> Result<()>> = match value_t!(matches.value_of("load-mode"),
