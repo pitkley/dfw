@@ -175,17 +175,19 @@ pub struct ProcessDFW<'a> {
     dfw: &'a DFW,
     ipt4: IPTables,
     ipt6: IPTables,
-    container_map: Option<Map<String, Container>>,
-    network_map: Option<Map<String, NetworkDetails>>,
+    container_map: Map<String, Container>,
+    network_map: Map<String, NetworkDetails>,
     external_network_interface: Option<String>,
 }
 
 impl<'a> ProcessDFW<'a> {
     pub fn new(docker: &'a Docker, dfw: &'a DFW) -> Result<ProcessDFW<'a>> {
         let containers = docker.containers().list(&Default::default())?;
-        let container_map = get_container_map(&containers)?;
+        let container_map = get_container_map(&containers)?
+            .ok_or_else(|| "no containers found")?;
         let networks = docker.networks().list(&Default::default())?;
-        let network_map = get_network_map(&networks)?;
+        let network_map = get_network_map(&networks)?
+            .ok_or_else(|| "no networks found")?;
 
         let external_network_interface = dfw.defaults
             .as_ref()
@@ -261,33 +263,31 @@ impl<'a> ProcessDFW<'a> {
 
         if let Some(external_network_interface) = external_network_interface {
             // Add accept rules for Docker bridge
-            if let Some(ref network_map) = self.network_map {
-                if let Some(bridge_network) = network_map.get("bridge") {
-                    if let Some(bridge_name) =
-                        bridge_network
-                            .Options
-                            .as_ref()
-                            .ok_or("error")?
-                            .get("com.docker.network.bridge.name") {
-                        println!("bridge_name: {}", bridge_name);
-                        let rule_str = Rule::default()
-                            .in_interface(bridge_name.to_owned())
-                            .out_interface(external_network_interface.to_owned())
-                            .jump("ACCEPT".to_owned())
-                            .build()?;
-                        println!("accept-rule: {}", rule_str);
-                        self.ipt4
-                            .append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
-                        // TODO: verify what is needed for ipt6
+            if let Some(bridge_network) = self.network_map.get("bridge") {
+                if let Some(bridge_name) =
+                    bridge_network
+                        .Options
+                        .as_ref()
+                        .ok_or("error")?
+                        .get("com.docker.network.bridge.name") {
+                    println!("bridge_name: {}", bridge_name);
+                    let rule_str = Rule::default()
+                        .in_interface(bridge_name.to_owned())
+                        .out_interface(external_network_interface.to_owned())
+                        .jump("ACCEPT".to_owned())
+                        .build()?;
+                    println!("accept-rule: {}", rule_str);
+                    self.ipt4
+                        .append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
+                    // TODO: verify what is needed for ipt6
 
-                        let rule_str = Rule::default()
-                            .in_interface(bridge_name.to_owned())
-                            .jump("ACCEPT".to_owned())
-                            .build()?;
-                        self.ipt4
-                            .append("filter", DFWRS_INPUT_CHAIN, &rule_str)?;
-                        // TODO: verify what is needed for ipt6
-                    }
+                    let rule_str = Rule::default()
+                        .in_interface(bridge_name.to_owned())
+                        .jump("ACCEPT".to_owned())
+                        .build()?;
+                    self.ipt4
+                        .append("filter", DFWRS_INPUT_CHAIN, &rule_str)?;
+                    // TODO: verify what is needed for ipt6
                 }
             }
 
@@ -340,7 +340,7 @@ impl<'a> ProcessDFW<'a> {
     }
 
     fn process_container_to_container(&self, ctc: &ContainerToContainer) -> Result<()> {
-        if ctc.rules.is_some() && self.container_map.is_some() && self.network_map.is_some() {
+        if ctc.rules.is_some() {
             self.process_ctc_rules(ctc.rules.as_ref().unwrap())?;
         }
 
@@ -348,14 +348,11 @@ impl<'a> ProcessDFW<'a> {
     }
 
     fn process_ctc_rules(&self, rules: &Vec<ContainerToContainerRule>) -> Result<()> {
-        let container_map = self.container_map.as_ref().unwrap();
-        let network_map = self.network_map.as_ref().unwrap();
-
         for rule in rules {
             println!("{:#?}", rule);
             let mut ipt_rule = Rule::default();
 
-            let network = match network_map.get(&rule.network) {
+            let network = match self.network_map.get(&rule.network) {
                 Some(network) => network,
                 None => continue,
             };
@@ -366,7 +363,7 @@ impl<'a> ProcessDFW<'a> {
 
             if let Some(ref src_container) = rule.src_container {
                 let src_network = match get_network_for_container(&self.docker,
-                                                                  &container_map,
+                                                                  &self.container_map,
                                                                   &src_container,
                                                                   &network.Id)? {
                     Some(src_network) => src_network,
@@ -387,7 +384,7 @@ impl<'a> ProcessDFW<'a> {
 
             if let Some(ref dst_container) = rule.dst_container {
                 let dst_network = match get_network_for_container(&self.docker,
-                                                                  &container_map,
+                                                                  &self.container_map,
                                                                   &dst_container,
                                                                   &network.Id)? {
                     Some(dst_network) => dst_network,
@@ -422,16 +419,15 @@ impl<'a> ProcessDFW<'a> {
 
     fn process_container_to_wider_world(&self, ctww: &ContainerToWiderWorld) -> Result<()> {
         // Rules
-        if ctww.rules.is_some() && self.container_map.is_some() && self.network_map.is_some() {
+        if ctww.rules.is_some() {
             self.process_ctww_rules(ctww.rules.as_ref().unwrap())?;
         }
 
         // Default policy
-        if self.network_map.is_some() && self.external_network_interface.is_some() {
-            let network_map = self.network_map.as_ref().unwrap();
+        if self.external_network_interface.is_some() {
             let external_network_interface = self.external_network_interface.as_ref().unwrap();
 
-            for (_, network) in network_map {
+            for (_, network) in &self.network_map {
                 let bridge_name = get_bridge_name(&network.Id)?;
                 let rule = Rule::default()
                     .in_interface(bridge_name)
@@ -449,22 +445,19 @@ impl<'a> ProcessDFW<'a> {
     }
 
     fn process_ctww_rules(&self, rules: &Vec<ContainerToWiderWorldRule>) -> Result<()> {
-        let container_map = self.container_map.as_ref().unwrap();
-        let network_map = self.network_map.as_ref().unwrap();
-
         for rule in rules {
             println!("{:#?}", rule);
             let mut ipt_rule = Rule::default();
 
             if let Some(ref network) = rule.network {
-                if let Some(network) = network_map.get(network) {
+                if let Some(network) = self.network_map.get(network) {
                     let bridge_name = get_bridge_name(&network.Id)?;
                     ipt_rule.in_interface(bridge_name.to_owned());
 
                     if let Some(ref src_container) = rule.src_container {
                         if let Some(src_network) =
                             get_network_for_container(&self.docker,
-                                                      &container_map,
+                                                      &self.container_map,
                                                       &src_container,
                                                       &network.Id)? {
                             let bridge_name = get_bridge_name(&network.Id)?;
@@ -511,39 +504,32 @@ impl<'a> ProcessDFW<'a> {
 
     fn process_container_to_host(&self, cth: &ContainerToHost) -> Result<()> {
         // Rules
-        if cth.rules.is_some() && self.container_map.is_some() && self.network_map.is_some() {
+        if cth.rules.is_some() {
             self.process_cth_rules(cth.rules.as_ref().unwrap())?;
         }
 
         // Default policy
-        if self.network_map.is_some() {
-            let network_map = self.network_map.as_ref().unwrap();
+        for (_, network) in &self.network_map {
+            let bridge_name = get_bridge_name(&network.Id)?;
+            let rule = Rule::default()
+                .in_interface(bridge_name)
+                .jump(cth.default_policy.to_owned())
+                .build()?;
 
-            for (_, network) in network_map {
-                let bridge_name = get_bridge_name(&network.Id)?;
-                let rule = Rule::default()
-                    .in_interface(bridge_name)
-                    .jump(cth.default_policy.to_owned())
-                    .build()?;
-
-                println!("{:?}", rule);
-                self.ipt4.append("filter", DFWRS_INPUT_CHAIN, &rule)?;
-                // TODO: verify what is needed for ipt6
-            }
+            println!("{:?}", rule);
+            self.ipt4.append("filter", DFWRS_INPUT_CHAIN, &rule)?;
+            // TODO: verify what is needed for ipt6
         }
 
         Ok(())
     }
 
     fn process_cth_rules(&self, rules: &Vec<ContainerToHostRule>) -> Result<()> {
-        let container_map = self.container_map.as_ref().unwrap();
-        let network_map = self.network_map.as_ref().unwrap();
-
         for rule in rules {
             println!("{:#?}", rule);
             let mut ipt_rule = Rule::default();
 
-            let network = match network_map.get(&rule.network) {
+            let network = match self.network_map.get(&rule.network) {
                 Some(network) => network,
                 None => continue,
             };
@@ -553,7 +539,7 @@ impl<'a> ProcessDFW<'a> {
             if let Some(ref src_container) = rule.src_container {
                 if let Some(src_network) =
                     get_network_for_container(&self.docker,
-                                              &container_map,
+                                              &self.container_map,
                                               &src_container,
                                               &network.Id)? {
                     ipt_rule.source(src_network
@@ -588,19 +574,17 @@ impl<'a> ProcessDFW<'a> {
     }
 
     fn process_wider_world_to_container(&self, wwtc: &WiderWorldToContainer) -> Result<()> {
-        if wwtc.rules.is_none() || self.container_map.is_none() || self.network_map.is_none() {
+        if wwtc.rules.is_none() {
             return Ok(());
         }
         let rules = wwtc.rules.as_ref().unwrap();
-        let container_map = self.container_map.as_ref().unwrap();
-        let network_map = self.network_map.as_ref().unwrap();
 
         for rule in rules {
             println!("{:#?}", rule);
             let mut ipt_forward_rule = Rule::default();
             let mut ipt_dnat_rule = Rule::default();
 
-            let network = match network_map.get(&rule.network) {
+            let network = match self.network_map.get(&rule.network) {
                 Some(network) => network,
                 None => continue,
             };
@@ -609,7 +593,7 @@ impl<'a> ProcessDFW<'a> {
 
             if let Some(dst_network) =
                 get_network_for_container(&self.docker,
-                                          &container_map,
+                                          &self.container_map,
                                           &rule.dst_container,
                                           &network.Id)? {
                 ipt_forward_rule.destination(dst_network
@@ -673,26 +657,24 @@ impl<'a> ProcessDFW<'a> {
     }
 
     fn process_container_dnat(&self, cd: &ContainerDNAT) -> Result<()> {
-        if cd.rules.is_none() || self.container_map.is_none() || self.network_map.is_none() {
+        if cd.rules.is_none() {
             return Ok(());
         }
         let rules = cd.rules.as_ref().unwrap();
-        let container_map = self.container_map.as_ref().unwrap();
-        let network_map = self.network_map.as_ref().unwrap();
 
         for rule in rules {
             println!("{:#?}", rule);
             let mut ipt_rule = Rule::default();
 
             if let Some(ref network) = rule.src_network {
-                if let Some(network) = network_map.get(network) {
+                if let Some(network) = self.network_map.get(network) {
                     let bridge_name = get_bridge_name(&network.Id)?;
                     ipt_rule.in_interface(bridge_name.to_owned());
 
                     if let Some(ref src_container) = rule.src_container {
                         if let Some(src_network) =
                             get_network_for_container(&self.docker,
-                                                      &container_map,
+                                                      &self.container_map,
                                                       &src_container,
                                                       &network.Id)? {
                             let bridge_name = get_bridge_name(&network.Id)?;
@@ -709,12 +691,12 @@ impl<'a> ProcessDFW<'a> {
                 }
             }
 
-            let network = match network_map.get(&rule.dst_network) {
+            let network = match self.network_map.get(&rule.dst_network) {
                 Some(network) => network,
                 None => continue,
             };
             let dst_network = match get_network_for_container(&self.docker,
-                                                              &container_map,
+                                                              &self.container_map,
                                                               &rule.dst_container,
                                                               &network.Id)? {
                 Some(dst_network) => dst_network,
