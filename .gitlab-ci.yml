@@ -15,14 +15,14 @@ prepare rust image:
     script:
         - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
         - docker pull "$(grep '^FROM' Dockerfile.build | awk '{ print $2; }' | head -n1)"
-        - docker build -t "${CI_REGISTRY_IMAGE}:build" -f Dockerfile.build .
-        - docker push "${CI_REGISTRY_IMAGE}:build"
+        - docker build -t "${CI_REGISTRY_IMAGE}/build" -f Dockerfile.build .
+        - docker push "${CI_REGISTRY_IMAGE}/build"
 
 build dynamic binary:
     stage: build
     tags:
         - docker
-    image: "${CI_REGISTRY_IMAGE}:build"
+    image: "${CI_REGISTRY_IMAGE}/build"
     script:
         - cargo build --verbose
         - cargo build --release
@@ -51,7 +51,7 @@ rustfmt:
     stage: build
     tags:
         - docker
-    image: "${CI_REGISTRY_IMAGE}:build"
+    image: "${CI_REGISTRY_IMAGE}/build"
     script:
         - cargo fmt -- --write-mode diff
     allow_failure: true
@@ -68,8 +68,8 @@ package image for feature-branch:
         - master
         - /^develop\/.*$/
     script:
-        - docker build -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}" .
-        - docker image rm "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}"
+        - docker build -t "${CI_REGISTRY_IMAGE}/branches:${CI_COMMIT_REF_SLUG}" .
+        - docker image rm "${CI_REGISTRY_IMAGE}/branches:${CI_COMMIT_REF_SLUG}"
 
 package and push image for tags:
     stage: package
@@ -94,8 +94,8 @@ package and push image on develop patch:
         - develop/patch
     script:
         - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
-        - docker build -t "${CI_REGISTRY_IMAGE}:patch" .
-        - docker push "${CI_REGISTRY_IMAGE}:patch"
+        - docker build -t "${CI_REGISTRY_IMAGE}/develop:patch" .
+        - docker push "${CI_REGISTRY_IMAGE}/develop:patch"
 
 package and push image on develop minor:
     stage: package
@@ -107,8 +107,8 @@ package and push image on develop minor:
         - develop/minor
     script:
         - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
-        - docker build -t "${CI_REGISTRY_IMAGE}:minor" .
-        - docker push "${CI_REGISTRY_IMAGE}:minor"
+        - docker build -t "${CI_REGISTRY_IMAGE}/develop:minor" .
+        - docker push "${CI_REGISTRY_IMAGE}/develop:minor"
 
 package and push image on master:
     stage: package
