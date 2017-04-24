@@ -264,7 +264,7 @@ dependencies = [
 [[package]]
 name = "iptables"
 version = "0.1.2"
-source = "git+https://github.com/pitkley/rust-iptables?branch=extend-api#01c0cf2e65b2fda804be27d5bb32cc099b2e65a2"
+source = "git+https://github.com/pitkley/rust-iptables?branch=extend-api#27e233ee319572167194cfd37d007c37de8885fc"
 dependencies = [
  "nix 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
