@@ -15,10 +15,32 @@ prepare rust image:
     script:
         - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
         - docker pull "$(grep '^FROM' Dockerfile.build | awk '{ print $2; }' | head -n1)"
-        - docker build -t "${CI_REGISTRY_IMAGE}/build" -f Dockerfile.build .
-        - docker push "${CI_REGISTRY_IMAGE}/build"
+        - docker build -t "${CI_REGISTRY_IMAGE}/build:current" -f Dockerfile.build .
+        - docker push "${CI_REGISTRY_IMAGE}/build:current"
 
-build dynamic binary:
+prepare rust image beta:
+    stage: prepare
+    tags:
+        - docker-available
+    script:
+        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+        - sed -i '0,/FROM /{s/:.*/:beta/}' Dockerfile.build
+        - docker pull "$(grep '^FROM' Dockerfile.build | awk '{ print $2; }' | head -n1)"
+        - docker build -t "${CI_REGISTRY_IMAGE}/build:beta" -f Dockerfile.build .
+        - docker push "${CI_REGISTRY_IMAGE}/build:beta"
+
+prepare rust image nightly:
+    stage: prepare
+    tags:
+        - docker-available
+    script:
+        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+        - sed -i '0,/FROM /{s/:.*/:nightly/}' Dockerfile.build
+        - docker pull "$(grep '^FROM' Dockerfile.build | awk '{ print $2; }' | head -n1)"
+        - docker build -t "${CI_REGISTRY_IMAGE}/build:nightly" -f Dockerfile.build .
+        - docker push "${CI_REGISTRY_IMAGE}/build:nightly"
+
+build dynamic binary on current:
     stage: build
     tags:
         - docker
@@ -26,6 +48,37 @@ build dynamic binary:
     script:
         - cargo build --verbose
         - cargo build --release
+    artifacts:
+        name: "$CI_JOB_NAME"
+        paths:
+            - Cargo.toml
+            - Cargo.lock
+            - target/release/dfwrs
+
+build dynamic binary on beta:
+    stage: build
+    tags:
+        - docker
+    image: "${CI_REGISTRY_IMAGE}/build:beta"
+    script:
+        - cargo build --verbose
+        - cargo build --release
+    artifacts:
+        name: "$CI_JOB_NAME"
+        paths:
+            - Cargo.toml
+            - Cargo.lock
+            - target/release/dfwrs
+
+build dynamic binary on nightly:
+    stage: build
+    tags:
+        - docker
+    image: "${CI_REGISTRY_IMAGE}/build:nightly"
+    script:
+        - cargo build --verbose
+        - cargo build --release
+    allow_failure: true
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
