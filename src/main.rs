@@ -39,6 +39,7 @@ use serde::Deserialize;
 use shiplift::Docker;
 use shiplift::builder::{EventFilter, EventFilterType, EventsOptions};
 
+use dfwrs::ProcessDFW;
 use errors::*;
 use types::*;
 
@@ -237,9 +238,6 @@ fn run() -> Result<()> {
     // Check if the docker instance is reachable
     docker.ping()?;
 
-    let ipt4 = iptables::new(false)?;
-    let ipt6 = iptables::new(true)?;
-
     // Create a dummy channel
     let load_interval = value_t!(matches.value_of("load-interval"), u64)?;
     let load_interval_chan = {
@@ -263,11 +261,11 @@ fn run() -> Result<()> {
     let toml = load_config(&matches)?;
     let process: Box<Fn() -> Result<()>> = match value_t!(matches.value_of("load-mode"),
                                                           LoadMode)? {
-        LoadMode::Once => Box::new(|| dfwrs::process(&docker, &toml, &ipt4, &ipt6)),
+        LoadMode::Once => Box::new(|| ProcessDFW::new(&docker, &toml)?.process()),
         LoadMode::Always => {
             Box::new(|| {
                          let toml = load_config(&matches)?;
-                         dfwrs::process(&docker, &toml, &ipt4, &ipt6)
+                         ProcessDFW::new(&docker, &toml)?.process()
                      })
         }
     };
