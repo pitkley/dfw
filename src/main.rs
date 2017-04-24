@@ -226,8 +226,11 @@ fn run() -> Result<()> {
         .arg(Arg::with_name("disable-event-monitoring")
                  .takes_value(false)
                  .long("--disable-event-monitoring")
-                 .help("Disable Docker event monitoring. Use in conjunction with \
-                        `--load-interval 0` to process rules once, then exit."))
+                 .help("Disable Docker event monitoring"))
+        .arg(Arg::with_name("run-once")
+                 .takes_value(false)
+                 .long("run-once")
+                 .help("Process rules once, then exit."))
         .get_matches();
     println!("{:#?}", matches);
 
@@ -257,6 +260,7 @@ fn run() -> Result<()> {
         }
     };
     let monitor_events = !matches.is_present("disable-event-monitoring");
+    let run_once = matches.is_present("run-once");
 
     let toml = load_config(&matches)?;
     let process: Box<Fn() -> Result<()>> = match value_t!(matches.value_of("load-mode"),
@@ -273,8 +277,9 @@ fn run() -> Result<()> {
     // Initial processing
     process()?;
 
-    if !monitor_events && load_interval <= 0 {
-        // Events are not monitored and rules aren't processed regularly -- process once, exit.
+    if run_once || (!monitor_events && load_interval <= 0) {
+        // Either run-once is specified or both events are not monitored and rules aren't processed
+        // regularly -- process once, then exit.
         ::std::process::exit(0);
     }
 
