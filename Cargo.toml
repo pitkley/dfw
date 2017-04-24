@@ -10,7 +10,7 @@ clap = "~2.23.3"
 derive_builder = "~0.4.2"
 error-chain = "~0.10.0"
 glob = "~0.2.11"
-iptables = { git = "https://github.com/pitkley/rust-iptables", branch = "extend-api" }
+iptables = "~0.2.0"
 serde = "~0.9.13"
 serde_derive = "~0.9.13"
 shiplift = { git = "https://github.com/softprops/shiplift", rev = "1e248234625c85c0716eb3924b386efae12356f6" }

@@ -31,7 +31,7 @@ use std::io::BufReader;
 use std::io::prelude::*;
 use std::time::Duration;
 
-use chan::Sender;
+use chan::{Receiver, Sender};
 use chan_signal::Signal;
 use clap::{App, Arg, ArgGroup, ArgMatches};
 use glob::glob;
@@ -39,6 +39,7 @@ use serde::Deserialize;
 use shiplift::Docker;
 use shiplift::builder::{EventFilter, EventFilterType, EventsOptions};
 
+use dfwrs::ProcessDFW;
 use errors::*;
 use types::*;
 
@@ -90,6 +91,48 @@ fn load_config(matches: &ArgMatches) -> Result<DFW> {
     };
 
     Ok(toml)
+}
+
+fn spawn_burst_monitor(burst_timeout: u64, s_trigger: Sender<()>, r_event: Receiver<()>) {
+    enum Trigger {
+        Event,
+        After,
+        None,
+    }
+    ::std::thread::spawn(move || {
+        let dummy: Receiver<()> = {
+            let (s_dummy, r_dummy) = chan::sync(0);
+            // Leak the send-channel so that it never gets closed and `recv` never synchronizes.
+            ::std::mem::forget(s_dummy);
+            r_dummy
+        };
+        let mut after: Receiver<()> = dummy.clone();
+
+        loop {
+            // The `unused_assignments` warning for the following variable is wrong, since
+            // `trigger` is read at the match-statement.
+            // Maybe related to:
+            //   https://github.com/rust-lang/rfcs/issues/1710
+            #[allow(unused_assignments)]
+            let mut trigger: Trigger = Trigger::None;
+
+            chan_select! {
+                r_event.recv() => {
+                    trigger = Trigger::Event;
+                },
+                after.recv() => {
+                    trigger = Trigger::After;
+                    s_trigger.send(());
+                }
+            }
+
+            match trigger {
+                Trigger::Event => after = chan::after(Duration::from_millis(burst_timeout)),
+                Trigger::After => after = dummy.clone(),
+                Trigger::None => {}
+            }
+        }
+    });
 }
 
 fn spawn_event_monitor(docker_url: Option<String>, s_event: Sender<()>) {
@@ -172,7 +215,23 @@ fn run() -> Result<()> {
                                       .map(|s| &**s)
                                       .collect::<Vec<_>>()
                                       .as_slice())
-                 .default_value("once"))
+                 .default_value("once")
+                 .help("Define if the config-files get loaded once, or before every run"))
+        .arg(Arg::with_name("burst-timeout")
+                 .takes_value(true)
+                 .default_value("500")
+                 .long("burst-timeout")
+                 .value_name("TIMEOUT")
+                 .help("Time to wait after a event was received before processing the rules, in \
+                        milliseconds"))
+        .arg(Arg::with_name("disable-event-monitoring")
+                 .takes_value(false)
+                 .long("--disable-event-monitoring")
+                 .help("Disable Docker event monitoring"))
+        .arg(Arg::with_name("run-once")
+                 .takes_value(false)
+                 .long("run-once")
+                 .help("Process rules once, then exit."))
         .get_matches();
     println!("{:#?}", matches);
 
@@ -183,12 +242,9 @@ fn run() -> Result<()> {
     // Check if the docker instance is reachable
     docker.ping()?;
 
-    let ipt4 = iptables::new(false)?;
-    let ipt6 = iptables::new(true)?;
-
     // Create a dummy channel
-    let (_s_dummy, r_dummy) = chan::sync(0);
-    let load_interval = {
+    let load_interval = value_t!(matches.value_of("load-interval"), u64)?;
+    let load_interval_chan = {
         let load_interval = value_t!(matches.value_of("load-interval"), u64)?;
 
         if load_interval > 0 {
@@ -197,18 +253,24 @@ fn run() -> Result<()> {
         } else {
             // Otherwise we use the dummy channel, which will never send and thus never receive any
             // messages to circumvent having multiple `chan_select!`s below.
+            let (s_dummy, r_dummy) = chan::sync(0);
+            // Leak the send-channel so that it never gets closed and `recv` never synchronizes.
+            ::std::mem::forget(s_dummy);
+
             r_dummy
         }
     };
+    let monitor_events = !matches.is_present("disable-event-monitoring");
+    let run_once = matches.is_present("run-once");
 
     let toml = load_config(&matches)?;
     let process: Box<Fn() -> Result<()>> = match value_t!(matches.value_of("load-mode"),
                                                           LoadMode)? {
-        LoadMode::Once => Box::new(|| dfwrs::process(&docker, &toml, &ipt4, &ipt6)),
+        LoadMode::Once => Box::new(|| ProcessDFW::new(&docker, &toml)?.process()),
         LoadMode::Always => {
             Box::new(|| {
                          let toml = load_config(&matches)?;
-                         dfwrs::process(&docker, &toml, &ipt4, &ipt6)
+                         ProcessDFW::new(&docker, &toml)?.process()
                      })
         }
     };
@@ -216,18 +278,36 @@ fn run() -> Result<()> {
     // Initial processing
     process()?;
 
-    // Setup event monitor
-    let (s_event, r_event) = chan::sync(0);
-    let docker_url = matches.value_of("docker-url").map(|s| s.to_owned());
-    spawn_event_monitor(docker_url, s_event);
+    if run_once || (!monitor_events && load_interval <= 0) {
+        // Either run-once is specified or both events are not monitored and rules aren't processed
+        // regularly -- process once, then exit.
+        ::std::process::exit(0);
+    }
+
+    let event_trigger = if monitor_events {
+        // Setup event monitoring
+        let (s_trigger, r_trigger) = chan::sync(0);
+        let (s_event, r_event) = chan::sync(0);
+        let docker_url = matches.value_of("docker-url").map(|s| s.to_owned());
+        let burst_timeout = value_t!(matches.value_of("burst-timeout"), u64)?;
+        spawn_burst_monitor(burst_timeout, s_trigger, r_event);
+        spawn_event_monitor(docker_url, s_event);
+
+        r_trigger
+    } else {
+        let (s_dummy, r_dummy) = chan::sync(0);
+        // Leak the send-channel so that it never gets closed and `recv` never synchronizes.
+        ::std::mem::forget(s_dummy);
+        r_dummy
+    };
 
     loop {
         chan_select! {
-            load_interval.recv() => {
+            load_interval_chan.recv() => {
                 println!("load interval");
                 process()?;
             },
-            r_event.recv() => {
+            event_trigger.recv() => {
                 println!("received event trigger");
                 process()?;
             },
