@@ -94,8 +94,8 @@ pub struct WiderWorldToContainer {
 pub struct WiderWorldToContainerRule {
     pub network: String,
     pub dst_container: String,
-    #[serde(deserialize_with = "string_or_struct")]
-    pub expose_port: ExposePort,
+    #[serde(deserialize_with = "single_or_seq_string_or_struct")]
+    pub expose_port: Vec<ExposePort>,
     pub external_network_interface: Option<String>,
 }
 
@@ -158,8 +158,8 @@ pub struct ContainerDNATRule {
     pub src_container: Option<String>,
     pub dst_network: String,
     pub dst_container: String,
-    #[serde(deserialize_with = "string_or_struct")]
-    pub expose_port: ExposePort,
+    #[serde(deserialize_with = "single_or_seq_string_or_struct")]
+    pub expose_port: Vec<ExposePort>,
 }
 
 fn default_expose_port_family() -> String {
@@ -225,7 +225,8 @@ impl<'de, T> de::Visitor<'de> for SingleOrSeqStringOrStruct<T>
     type Value = Vec<T>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("sequence of integers, strings or maps or a single integer, string or map")
+        formatter.write_str("sequence of integers, strings or maps \
+                             or a single integer, string or map")
     }
 
     fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
