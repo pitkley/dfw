@@ -166,14 +166,14 @@ fn default_expose_port_family() -> String {
     DEFAULT_PROTOCOL.to_owned()
 }
 
-fn string_or_struct<T, D>(d: D) -> Result<T, D::Error>
-    where T: Deserialize + FromStr<Err = String>,
-          D: Deserializer
+fn string_or_struct<'de, T, D>(d: D) -> Result<T, D::Error>
+    where T: Deserialize<'de> + FromStr<Err = String>,
+          D: Deserializer<'de>
 {
     struct StringOrStruct<T>(PhantomData<T>);
 
-    impl<T> de::Visitor for StringOrStruct<T>
-        where T: Deserialize + FromStr<Err = String>
+    impl<'de, T> de::Visitor<'de> for StringOrStruct<T>
+        where T: Deserialize<'de> + FromStr<Err = String>
     {
         type Value = T;
 
@@ -194,21 +194,21 @@ fn string_or_struct<T, D>(d: D) -> Result<T, D::Error>
         }
 
         fn visit_map<M>(self, visitor: M) -> Result<T, M::Error>
-            where M: de::MapVisitor
+            where M: de::MapAccess<'de>
         {
-            Deserialize::deserialize(de::value::MapVisitorDeserializer::new(visitor))
+            Deserialize::deserialize(de::value::MapAccessDeserializer::new(visitor))
         }
     }
 
-    d.deserialize(StringOrStruct(PhantomData))
+    d.deserialize_any(StringOrStruct(PhantomData))
 }
 
-fn string_or_vec<D>(d: D) -> Result<Vec<String>, D::Error>
-    where D: Deserializer
+fn string_or_vec<'de, D>(d: D) -> Result<Vec<String>, D::Error>
+    where D: Deserializer<'de>
 {
     struct StringOrVec(PhantomData<Vec<String>>);
 
-    impl de::Visitor for StringOrVec {
+    impl<'de> de::Visitor<'de> for StringOrVec {
         type Value = Vec<String>;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
@@ -222,17 +222,17 @@ fn string_or_vec<D>(d: D) -> Result<Vec<String>, D::Error>
         }
 
         fn visit_seq<S>(self, visitor: S) -> Result<Self::Value, S::Error>
-            where S: de::SeqVisitor
+            where S: de::SeqAccess<'de>
         {
-            Deserialize::deserialize(de::value::SeqVisitorDeserializer::new(visitor))
+            Deserialize::deserialize(de::value::SeqAccessDeserializer::new(visitor))
         }
     }
 
-    d.deserialize(StringOrVec(PhantomData))
+    d.deserialize_any(StringOrVec(PhantomData))
 }
 
-fn option_string_or_vec<D>(d: D) -> Result<Option<Vec<String>>, D::Error>
-    where D: Deserializer
+fn option_string_or_vec<'de, D>(d: D) -> Result<Option<Vec<String>>, D::Error>
+    where D: Deserializer<'de>
 {
     string_or_vec(d).map(Some)
 }

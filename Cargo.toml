@@ -11,10 +11,10 @@ derive_builder = "~0.4.2"
 error-chain = "~0.10.0"
 glob = "~0.2.11"
 iptables = "~0.2.0"
-serde = "~0.9.13"
-serde_derive = "~0.9.13"
+serde = "~1.0.1"
+serde_derive = "~1.0.1"
 shiplift = { git = "https://github.com/softprops/shiplift", rev = "1e248234625c85c0716eb3924b386efae12356f6" }
-toml = "~0.3.2"
+toml = "~0.4.0"
 url = "~1.4.0"
 
 [package.metadata.release]
