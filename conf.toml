@@ -1,5 +1,5 @@
 [defaults]
-external_network_interface = "ens3"
+external_network_interfaces = "ens3"
 
 [initialization.v4]
 filter = [
@@ -69,7 +69,7 @@ expose_port = 80
 [[wider_world_to_container.rules]]
 network = "dfwrs_proxy"
 dst_container = "dfwrs_proxy_1"
-expose_port = { host_port = 443 }
+expose_port = "443/tcp"
 
 [[wider_world_to_container.rules]]
 network = "dfwrs_a"
@@ -80,7 +80,10 @@ external_network_interface = "lxdbr0"
 [[wider_world_to_container.rules]]
 network = "dfwrs_b"
 dst_container = "dfwrs_b_1"
-expose_port = { host_port = 8081, container_port = 80, family = "udp" }
+expose_port = [
+    { host_port = 8081, container_port = 80, family = "udp" },
+    { host_port = 8181, container_port = 81, family = "tcp" },
+]
 
 [container_dnat]
 
@@ -89,10 +92,10 @@ src_network = "dfwrs_a"
 src_container = "dfwrs_a_1"
 dst_network = "dfwrs_b"
 dst_container = "dfwrs_b_1"
-expose_port = { host_port = 80, family = "tcp" }
+expose_port = [80, 81]
 
 [[container_dnat.rules]]
 dst_network = "dfwrs_a"
 dst_container = "dfwrs_a_1"
-expose_port = "53/udp"
+expose_port = ["53/udp", "53/tcp"]
 

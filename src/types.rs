@@ -3,7 +3,7 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::str::FromStr;
 
-use serde::de::{self, Deserialize, Deserializer};
+use serde::de::{self, Deserialize, Deserializer, DeserializeSeed};
 
 const DEFAULT_PROTOCOL: &'static str = "tcp";
 
@@ -94,8 +94,8 @@ pub struct WiderWorldToContainer {
 pub struct WiderWorldToContainerRule {
     pub network: String,
     pub dst_container: String,
-    #[serde(deserialize_with = "string_or_struct")]
-    pub expose_port: ExposePort,
+    #[serde(deserialize_with = "single_or_seq_string_or_struct")]
+    pub expose_port: Vec<ExposePort>,
     pub external_network_interface: Option<String>,
 }
 
@@ -158,52 +158,114 @@ pub struct ContainerDNATRule {
     pub src_container: Option<String>,
     pub dst_network: String,
     pub dst_container: String,
-    #[serde(deserialize_with = "string_or_struct")]
-    pub expose_port: ExposePort,
+    #[serde(deserialize_with = "single_or_seq_string_or_struct")]
+    pub expose_port: Vec<ExposePort>,
 }
 
 fn default_expose_port_family() -> String {
     DEFAULT_PROTOCOL.to_owned()
 }
 
-fn string_or_struct<'de, T, D>(d: D) -> Result<T, D::Error>
+struct StringOrStruct<T>(PhantomData<T>);
+
+impl<'de, T> de::Visitor<'de> for StringOrStruct<T>
+    where T: Deserialize<'de> + FromStr<Err = String>
+{
+    type Value = T;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("integer, string or map")
+    }
+
+    fn visit_i64<E>(self, value: i64) -> Result<T, E>
+        where E: de::Error
+    {
+        FromStr::from_str(&value.to_string()).map_err(de::Error::custom)
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<T, E>
+        where E: de::Error
+    {
+        FromStr::from_str(value).map_err(de::Error::custom)
+    }
+
+    fn visit_map<M>(self, visitor: M) -> Result<T, M::Error>
+        where M: de::MapAccess<'de>
+    {
+        Deserialize::deserialize(de::value::MapAccessDeserializer::new(visitor))
+    }
+}
+
+// Thanks to @dtolnay for the support:
+//   https://github.com/serde-rs/serde/issues/901#issuecomment-297070279
+impl<'de, T> DeserializeSeed<'de> for StringOrStruct<T>
+    where T: Deserialize<'de> + FromStr<Err = String>
+{
+    type Value = T;
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where D: Deserializer<'de>
+    {
+        deserializer.deserialize_any(self)
+    }
+}
+
+fn string_or_struct<'de, T, D>(deserializer: D) -> Result<T, D::Error>
     where T: Deserialize<'de> + FromStr<Err = String>,
           D: Deserializer<'de>
 {
-    struct StringOrStruct<T>(PhantomData<T>);
-
-    impl<'de, T> de::Visitor<'de> for StringOrStruct<T>
-        where T: Deserialize<'de> + FromStr<Err = String>
-    {
-        type Value = T;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("integer, string or map")
-        }
-
-        fn visit_i64<E>(self, value: i64) -> Result<T, E>
-            where E: de::Error
-        {
-            Ok(FromStr::from_str(&value.to_string()).unwrap())
-        }
-
-        fn visit_str<E>(self, value: &str) -> Result<T, E>
-            where E: de::Error
-        {
-            Ok(FromStr::from_str(value).unwrap())
-        }
-
-        fn visit_map<M>(self, visitor: M) -> Result<T, M::Error>
-            where M: de::MapAccess<'de>
-        {
-            Deserialize::deserialize(de::value::MapAccessDeserializer::new(visitor))
-        }
-    }
-
-    d.deserialize_any(StringOrStruct(PhantomData))
+    deserializer.deserialize_any(StringOrStruct(PhantomData))
 }
 
-fn string_or_vec<'de, D>(d: D) -> Result<Vec<String>, D::Error>
+struct SingleOrSeqStringOrStruct<T>(PhantomData<T>);
+
+impl<'de, T> de::Visitor<'de> for SingleOrSeqStringOrStruct<T>
+    where T: Deserialize<'de> + FromStr<Err = String>
+{
+    type Value = Vec<T>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("sequence of integers, strings or maps \
+                             or a single integer, string or map")
+    }
+
+    fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+        where E: de::Error
+    {
+        Ok(vec![FromStr::from_str(&value.to_string()).unwrap()])
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        where E: de::Error
+    {
+        Ok(vec![FromStr::from_str(value).unwrap()])
+    }
+
+    fn visit_map<M>(self, visitor: M) -> Result<Self::Value, M::Error>
+        where M: de::MapAccess<'de>
+    {
+        Deserialize::deserialize(de::value::MapAccessDeserializer::new(visitor)).map(|e| vec![e])
+    }
+
+    fn visit_seq<S>(self, mut seq: S) -> Result<Self::Value, S::Error>
+        where S: de::SeqAccess<'de>
+    {
+        let mut vec = Vec::new();
+        while let Some(element) = seq.next_element_seed(StringOrStruct(PhantomData))? {
+            vec.push(element);
+        }
+        Ok(vec)
+    }
+}
+
+fn single_or_seq_string_or_struct<'de, T, D>(deserializer: D) -> Result<Vec<T>, D::Error>
+    where T: Deserialize<'de> + FromStr<Err = String>,
+          D: Deserializer<'de>
+{
+    deserializer.deserialize_any(SingleOrSeqStringOrStruct(PhantomData))
+}
+
+fn string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
     where D: Deserializer<'de>
 {
     struct StringOrVec(PhantomData<Vec<String>>);
@@ -228,11 +290,11 @@ fn string_or_vec<'de, D>(d: D) -> Result<Vec<String>, D::Error>
         }
     }
 
-    d.deserialize_any(StringOrVec(PhantomData))
+    deserializer.deserialize_any(StringOrVec(PhantomData))
 }
 
-fn option_string_or_vec<'de, D>(d: D) -> Result<Option<Vec<String>>, D::Error>
+fn option_string_or_vec<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
     where D: Deserializer<'de>
 {
-    string_or_vec(d).map(Some)
+    string_or_vec(deserializer).map(Some)
 }
