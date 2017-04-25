@@ -177,7 +177,8 @@ pub struct ProcessDFW<'a> {
     ipt6: IPTables,
     container_map: Map<String, Container>,
     network_map: Map<String, NetworkDetails>,
-    external_network_interface: Option<String>,
+    external_network_interfaces: Option<Vec<String>>,
+    primary_external_network_interface: Option<String>,
 }
 
 impl<'a> ProcessDFW<'a> {
@@ -189,9 +190,14 @@ impl<'a> ProcessDFW<'a> {
         let network_map = get_network_map(&networks)?
             .ok_or_else(|| "no networks found")?;
 
-        let external_network_interface = dfw.defaults
+        let external_network_interfaces = dfw.defaults
             .as_ref()
-            .and_then(|d| d.external_network_interface.clone());
+            .and_then(|d| d.external_network_interfaces.as_ref())
+            .map(Clone::clone);
+        let primary_external_network_interface = external_network_interfaces
+            .as_ref()
+            .and_then(|v| v.get(0))
+            .map(|s| s.to_owned());
 
         Ok(ProcessDFW {
                docker: docker,
@@ -200,7 +206,8 @@ impl<'a> ProcessDFW<'a> {
                ipt6: iptables::new(true)?,
                container_map: container_map,
                network_map: network_map,
-               external_network_interface: external_network_interface,
+               external_network_interfaces: external_network_interfaces,
+               primary_external_network_interface: primary_external_network_interface,
            })
     }
 
@@ -235,11 +242,6 @@ impl<'a> ProcessDFW<'a> {
                     &format!("-j {}", DFWRS_POSTROUTING_CHAIN))?;
         // TODO: verify what is needed for ipt6
 
-        let external_network_interface = self.dfw
-            .defaults
-            .as_ref()
-            .and_then(|d| d.external_network_interface.clone());
-
         println!("\n\n==> process_container_to_container\n");
         if let Some(ref ctc) = self.dfw.container_to_container {
             self.process_container_to_container(ctc)?;
@@ -261,44 +263,46 @@ impl<'a> ProcessDFW<'a> {
             self.process_container_dnat(cd)?;
         }
 
-        if let Some(external_network_interface) = external_network_interface {
-            // Add accept rules for Docker bridge
-            if let Some(bridge_network) = self.network_map.get("bridge") {
-                if let Some(bridge_name) =
-                    bridge_network
-                        .Options
-                        .as_ref()
-                        .ok_or("error")?
-                        .get("com.docker.network.bridge.name") {
-                    println!("bridge_name: {}", bridge_name);
-                    let rule_str = Rule::default()
-                        .in_interface(bridge_name.to_owned())
-                        .out_interface(external_network_interface.to_owned())
-                        .jump("ACCEPT".to_owned())
-                        .build()?;
-                    println!("accept-rule: {}", rule_str);
-                    self.ipt4
-                        .append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
-                    // TODO: verify what is needed for ipt6
+        if let Some(ref external_network_interfaces) = self.external_network_interfaces {
+            for external_network_interface in external_network_interfaces {
+                // Add accept rules for Docker bridge
+                if let Some(bridge_network) = self.network_map.get("bridge") {
+                    if let Some(bridge_name) =
+                        bridge_network
+                            .Options
+                            .as_ref()
+                            .ok_or("error")?
+                            .get("com.docker.network.bridge.name") {
+                        println!("bridge_name: {}", bridge_name);
+                        let rule_str = Rule::default()
+                            .in_interface(bridge_name.to_owned())
+                            .out_interface(external_network_interface.to_owned())
+                            .jump("ACCEPT".to_owned())
+                            .build()?;
+                        println!("accept-rule: {}", rule_str);
+                        self.ipt4
+                            .append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
+                        // TODO: verify what is needed for ipt6
 
-                    let rule_str = Rule::default()
-                        .in_interface(bridge_name.to_owned())
-                        .jump("ACCEPT".to_owned())
-                        .build()?;
-                    self.ipt4
-                        .append("filter", DFWRS_INPUT_CHAIN, &rule_str)?;
-                    // TODO: verify what is needed for ipt6
+                        let rule_str = Rule::default()
+                            .in_interface(bridge_name.to_owned())
+                            .jump("ACCEPT".to_owned())
+                            .build()?;
+                        self.ipt4
+                            .append("filter", DFWRS_INPUT_CHAIN, &rule_str)?;
+                        // TODO: verify what is needed for ipt6
+                    }
                 }
-            }
 
-            // Configure POSTROUTING
-            let rule_str = Rule::default()
-                .out_interface(external_network_interface.to_owned())
-                .jump("MASQUERADE".to_owned())
-                .build()?;
-            self.ipt4
-                .append("nat", DFWRS_POSTROUTING_CHAIN, &rule_str)?;
-            // TODO: verify what is needed for ipt6
+                // Configure POSTROUTING
+                let rule_str = Rule::default()
+                    .out_interface(external_network_interface.to_owned())
+                    .jump("MASQUERADE".to_owned())
+                    .build()?;
+                self.ipt4
+                    .append("nat", DFWRS_POSTROUTING_CHAIN, &rule_str)?;
+                // TODO: verify what is needed for ipt6
+            }
         }
 
         // Set default policy for forward chain (defined by `container_to_container`)
@@ -424,20 +428,20 @@ impl<'a> ProcessDFW<'a> {
         }
 
         // Default policy
-        if self.external_network_interface.is_some() {
-            let external_network_interface = self.external_network_interface.as_ref().unwrap();
+        if let Some(ref external_network_interfaces) = self.external_network_interfaces {
+            for external_network_interface in external_network_interfaces {
+                for (_, network) in &self.network_map {
+                    let bridge_name = get_bridge_name(&network.Id)?;
+                    let rule = Rule::default()
+                        .in_interface(bridge_name)
+                        .out_interface(external_network_interface.to_owned())
+                        .jump(ctww.default_policy.to_owned())
+                        .build()?;
 
-            for (_, network) in &self.network_map {
-                let bridge_name = get_bridge_name(&network.Id)?;
-                let rule = Rule::default()
-                    .in_interface(bridge_name)
-                    .out_interface(external_network_interface.to_owned())
-                    .jump(ctww.default_policy.to_owned())
-                    .build()?;
-
-                println!("{:?}", rule);
-                self.ipt4.append("filter", DFWRS_FORWARD_CHAIN, &rule)?;
-                // TODO: verify what is needed for ipt6
+                    println!("{:?}", rule);
+                    self.ipt4.append("filter", DFWRS_FORWARD_CHAIN, &rule)?;
+                    // TODO: verify what is needed for ipt6
+                }
             }
         }
 
@@ -486,8 +490,9 @@ impl<'a> ProcessDFW<'a> {
 
             if let Some(ref external_network_interface) = rule.external_network_interface {
                 ipt_rule.out_interface(external_network_interface.to_owned());
-            } else if let Some(ref external_network_interface) = self.external_network_interface {
-                ipt_rule.out_interface(external_network_interface.to_owned().to_owned());
+            } else if let Some(ref primary_external_network_interface) =
+                self.primary_external_network_interface {
+                ipt_rule.out_interface(primary_external_network_interface.to_owned().to_owned());
             }
 
             let rule_str = ipt_rule.build()?;
@@ -632,9 +637,14 @@ impl<'a> ProcessDFW<'a> {
             if let Some(ref external_network_interface) = rule.external_network_interface {
                 ipt_forward_rule.in_interface(external_network_interface.to_owned());
                 ipt_dnat_rule.in_interface(external_network_interface.to_owned());
-            } else if let Some(ref external_network_interface) = self.external_network_interface {
-                ipt_forward_rule.in_interface(external_network_interface.to_owned().to_owned());
-                ipt_dnat_rule.in_interface(external_network_interface.to_owned().to_owned());
+            } else if let Some(ref primary_external_network_interface) =
+                self.primary_external_network_interface {
+                ipt_forward_rule.in_interface(primary_external_network_interface
+                                                  .to_owned()
+                                                  .to_owned());
+                ipt_dnat_rule.in_interface(primary_external_network_interface
+                                               .to_owned()
+                                               .to_owned());
             } else {
                 // The DNAT rule requires the external interface
                 continue;
@@ -718,9 +728,10 @@ impl<'a> ProcessDFW<'a> {
             ipt_rule.build()?; // TODO: maybe add a `verify` method to `Rule`
 
             if ipt_rule.out_interface.is_none() {
-                if let Some(ref external_network_interface) = self.external_network_interface {
+                if let Some(ref primary_external_network_interface) =
+                    self.primary_external_network_interface {
                     ipt_rule
-                        .in_interface(external_network_interface.to_owned().to_owned())
+                        .in_interface(primary_external_network_interface.to_owned().to_owned())
                         .not_in_interface(true);
                 } else {
                     // We need to specify a external network interface.
