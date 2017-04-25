@@ -201,3 +201,37 @@ fn string_or_struct<T, D>(d: D) -> Result<T, D::Error>
 
     d.deserialize(StringOrStruct(PhantomData))
 }
+
+fn string_or_vec<D>(d: D) -> Result<Vec<String>, D::Error>
+    where D: Deserializer
+{
+    struct StringOrVec(PhantomData<Vec<String>>);
+
+    impl de::Visitor for StringOrVec {
+        type Value = Vec<String>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("string or list of strings")
+        }
+
+        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where E: de::Error
+        {
+            Ok(vec![value.to_owned()])
+        }
+
+        fn visit_seq<S>(self, visitor: S) -> Result<Self::Value, S::Error>
+            where S: de::SeqVisitor
+        {
+            Deserialize::deserialize(de::value::SeqVisitorDeserializer::new(visitor))
+        }
+    }
+
+    d.deserialize(StringOrVec(PhantomData))
+}
+
+fn option_string_or_vec<D>(d: D) -> Result<Option<Vec<String>>, D::Error>
+    where D: Deserializer
+{
+    string_or_vec(d).map(Some)
+}
