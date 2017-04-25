@@ -22,7 +22,8 @@ pub struct DFW {
 #[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Defaults {
-    pub external_network_interface: Option<String>,
+    #[serde(default, deserialize_with = "option_string_or_vec")]
+    pub external_network_interfaces: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
