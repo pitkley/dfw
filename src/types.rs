@@ -165,14 +165,14 @@ fn default_expose_port_family() -> String {
     DEFAULT_PROTOCOL.to_owned()
 }
 
-fn string_or_struct<T, D>(d: D) -> Result<T, D::Error>
-    where T: Deserialize + FromStr<Err = String>,
-          D: Deserializer
+fn string_or_struct<'de, T, D>(d: D) -> Result<T, D::Error>
+    where T: Deserialize<'de> + FromStr<Err = String>,
+          D: Deserializer<'de>
 {
     struct StringOrStruct<T>(PhantomData<T>);
 
-    impl<T> de::Visitor for StringOrStruct<T>
-        where T: Deserialize + FromStr<Err = String>
+    impl<'de, T> de::Visitor<'de> for StringOrStruct<T>
+        where T: Deserialize<'de> + FromStr<Err = String>
     {
         type Value = T;
 
@@ -193,11 +193,11 @@ fn string_or_struct<T, D>(d: D) -> Result<T, D::Error>
         }
 
         fn visit_map<M>(self, visitor: M) -> Result<T, M::Error>
-            where M: de::MapVisitor
+            where M: de::MapAccess<'de>
         {
-            Deserialize::deserialize(de::value::MapVisitorDeserializer::new(visitor))
+            Deserialize::deserialize(de::value::MapAccessDeserializer::new(visitor))
         }
     }
 
-    d.deserialize(StringOrStruct(PhantomData))
+    d.deserialize_any(StringOrStruct(PhantomData))
 }

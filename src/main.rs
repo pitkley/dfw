@@ -51,38 +51,37 @@ arg_enum! {
     }
 }
 
-fn load_file<T>(file: &str) -> Result<T>
-    where T: Deserialize
+fn load_file<'de, T>(file: &str, contents: &'de mut String) -> Result<T>
+    where T: Deserialize<'de>
 {
     let mut file = BufReader::new(File::open(file)?);
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-
-    Ok(toml::from_str(&contents)?)
+    file.read_to_string(contents)?;
+    Ok(toml::from_str(contents)?)
 }
 
-fn load_path<T>(path: &str) -> Result<T>
-    where T: Deserialize
+fn load_path<'de, T>(path: &str, contents: &'de mut String) -> Result<T>
+    where T: Deserialize<'de>
 {
-    let mut contents = String::new();
     for entry in glob(&format!("{}/*.toml", path)).expect("Failed to read glob pattern") {
         match entry {
             Ok(path) => {
                 let mut file = BufReader::new(File::open(path)?);
-                file.read_to_string(&mut contents)?;
+                file.read_to_string(contents)?;
             }
             Err(e) => println!("{:?}", e),
         }
     }
 
-    Ok(toml::from_str(&contents)?)
+    Ok(toml::from_str(contents)?)
 }
 
 fn load_config(matches: &ArgMatches) -> Result<DFW> {
+    // TODO somehow get rid of this lifetime-workaround
+    let mut contents = String::new();
     let toml: DFW = if matches.is_present("config-file") {
-        load_file(matches.value_of("config-file").unwrap())?
+        load_file(matches.value_of("config-file").unwrap(), &mut contents)?
     } else if matches.is_present("config-path") {
-        load_path(matches.value_of("config-path").unwrap())?
+        load_path(matches.value_of("config-path").unwrap(), &mut contents)?
     } else {
         // This statement should be unreachable, since clap verifies that either config-file or
         // config-path is populated.
