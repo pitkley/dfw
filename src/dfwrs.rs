@@ -7,6 +7,8 @@ use iptables::IPTables;
 use shiplift::Docker;
 use shiplift::rep::Container;
 use shiplift::rep::{NetworkDetails, NetworkContainerDetails};
+use slog::Logger;
+use time;
 
 use errors::*;
 use types::*;
@@ -179,16 +181,30 @@ pub struct ProcessDFW<'a> {
     network_map: Map<String, NetworkDetails>,
     external_network_interfaces: Option<Vec<String>>,
     primary_external_network_interface: Option<String>,
+    logger: Logger,
 }
 
 impl<'a> ProcessDFW<'a> {
-    pub fn new(docker: &'a Docker, dfw: &'a DFW) -> Result<ProcessDFW<'a>> {
+    pub fn new(docker: &'a Docker, dfw: &'a DFW, logger: &'a Logger) -> Result<ProcessDFW<'a>> {
+        let logger = logger.new(o!());
+
         let containers = docker.containers().list(&Default::default())?;
+        debug!(logger, "Got list of containers";
+               o!("containers" => format!("{:#?}", containers)));
+
         let container_map = get_container_map(&containers)?
             .ok_or_else(|| "no containers found")?;
+        trace!(logger, "Got map of containers";
+               o!("container_map" => format!("{:#?}", container_map)));
+
         let networks = docker.networks().list(&Default::default())?;
+        debug!(logger, "Got list of networks";
+               o!("networks" => format!("{:#?}", networks)));
+
         let network_map = get_network_map(&networks)?
             .ok_or_else(|| "no networks found")?;
+        trace!(logger, "Got map of networks";
+               o!("container_map" => format!("{:#?}", container_map)));
 
         let external_network_interfaces = dfw.defaults
             .as_ref()
@@ -208,17 +224,23 @@ impl<'a> ProcessDFW<'a> {
                network_map: network_map,
                external_network_interfaces: external_network_interfaces,
                primary_external_network_interface: primary_external_network_interface,
+               logger: logger,
            })
     }
 
     pub fn process(&self) -> Result<()> {
+        info!(self.logger, "Starting processing";
+              o!("started_processing_at" => format!("{}", time::now().rfc3339())));
+
         create_and_flush_chain("filter", DFWRS_FORWARD_CHAIN, &self.ipt4, &self.ipt6)?;
         create_and_flush_chain("filter", DFWRS_INPUT_CHAIN, &self.ipt4, &self.ipt6)?;
         create_and_flush_chain("nat", DFWRS_PREROUTING_CHAIN, &self.ipt4, &self.ipt6)?;
         create_and_flush_chain("nat", DFWRS_POSTROUTING_CHAIN, &self.ipt4, &self.ipt6)?;
+        debug!(self.logger, "Created and flushed chains");
 
-        println!("\n==> process_initialization\n");
         if let Some(ref init) = self.dfw.initialization {
+            info!(self.logger, "Starting sub-processing";
+                   o!("part" => "initialization"));
             self.process_initialization(init)?;
         }
 
@@ -230,6 +252,7 @@ impl<'a> ProcessDFW<'a> {
         self.ipt4
             .append("filter", "FORWARD", &format!("-j {}", DFWRS_FORWARD_CHAIN))?;
         // TODO: verify what is needed for ipt6
+        debug!(self.logger, "Setup input and forward chains");
 
         // Setup pre- and postrouting
         self.ipt4
@@ -241,25 +264,31 @@ impl<'a> ProcessDFW<'a> {
                     "POSTROUTING",
                     &format!("-j {}", DFWRS_POSTROUTING_CHAIN))?;
         // TODO: verify what is needed for ipt6
+        debug!(self.logger, "Setup pre- and postrouting");
 
-        println!("\n\n==> process_container_to_container\n");
         if let Some(ref ctc) = self.dfw.container_to_container {
+            info!(self.logger, "Starting sub-processing";
+                  o!("part" => "container_to_container"));
             self.process_container_to_container(ctc)?;
         }
-        println!("\n\n==> process_container_to_wider_world\n");
         if let Some(ref ctww) = self.dfw.container_to_wider_world {
+            info!(self.logger, "Starting sub-processing";
+                  o!("part" => "container_to_wider_world"));
             self.process_container_to_wider_world(ctww)?;
         }
-        println!("\n\n==> process_container_to_host\n");
         if let Some(ref cth) = self.dfw.container_to_host {
+            info!(self.logger, "Starting sub-processing";
+                  o!("part" => "container_to_host"));
             self.process_container_to_host(cth)?;
         }
-        println!("\n\n==> process_wider_world_to_container\n");
         if let Some(ref wwtc) = self.dfw.wider_world_to_container {
+            info!(self.logger, "Starting sub-processing";
+                  o!("part" => "wider_world_to_container"));
             self.process_wider_world_to_container(wwtc)?;
         }
-        println!("\n\n==> process_container_dnat\n");
         if let Some(ref cd) = self.dfw.container_dnat {
+            info!(self.logger, "Starting sub-processing";
+                  o!("part" => "container_dnat"));
             self.process_container_dnat(cd)?;
         }
 
@@ -273,13 +302,19 @@ impl<'a> ProcessDFW<'a> {
                             .as_ref()
                             .ok_or("error")?
                             .get("com.docker.network.bridge.name") {
-                        println!("bridge_name: {}", bridge_name);
+                        info!(self.logger, "Add ACCEPT rules for Docker bridge";
+                              o!("docker_bridge" => bridge_name,
+                                 "external_network_interface" => external_network_interface));
+
                         let rule_str = Rule::default()
                             .in_interface(bridge_name.to_owned())
                             .out_interface(external_network_interface.to_owned())
                             .jump("ACCEPT".to_owned())
                             .build()?;
-                        println!("accept-rule: {}", rule_str);
+
+                        trace!(self.logger, "Add forward rule for external network interface";
+                               o!("external_network_interface" => external_network_interface,
+                                  "rule" => rule_str.to_owned()));
                         self.ipt4
                             .append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
                         // TODO: verify what is needed for ipt6
@@ -288,6 +323,10 @@ impl<'a> ProcessDFW<'a> {
                             .in_interface(bridge_name.to_owned())
                             .jump("ACCEPT".to_owned())
                             .build()?;
+
+                        trace!(self.logger, "Add input rule for external network interface";
+                               o!("external_network_interface" => external_network_interface,
+                                  "rule" => &rule_str));
                         self.ipt4
                             .append("filter", DFWRS_INPUT_CHAIN, &rule_str)?;
                         // TODO: verify what is needed for ipt6
@@ -295,10 +334,17 @@ impl<'a> ProcessDFW<'a> {
                 }
 
                 // Configure POSTROUTING
+                info!(self.logger, "Configure postrouting for external network interface";
+                      o!("external_network_interface" => external_network_interface));
+
                 let rule_str = Rule::default()
                     .out_interface(external_network_interface.to_owned())
                     .jump("MASQUERADE".to_owned())
                     .build()?;
+
+                trace!(self.logger, "Add post-routing rule for external network interface";
+                       o!("external_network_interface" => external_network_interface,
+                          "rule" => &rule_str));
                 self.ipt4
                     .append("nat", DFWRS_POSTROUTING_CHAIN, &rule_str)?;
                 // TODO: verify what is needed for ipt6
@@ -307,6 +353,10 @@ impl<'a> ProcessDFW<'a> {
 
         // Set default policy for forward chain (defined by `container_to_container`)
         if let Some(ref ctc) = self.dfw.container_to_container {
+            info!(self.logger, "Set default policy for forward chain";
+                  o!("part" => "container_to_container",
+                     "default_policy" => &ctc.default_policy));
+
             self.ipt4
                 .append("filter",
                         DFWRS_FORWARD_CHAIN,
@@ -319,23 +369,49 @@ impl<'a> ProcessDFW<'a> {
 
     fn process_initialization(&self, init: &Initialization) -> Result<()> {
         if let Some(ref v4) = init.v4 {
+            info!(self.logger, "Process initialization rules";
+                  o!("ip" => "v4"));
             for (table, rules) in v4.iter() {
-                println!("table: {}", table);
+                debug!(self.logger, "Process table";
+                       o!("ip" => "v4",
+                          "table" => table));
                 for rule in rules {
-                    println!("  RULE: {}", rule);
+                    debug!(self.logger, "Process rule";
+                           o!("ip" => "v4",
+                              "table" => table,
+                              "rule" => rule));
                     let out = self.ipt4.execute(table, rule)?;
-                    println!(" status: {:?}", out.status);
+                    trace!(self.logger, "Rule executed";
+                           o!("ip" => "v4",
+                              "table" => table,
+                              "rule" => rule,
+                              "status" => out.status.code(),
+                              "stdout" => String::from_utf8_lossy(&out.stdout).into_owned(),
+                              "stderr" => String::from_utf8_lossy(&out.stderr).into_owned()))
                 }
             }
         }
 
         if let Some(ref v6) = init.v6 {
+            info!(self.logger, "Process initialization rules";
+                  o!("ip" => "v4"));
             for (table, rules) in v6.iter() {
-                println!("table: {}", table);
+                debug!(self.logger, "Process table";
+                       o!("ip" => "v4",
+                          "table" => table));
                 for rule in rules {
-                    println!("  RULE: {}", rule);
+                    debug!(self.logger, "Process rule";
+                           o!("ip" => "v4",
+                              "table" => table,
+                              "rule" => rule));
                     let out = self.ipt6.execute(table, rule)?;
-                    println!(" status: {:?}", out.status);
+                    trace!(self.logger, "Rule executed";
+                           o!("ip" => "v4",
+                              "table" => table,
+                              "rule" => rule,
+                              "status" => out.status.code(),
+                              "stdout" => String::from_utf8_lossy(&out.stdout).into_owned(),
+                              "stderr" => String::from_utf8_lossy(&out.stderr).into_owned()))
                 }
             }
         }
@@ -345,6 +421,8 @@ impl<'a> ProcessDFW<'a> {
 
     fn process_container_to_container(&self, ctc: &ContainerToContainer) -> Result<()> {
         if ctc.rules.is_some() {
+            info!(self.logger, "Process rules";
+                  o!("part" => "container_to_container"));
             self.process_ctc_rules(ctc.rules.as_ref().unwrap())?;
         }
 
@@ -353,14 +431,24 @@ impl<'a> ProcessDFW<'a> {
 
     fn process_ctc_rules(&self, rules: &Vec<ContainerToContainerRule>) -> Result<()> {
         for rule in rules {
-            println!("{:#?}", rule);
+            info!(self.logger, "Process rule";
+                  o!("part" => "container_to_container",
+                     "rule" => format!("{:?}", rule)));
             let mut ipt_rule = Rule::default();
 
             let network = match self.network_map.get(&rule.network) {
                 Some(network) => network,
                 None => continue,
             };
+            trace!(self.logger, "Got network";
+                   o!("network_name" => &rule.network,
+                      "network" => format!("{:?}", network)));
+
             let bridge_name = get_bridge_name(&network.Id)?;
+            trace!(self.logger, "Got bridge name";
+                   o!("network_name" => &network.Name,
+                      "bridge_name" => &bridge_name));
+
             ipt_rule
                 .in_interface(bridge_name.to_owned())
                 .out_interface(bridge_name.to_owned());
@@ -373,8 +461,15 @@ impl<'a> ProcessDFW<'a> {
                     Some(src_network) => src_network,
                     None => continue,
                 };
+                trace!(self.logger, "Got source network";
+                       o!("network_name" => &network.Name,
+                          "src_network" => format!("{:?}", src_network)));
 
                 let bridge_name = get_bridge_name(&network.Id)?;
+                trace!(self.logger, "Got bridge name";
+                       o!("network_name" => &network.Name,
+                          "bridge_name" => &bridge_name));
+
                 ipt_rule
                     .in_interface(bridge_name.to_owned())
                     .out_interface(bridge_name.to_owned())
@@ -394,8 +489,15 @@ impl<'a> ProcessDFW<'a> {
                     Some(dst_network) => dst_network,
                     None => continue,
                 };
+                trace!(self.logger, "Got destination network";
+                       o!("network_name" => &network.Name,
+                          "dst_network" => format!("{:?}", dst_network)));
 
                 let bridge_name = get_bridge_name(&network.Id)?;
+                trace!(self.logger, "Got bridge name";
+                       o!("network_name" => &network.Name,
+                          "bridge_name" => &bridge_name));
+
                 ipt_rule
                     .out_interface(bridge_name.to_owned())
                     .destination(dst_network
@@ -410,7 +512,9 @@ impl<'a> ProcessDFW<'a> {
             ipt_rule.jump(rule.action.to_owned());
 
             let rule_str = ipt_rule.build()?;
-            println!("{:#?}", rule_str);
+            info!(self.logger, "Add forward rule";
+                  o!("part" => "container_to_container",
+                     "rule" => &rule_str));
 
             // Apply the rule
             self.ipt4
@@ -424,21 +528,39 @@ impl<'a> ProcessDFW<'a> {
     fn process_container_to_wider_world(&self, ctww: &ContainerToWiderWorld) -> Result<()> {
         // Rules
         if ctww.rules.is_some() {
+            info!(self.logger, "Process rules";
+                  o!("part" => "container_to_wider_world"));
             self.process_ctww_rules(ctww.rules.as_ref().unwrap())?;
         }
 
         // Default policy
         if let Some(ref external_network_interfaces) = self.external_network_interfaces {
+            info!(self.logger, "Set default policy for external network interfaces";
+                  o!("part" => "container_to_wider_world",
+                     "external_network_interfaces" => format!("{:?}", external_network_interfaces),
+                     "default_policy" => &ctww.default_policy));
             for external_network_interface in external_network_interfaces {
+                trace!(self.logger, "Process default policy for external network interface";
+                       o!("part" => "container_to_wider_world",
+                          "external_network_interface" => external_network_interface,
+                          "default_policy" => &ctww.default_policy));
                 for (_, network) in &self.network_map {
                     let bridge_name = get_bridge_name(&network.Id)?;
+                    trace!(self.logger, "Got bridge name";
+                           o!("network_name" => &network.Name,
+                              "bridge_name" => &bridge_name));
+
                     let rule = Rule::default()
                         .in_interface(bridge_name)
                         .out_interface(external_network_interface.to_owned())
                         .jump(ctww.default_policy.to_owned())
                         .build()?;
 
-                    println!("{:?}", rule);
+                    info!(self.logger, "Add forward rule for default policy";
+                          o!("part" => "container_to_wider_world",
+                             "external_network_interface" => external_network_interface,
+                             "default_policy" => &ctww.default_policy,
+                             "rule" => &rule));
                     self.ipt4.append("filter", DFWRS_FORWARD_CHAIN, &rule)?;
                     // TODO: verify what is needed for ipt6
                 }
@@ -450,12 +572,18 @@ impl<'a> ProcessDFW<'a> {
 
     fn process_ctww_rules(&self, rules: &Vec<ContainerToWiderWorldRule>) -> Result<()> {
         for rule in rules {
-            println!("{:#?}", rule);
+            info!(self.logger, "Process rule";
+                  o!("part" => "container_to_wider_world",
+                     "rule" => format!("{:?}", rule)));
             let mut ipt_rule = Rule::default();
 
             if let Some(ref network) = rule.network {
                 if let Some(network) = self.network_map.get(network) {
                     let bridge_name = get_bridge_name(&network.Id)?;
+                    trace!(self.logger, "Got bridge name";
+                           o!("network_name" => &network.Name,
+                              "bridge_name" => &bridge_name));
+
                     ipt_rule.in_interface(bridge_name.to_owned());
 
                     if let Some(ref src_container) = rule.src_container {
@@ -464,7 +592,15 @@ impl<'a> ProcessDFW<'a> {
                                                       &self.container_map,
                                                       &src_container,
                                                       &network.Id)? {
+                            trace!(self.logger, "Got source network";
+                                   o!("network_name" => &network.Name,
+                                      "src_network" => format!("{:?}", src_network)));
+
                             let bridge_name = get_bridge_name(&network.Id)?;
+                            trace!(self.logger, "Got bridge name";
+                                   o!("network_name" => &network.Name,
+                                      "bridge_name" => &bridge_name));
+
                             ipt_rule
                                 .in_interface(bridge_name.to_owned())
                                 .source(src_network
@@ -486,17 +622,25 @@ impl<'a> ProcessDFW<'a> {
 
             // Try to build the rule without the out_interface defined to see if any of the other
             // mandatory fields has been populated.
+            debug!(self.logger, "Build rule to verify contents";
+                   o!("args" => format!("{:?}", ipt_rule)));
             ipt_rule.build()?; // TODO: maybe add a `verify` method to `Rule`
 
             if let Some(ref external_network_interface) = rule.external_network_interface {
+                trace!(self.logger, "Rule has specific external network interface";
+                       o!("external_network_interface" => external_network_interface));
                 ipt_rule.out_interface(external_network_interface.to_owned());
             } else if let Some(ref primary_external_network_interface) =
                 self.primary_external_network_interface {
+                trace!(self.logger, "Rule uses primary external network interface";
+                       o!("external_network_interface" => primary_external_network_interface));
                 ipt_rule.out_interface(primary_external_network_interface.to_owned().to_owned());
             }
 
             let rule_str = ipt_rule.build()?;
-            println!("{:#?}", rule_str);
+            info!(self.logger, "Add forward rule";
+                  o!("part" => "container_to_wider_world",
+                     "rule" => &rule_str));
 
             // Apply the rule
             self.ipt4
@@ -510,18 +654,27 @@ impl<'a> ProcessDFW<'a> {
     fn process_container_to_host(&self, cth: &ContainerToHost) -> Result<()> {
         // Rules
         if cth.rules.is_some() {
+            info!(self.logger, "Process rules";
+                  o!("part" => "container_to_host"));
             self.process_cth_rules(cth.rules.as_ref().unwrap())?;
         }
 
         // Default policy
         for (_, network) in &self.network_map {
             let bridge_name = get_bridge_name(&network.Id)?;
+            trace!(self.logger, "Got bridge name";
+                   o!("network_name" => &network.Name,
+                      "bridge_name" => &bridge_name));
+
             let rule = Rule::default()
                 .in_interface(bridge_name)
                 .jump(cth.default_policy.to_owned())
                 .build()?;
 
-            println!("{:?}", rule);
+            trace!(self.logger, "Add input rule for default policy";
+                   o!("part" => "container_to_host",
+                      "default_policy" => &cth.default_policy,
+                      "rule" => &rule));
             self.ipt4.append("filter", DFWRS_INPUT_CHAIN, &rule)?;
             // TODO: verify what is needed for ipt6
         }
@@ -531,14 +684,24 @@ impl<'a> ProcessDFW<'a> {
 
     fn process_cth_rules(&self, rules: &Vec<ContainerToHostRule>) -> Result<()> {
         for rule in rules {
-            println!("{:#?}", rule);
+            info!(self.logger, "Process rule";
+                  o!("part" => "container_to_host",
+                     "rule" => format!("{:?}", rule)));
             let mut ipt_rule = Rule::default();
 
             let network = match self.network_map.get(&rule.network) {
                 Some(network) => network,
                 None => continue,
             };
+            trace!(self.logger, "Got network";
+                   o!("network_name" => &network.Name,
+                      "network" => format!("{:?}", network)));
+
             let bridge_name = get_bridge_name(&network.Id)?;
+            trace!(self.logger, "Got bridge name";
+                   o!("network_name" => &network.Name,
+                      "bridge_name" => &bridge_name));
+
             ipt_rule.in_interface(bridge_name.to_owned());
 
             if let Some(ref src_container) = rule.src_container {
@@ -547,6 +710,9 @@ impl<'a> ProcessDFW<'a> {
                                               &self.container_map,
                                               &src_container,
                                               &network.Id)? {
+                    trace!(self.logger, "Got source network";
+                           o!("network_name" => &network.Name,
+                              "src_network" => format!("{:?}", src_network)));
                     ipt_rule.source(src_network
                                         .IPv4Address
                                         .split("/")
@@ -564,10 +730,14 @@ impl<'a> ProcessDFW<'a> {
 
             // Try to build the rule without the out_interface defined to see if any of the other
             // mandatory fields has been populated.
+            debug!(self.logger, "Build rule to verify contents";
+                   o!("args" => format!("{:?}", ipt_rule)));
             ipt_rule.build()?; // TODO: maybe add a `verify` method to `Rule`
 
             let rule_str = ipt_rule.build()?;
-            println!("{:#?}", rule_str);
+            info!(self.logger, "Add input rule";
+                  o!("part" => "container_to_host",
+                     "rule" => &rule_str));
 
             // Apply the rule
             self.ipt4
@@ -580,12 +750,19 @@ impl<'a> ProcessDFW<'a> {
 
     fn process_wider_world_to_container(&self, wwtc: &WiderWorldToContainer) -> Result<()> {
         if wwtc.rules.is_none() {
+            trace!(self.logger, "No rules";
+                   o!("part" => "wider_world_to_container"));
             return Ok(());
         }
+        info!(self.logger, "Process rules";
+              o!("part" => "wider_world_to_container"));
+
         let rules = wwtc.rules.as_ref().unwrap();
 
         for rule in rules {
-            println!("{:#?}", rule);
+            info!(self.logger, "Process rule";
+                  o!("part" => "wider_world_to_container",
+                     "rule" => format!("{:?}", rule)));
             for expose_port in &rule.expose_port {
                 let mut ipt_forward_rule = Rule::default();
                 let mut ipt_dnat_rule = Rule::default();
@@ -594,7 +771,15 @@ impl<'a> ProcessDFW<'a> {
                     Some(network) => network,
                     None => continue,
                 };
+                trace!(self.logger, "Got network";
+                       o!("network_name" => &network.Name,
+                          "network" => format!("{:?}", network)));
+
                 let bridge_name = get_bridge_name(&network.Id)?;
+                trace!(self.logger, "Got bridge name";
+                       o!("network_name" => &network.Name,
+                          "bridge_name" => &bridge_name));
+
                 ipt_forward_rule.out_interface(bridge_name.to_owned());
 
                 if let Some(dst_network) =
@@ -602,6 +787,10 @@ impl<'a> ProcessDFW<'a> {
                                               &self.container_map,
                                               &rule.dst_container,
                                               &network.Id)? {
+                    trace!(self.logger, "Got destination network";
+                           o!("network_name" => &network.Name,
+                              "dst_network" => format!("{:?}", dst_network)));
+
                     ipt_forward_rule.destination(dst_network
                                                      .IPv4Address
                                                      .split("/")
@@ -636,14 +825,24 @@ impl<'a> ProcessDFW<'a> {
 
                 // Try to build the rule without the out_interface defined to see if any of the
                 // other mandatory fields has been populated.
+                debug!(self.logger, "Build rule to verify contents";
+                       o!("args" => format!("{:?}", ipt_forward_rule)));
                 ipt_forward_rule.build()?; // TODO: maybe add a `verify` method to `Rule`
+                debug!(self.logger, "Build rule to verify contents";
+                       o!("args" => format!("{:?}", ipt_dnat_rule)));
                 ipt_dnat_rule.build()?; // TODO: maybe add a `verify` method to `Rule`
 
                 if let Some(ref external_network_interface) = rule.external_network_interface {
+                    trace!(self.logger, "Rule has specific external network interface";
+                           o!("external_network_interface" => external_network_interface));
+
                     ipt_forward_rule.in_interface(external_network_interface.to_owned());
                     ipt_dnat_rule.in_interface(external_network_interface.to_owned());
                 } else if let Some(ref primary_external_network_interface) =
                     self.primary_external_network_interface {
+                    trace!(self.logger, "Rule uses primary external network interface";
+                           o!("external_network_interface" => primary_external_network_interface));
+
                     ipt_forward_rule.in_interface(primary_external_network_interface
                                                       .to_owned()
                                                       .to_owned());
@@ -656,9 +855,13 @@ impl<'a> ProcessDFW<'a> {
                 }
 
                 let forward_rule_str = ipt_forward_rule.build()?;
-                println!("{:#?}", forward_rule_str);
+                info!(self.logger, "Add forward rule";
+                      o!("part" => "wider_world_to_container",
+                         "rule" => &forward_rule_str));
                 let dnat_rule_str = ipt_dnat_rule.build()?;
-                println!("{:#?}", dnat_rule_str);
+                info!(self.logger, "Add DNAT rule";
+                      o!("part" => "wider_world_to_container",
+                         "rule" => &dnat_rule_str));
 
                 // Apply the rule
                 self.ipt4
@@ -674,18 +877,33 @@ impl<'a> ProcessDFW<'a> {
 
     fn process_container_dnat(&self, cd: &ContainerDNAT) -> Result<()> {
         if cd.rules.is_none() {
+            trace!(self.logger, "No rules";
+                   o!("part" => "container_dnat"));
             return Ok(());
         }
+        info!(self.logger, "Process rules";
+              o!("part" => "container_dnat"));
+
         let rules = cd.rules.as_ref().unwrap();
 
         for rule in rules {
-            println!("{:#?}", rule);
+            info!(self.logger, "Process rule";
+                  o!("part" => "container_dnat",
+                     "rule" => format!("{:?}", rule)));
             for expose_port in &rule.expose_port {
                 let mut ipt_rule = Rule::default();
 
                 if let Some(ref network) = rule.src_network {
                     if let Some(network) = self.network_map.get(network) {
+                        trace!(self.logger, "Got network";
+                               o!("network_name" => &network.Name,
+                                  "network" => format!("{:?}", network)));
+
                         let bridge_name = get_bridge_name(&network.Id)?;
+                        trace!(self.logger, "Got bridge name";
+                               o!("network_name" => &network.Name,
+                                  "bridge_name" => &bridge_name));
+
                         ipt_rule.in_interface(bridge_name.to_owned());
 
                         if let Some(ref src_container) = rule.src_container {
@@ -694,7 +912,15 @@ impl<'a> ProcessDFW<'a> {
                                                           &self.container_map,
                                                           &src_container,
                                                           &network.Id)? {
+                                trace!(self.logger, "Got source network";
+                                       o!("network_name" => &network.Name,
+                                          "src_network" => format!("{:?}", src_network)));
+
                                 let bridge_name = get_bridge_name(&network.Id)?;
+                                trace!(self.logger, "Got bridge name";
+                                       o!("network_name" => &network.Name,
+                                          "bridge_name" => &bridge_name));
+
                                 ipt_rule
                                     .in_interface(bridge_name.to_owned())
                                     .source(src_network
@@ -732,11 +958,17 @@ impl<'a> ProcessDFW<'a> {
 
                 // Try to build the rule without the out_interface defined to see if any of the
                 // other mandatory fields has been populated.
+                debug!(self.logger, "Build rule to verify contents";
+                       o!("args" => format!("{:?}", ipt_rule)));
                 ipt_rule.build()?; // TODO: maybe add a `verify` method to `Rule`
 
                 if ipt_rule.out_interface.is_none() {
                     if let Some(ref primary_external_network_interface) =
                         self.primary_external_network_interface {
+                        trace!(self.logger, "Set primary external network interface";
+                               o!("external_network_interface"
+                                  => primary_external_network_interface));
+
                         ipt_rule
                             .in_interface(primary_external_network_interface.to_owned().to_owned())
                             .not_in_interface(true);
@@ -748,7 +980,9 @@ impl<'a> ProcessDFW<'a> {
                 }
 
                 let rule_str = ipt_rule.build()?;
-                println!("{:#?}", rule_str);
+                info!(self.logger, "Add prerouting rule";
+                      o!("part" => "container_dnat",
+                         "rule" => &rule_str));
 
                 // Apply the rule
                 self.ipt4
