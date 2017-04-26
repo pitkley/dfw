@@ -188,14 +188,10 @@ fn spawn_event_monitor(docker_url: Option<String>, s_event: Sender<()>, logger: 
     });
 }
 
-fn run() -> Result<()> {
+fn run(root_logger: &Logger) -> Result<()> {
     // Signals should be set up as early as possible, to set proper signal masks to all threads
     let signal = chan_signal::notify(&[Signal::INT, Signal::TERM, Signal::HUP]);
 
-    let decorator = slog_term::TermDecorator::new().stderr().build();
-    let drain = slog_term::FullFormat::new(decorator).build().fuse();
-    let drain = slog_async::Async::new(drain).build().fuse();
-    let root_logger = Logger::root(Arc::new(drain), o!());
     info!(root_logger, "Application starting";
           "version" => crate_version!(),
           "started_at" => format!("{}", time::now().rfc3339()));
@@ -406,4 +402,18 @@ fn run() -> Result<()> {
     Ok(())
 }
 
-quick_main!(run);
+//quick_main!(run);
+fn main() {
+    let decorator = slog_term::TermDecorator::new().stderr().build();
+    let drain = slog_term::FullFormat::new(decorator).build().fuse();
+    let drain = slog_async::Async::new(drain).build().fuse();
+    let root_logger = Logger::root(Arc::new(drain), o!());
+
+    if let Err(ref e) = run(&root_logger) {
+        // Trait that holds `display`
+        use error_chain::ChainedError;
+
+        error!(root_logger, "Encountered error";
+               o!("error" => format!("{}", e.display())));
+    }
+}
