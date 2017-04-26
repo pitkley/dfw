@@ -22,7 +22,7 @@ pub struct DFW {
 #[derive(Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Defaults {
-    #[serde(default, deserialize_with = "option_string_or_vec")]
+    #[serde(default, deserialize_with = "option_string_or_seq_string")]
     pub external_network_interfaces: Option<Vec<String>>,
 }
 
@@ -265,16 +265,16 @@ fn single_or_seq_string_or_struct<'de, T, D>(deserializer: D) -> Result<Vec<T>, 
     deserializer.deserialize_any(SingleOrSeqStringOrStruct(PhantomData))
 }
 
-fn string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
     where D: Deserializer<'de>
 {
-    struct StringOrVec(PhantomData<Vec<String>>);
+    struct StringOrSeqString(PhantomData<Vec<String>>);
 
-    impl<'de> de::Visitor<'de> for StringOrVec {
+    impl<'de> de::Visitor<'de> for StringOrSeqString {
         type Value = Vec<String>;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("string or list of strings")
+            formatter.write_str("string or sequence of strings")
         }
 
         fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
@@ -290,11 +290,11 @@ fn string_or_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
         }
     }
 
-    deserializer.deserialize_any(StringOrVec(PhantomData))
+    deserializer.deserialize_any(StringOrSeqString(PhantomData))
 }
 
-fn option_string_or_vec<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
+fn option_string_or_seq_string<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
     where D: Deserializer<'de>
 {
-    string_or_vec(deserializer).map(Some)
+    string_or_seq_string(deserializer).map(Some)
 }
