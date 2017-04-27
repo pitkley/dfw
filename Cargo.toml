@@ -8,7 +8,7 @@ license = "MIT/Apache-2.0"
 chan = "~0.1.19"
 chan-signal = "~0.2.0"
 clap = "~2.23.3"
-derive_builder = "~0.4.2"
+derive_builder = { version = "~0.4.2", features = ["private_fields"] }
 error-chain = "~0.10.0"
 glob = "~0.2.11"
 iptables = "~0.2.0"
