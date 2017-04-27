@@ -365,17 +365,18 @@ pub struct WiderWorldToContainerRule {
 #[serde(deny_unknown_fields)]
 pub struct ExposePort {
     /// Port the `container_port` should be exposed to on the host.
+    #[builder(field(public))]
     pub host_port: u16,
 
     /// Port the `host_port` should map to into the container.
-    #[builder(default="self.default_container_port()?")]
+    #[builder(field(public), default="self.default_container_port()?")]
     pub container_port: Option<u16>,
 
     /// Family of the exposed port.
     ///
     /// Can be left blank, `tcp` will be used as default.
     #[serde(default = "default_expose_port_family")]
-    #[builder(default = "self.default_family()?")]
+    #[builder(field(public), default = "self.default_family()?")]
     pub family: String,
 }
 
