@@ -185,7 +185,6 @@ use std::ascii::AsciiExt;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::prelude::*;
-use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
@@ -629,10 +628,9 @@ fn main() {
     // Signals should be set up as early as possible, to set proper signal masks to all threads
     let signal = chan_signal::notify(&[Signal::INT, Signal::TERM, Signal::HUP]);
 
-    let decorator = slog_term::TermDecorator::new().stdout().build();
+    let decorator = slog_term::PlainSyncDecorator::new(std::io::stdout());
     let drain = slog_term::FullFormat::new(decorator).build().fuse();
-    let drain = slog_async::Async::new(drain).build().fuse();
-    let root_logger = Logger::root(Arc::new(drain), o!());
+    let root_logger = Logger::root(drain, o!());
 
     if let Err(ref e) = run(signal, &root_logger) {
         // Trait that holds `display`
