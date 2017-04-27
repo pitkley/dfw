@@ -12,7 +12,7 @@ dependencies = [
  "libc 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "shiplift 0.3.1 (git+https://github.com/softprops/shiplift?rev=1e248234625c85c0716eb3924b386efae12356f6)",
+ "shiplift 0.3.1 (git+https://github.com/softprops/shiplift?rev=e57f0932741003ded8913de2385d5ce6672e645e)",
  "slog 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog-async 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog-term 2.0.0-4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -528,7 +528,7 @@ dependencies = [
 [[package]]
 name = "shiplift"
 version = "0.3.1"
-source = "git+https://github.com/softprops/shiplift?rev=1e248234625c85c0716eb3924b386efae12356f6#1e248234625c85c0716eb3924b386efae12356f6"
+source = "git+https://github.com/softprops/shiplift?rev=e57f0932741003ded8913de2385d5ce6672e645e#e57f0932741003ded8913de2385d5ce6672e645e"
 dependencies = [
  "flate2 0.2.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper 0.10.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -853,7 +853,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum serde 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "1be24992f20bb7dfb9932a152a6f51ed7f756ebd8df1ea707ecab09d615d3ede"
 "checksum serde_derive 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "94f3c3fd5cd27ffda6e1f330daed369d087b50557d59bd19c230c893f4fced60"
 "checksum serde_derive_internals 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)" = "021c338d22c7e30f957a6ab7e388cb6098499dda9fd4ba1661ee074ca7a180d1"
-"checksum shiplift 0.3.1 (git+https://github.com/softprops/shiplift?rev=1e248234625c85c0716eb3924b386efae12356f6)" = "<none>"
+"checksum shiplift 0.3.1 (git+https://github.com/softprops/shiplift?rev=e57f0932741003ded8913de2385d5ce6672e645e)" = "<none>"
 "checksum slog 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "283d5a2519a7e7ef1c6ab75ed820deab899de50989c910b4ff7d01842e61b6a3"
 "checksum slog-async 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "afbebab3918ccc36e83dca6879dbe554fc2874d1c26e3dd5debf646a5ee60936"
 "checksum slog-term 2.0.0-4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "89d130869a0c1e47a60114e055a7b911b3913972742a739cfc82de6fb71c6004"

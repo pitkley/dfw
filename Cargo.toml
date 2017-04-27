@@ -15,7 +15,7 @@ iptables = "~0.2.0"
 libc = "~0.2.21"
 serde = "~1.0.1"
 serde_derive = "~1.0.1"
-shiplift = { git = "https://github.com/softprops/shiplift", rev = "1e248234625c85c0716eb3924b386efae12356f6" }
+shiplift = { git = "https://github.com/softprops/shiplift", rev = "e57f0932741003ded8913de2385d5ce6672e645e" }
 slog = "~2.0.2"
 slog-async = "~2.0.1"
 slog-term = "~2.0.0-4.0"
