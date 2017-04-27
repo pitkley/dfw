@@ -13,6 +13,7 @@ extern crate derive_builder;
 extern crate error_chain;
 extern crate glob;
 extern crate iptables;
+extern crate libc;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde;
@@ -35,7 +36,10 @@ use std::fs::File;
 use std::io::BufReader;
 use std::io::prelude::*;
 use std::sync::Arc;
+use std::thread;
 use std::time::Duration;
+
+use std::os::unix::thread::JoinHandleExt;
 
 use chan::{Receiver, Sender};
 use chan_signal::Signal;
@@ -102,7 +106,9 @@ fn load_config(matches: &ArgMatches) -> Result<DFW> {
 fn spawn_burst_monitor(burst_timeout: u64,
                        s_trigger: Sender<()>,
                        r_event: Receiver<()>,
-                       logger: &Logger) {
+                       r_exit: Receiver<()>,
+                       logger: &Logger)
+                       -> thread::JoinHandle<()> {
     let logger = logger.new(o!("thread" => "burst_monitor"));
 
     #[derive(Debug)]
@@ -111,7 +117,7 @@ fn spawn_burst_monitor(burst_timeout: u64,
         After,
         None,
     }
-    ::std::thread::spawn(move || {
+    thread::spawn(move || {
         let dummy: Receiver<()> = {
             let (s_dummy, r_dummy) = chan::sync(0);
             // Leak the send-channel so that it never gets closed and `recv` never synchronizes.
@@ -137,6 +143,10 @@ fn spawn_burst_monitor(burst_timeout: u64,
                     trace!(logger, "After timer ran out, sending trigger");
                     trigger = Trigger::After;
                     s_trigger.send(());
+                },
+                r_exit.recv() => {
+                    trace!(logger, "Received exit event");
+                    break;
                 }
             }
 
@@ -148,13 +158,16 @@ fn spawn_burst_monitor(burst_timeout: u64,
                 Trigger::None => {}
             }
         }
-    });
+    })
 }
 
-fn spawn_event_monitor(docker_url: Option<String>, s_event: Sender<()>, logger: &Logger) {
+fn spawn_event_monitor(docker_url: Option<String>,
+                       s_event: Sender<()>,
+                       logger: &Logger)
+                       -> thread::JoinHandle<()> {
     let logger = logger.new(o!("thread" => "event_monitor"));
 
-    ::std::thread::spawn(move || {
+    thread::spawn(move || {
         let docker = match docker_url {
             Some(docker_url) => Docker::host(docker_url.parse().unwrap()),
             None => Docker::new(),
@@ -168,13 +181,13 @@ fn spawn_event_monitor(docker_url: Option<String>, s_event: Sender<()>, logger: 
                                  .build())
                     .unwrap() {
                 trace!(logger, "Received event";
-                       "event" => format!("{:?}", &event));
+                       o!("event" => format!("{:?}", &event)));
                 match event.status {
                     Some(ref status) => {
                         match &**status {
                             "create" | "destroy" | "start" | "restart" | "die" | "stop" => {
                                 trace!(logger, "Trigger channel about event";
-                                       "event" => format!("{:?}", event));
+                                       o!("event" => format!("{:?}", event)));
                                 s_event.send(());
                                 break;
                             }
@@ -185,16 +198,14 @@ fn spawn_event_monitor(docker_url: Option<String>, s_event: Sender<()>, logger: 
                 }
             }
         }
-    });
+    })
 }
 
-fn run(root_logger: &Logger) -> Result<()> {
-    // Signals should be set up as early as possible, to set proper signal masks to all threads
-    let signal = chan_signal::notify(&[Signal::INT, Signal::TERM, Signal::HUP]);
-
+#[cfg(unix)]
+fn run(signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
     info!(root_logger, "Application starting";
-          "version" => crate_version!(),
-          "started_at" => format!("{}", time::now().rfc3339()));
+          o!("version" => crate_version!(),
+             "started_at" => format!("{}", time::now().rfc3339())));
 
     trace!(root_logger, "Parsing command line arguments");
     let matches = App::new("dfwrs")
@@ -338,15 +349,18 @@ fn run(root_logger: &Logger) -> Result<()> {
         // Either run-once is specified or both events are not monitored and rules aren't processed
         // regularly -- process once, then exit.
         info!(root_logger,
-              "Run once specified (or load-interval is zero and events aren't monitored), exiting");
+              "Run once specified (or load-interval is zero and events aren't monitored), exiting";
+              o!("version" => crate_version!(),
+                 "exited_at" => format!("{}", time::now().rfc3339())));
         ::std::process::exit(0);
     }
 
-    let event_trigger = if monitor_events {
+    let (event_trigger, terminate_threads, thread_handles) = if monitor_events {
         // Setup event monitoring
         trace!(root_logger, "Setup event monitoring channel";
                o!("monitor_events" => monitor_events));
 
+        let (s_burst_exit, r_burst_exit) = chan::sync(0);
         let (s_trigger, r_trigger) = chan::sync(0);
         let (s_event, r_event) = chan::sync(0);
         let docker_url = matches.value_of("docker-url").map(|s| s.to_owned());
@@ -354,20 +368,62 @@ fn run(root_logger: &Logger) -> Result<()> {
 
         trace!(root_logger, "Start burst monitoring thread";
                o!("burst_timeout" => burst_timeout));
-        spawn_burst_monitor(burst_timeout, s_trigger, r_event, &root_logger);
+        let burst_handle = spawn_burst_monitor(burst_timeout,
+                                               s_trigger,
+                                               r_event,
+                                               r_burst_exit,
+                                               &root_logger);
 
         trace!(root_logger, "Start event monitoring thread";
                o!("docker_url" => &docker_url));
-        spawn_event_monitor(docker_url, s_event, &root_logger);
+        let event_handle = spawn_event_monitor(docker_url, s_event, &root_logger);
+        let event_pthread_t = event_handle.as_pthread_t();
 
-        r_trigger
+        let terminate_threads: Box<Fn() -> ()> = Box::new(move || {
+            trace!(root_logger, "Triggering burst thread to exit");
+            s_burst_exit.send(());
+            unsafe {
+                // The event-thread is stuck in a potentially indefinitely blocking for loop,
+                // waiting for a Docker event to happen.
+                //
+                // I can think of two ways to exit it:
+                //
+                //   1. Artifically produce an event, which unblocks the loop and lets us check for
+                //      an exit trigger
+                //   2. Kill the thread
+                //
+                // While artifically producing an event sounds cleaner, it would require to
+                // actually cause an event on the host we are running on, i.e. starting a
+                // container, or maybe pulling a non-existant image.
+                //
+                // I don't necessarily want to interfere with the running host, although causing an
+                // event for something that will be known to fail might be an option.
+                //
+                // The alternative, killing the thread, requires the unix-specific `JoinHandle`
+                // extensions to get a (numeric) handle to the thread, which can then unsafely be
+                // killed using `libc`.
+                //
+                // We have to send the "hardest" signal, SIGKILL, since both SIGINT and SIGTERM are
+                // captured at the very start of the main thread, and this propagates to the child
+                // thread.
+                //
+                // TODO: find a cleaner way!
+                trace!(root_logger, "Sending SIGKILL to event thread";
+                       o!("pthread_t" => event_pthread_t));
+                libc::pthread_kill(event_pthread_t, libc::SIGKILL);
+            }
+        });
+
+        (r_trigger, terminate_threads, vec![burst_handle, event_handle])
     } else {
         trace!(root_logger, "Creating dummy channel";
                o!("monitor_events" => monitor_events));
         let (s_dummy, r_dummy) = chan::sync(0);
         // Leak the send-channel so that it never gets closed and `recv` never synchronizes.
         ::std::mem::forget(s_dummy);
-        r_dummy
+
+        let terminate_threads: Box<Fn() -> ()> = Box::new(|| {});
+        (r_dummy, terminate_threads, vec![])
     };
 
     loop {
@@ -385,13 +441,26 @@ fn run(root_logger: &Logger) -> Result<()> {
                     Some(Signal::INT) | Some(Signal::TERM) => {
                         info!(root_logger, "Received kill-signal, exiting";
                               o!("signal" => format!("{:?}", signal)));
+
+                        trace!(root_logger, "Sending termination signals");
+                        terminate_threads();
+
+                        trace!(root_logger, "Joining threads";
+                               o!("handles" => format!("{:?}", thread_handles)));
+                        for handle in thread_handles {
+                            trace!(root_logger, "Joining thread";
+                                   o!("handle" => format!("{:?}", handle)));
+                            handle.join().expect("Couldn't join thread");
+                        }
                         break;
                     }
+
                     Some(Signal::HUP) => {
                         info!(root_logger, "Received HUP-signal, starting processing";
                               o!("signal" => format!("{:?}", signal)));
                         process()?;
                     }
+
                     Some(_) => { bail!("got unexpected signal '{:?}'", signal); }
                     None => { bail!("signal was empty"); }
                 }
@@ -399,17 +468,23 @@ fn run(root_logger: &Logger) -> Result<()> {
         }
     }
 
+    info!(root_logger, "Application exiting";
+          o!("version" => crate_version!(),
+             "exited_at" => format!("{}", time::now().rfc3339())));
+
     Ok(())
 }
 
-//quick_main!(run);
 fn main() {
-    let decorator = slog_term::TermDecorator::new().stderr().build();
+    // Signals should be set up as early as possible, to set proper signal masks to all threads
+    let signal = chan_signal::notify(&[Signal::INT, Signal::TERM, Signal::HUP]);
+
+    let decorator = slog_term::TermDecorator::new().stdout().build();
     let drain = slog_term::FullFormat::new(decorator).build().fuse();
     let drain = slog_async::Async::new(drain).build().fuse();
     let root_logger = Logger::root(Arc::new(drain), o!());
 
-    if let Err(ref e) = run(&root_logger) {
+    if let Err(ref e) = run(signal, &root_logger) {
         // Trait that holds `display`
         use error_chain::ChainedError;
 
