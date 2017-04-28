@@ -23,6 +23,10 @@ time = "~0.1.37"
 toml = "~0.4.0"
 url = "~1.4.0"
 
+[[bin]]
+name = "dfwrs"
+doc = false
+
 [package.metadata.release]
 sign-commit = true
 upload-doc = false
