@@ -1,0 +1,230 @@
+// Copyright 2017 Pit Kleyersburg <pitkley@googlemail.com>
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified or distributed
+// except according to those terms.
+
+use std::os::unix::process::ExitStatusExt;
+use std::process::{ExitStatus, Output};
+
+use errors::*;
+
+pub trait IPTables {
+    fn get_policy(&self, table: &str, chain: &str) -> Result<String>;
+    fn set_policy(&self, table: &str, chain: &str, policy: &str) -> Result<bool>;
+    fn execute(&self, table: &str, command: &str) -> Result<Output>;
+    fn exists(&self, table: &str, chain: &str, rule: &str) -> Result<bool>;
+    fn chain_exists(&self, table: &str, chain: &str) -> Result<bool>;
+    fn insert(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool>;
+    fn insert_unique(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool>;
+    fn replace(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool>;
+    fn append(&self, table: &str, chain: &str, rule: &str) -> Result<bool>;
+    fn append_unique(&self, table: &str, chain: &str, rule: &str) -> Result<bool>;
+    fn append_replace(&self, table: &str, chain: &str, rule: &str) -> Result<bool>;
+    fn delete(&self, table: &str, chain: &str, rule: &str) -> Result<bool>;
+    fn delete_all(&self, table: &str, chain: &str, rule: &str) -> Result<bool>;
+    fn list(&self, table: &str, chain: &str) -> Result<Vec<String>>;
+    fn list_table(&self, table: &str) -> Result<Vec<String>>;
+    fn list_chains(&self, table: &str) -> Result<Vec<String>>;
+    fn new_chain(&self, table: &str, chain: &str) -> Result<bool>;
+    fn flush_chain(&self, table: &str, chain: &str) -> Result<bool>;
+    fn rename_chain(&self, table: &str, old_chain: &str, new_chain: &str) -> Result<bool>;
+    fn delete_chain(&self, table: &str, chain: &str) -> Result<bool>;
+    fn flush_table(&self, table: &str) -> Result<bool>;
+}
+
+pub struct IPTablesProxy(pub ::ipt::IPTables);
+impl IPTables for IPTablesProxy {
+    fn get_policy(&self, table: &str, chain: &str) -> Result<String> {
+        self.0.get_policy(table, chain).map_err(|e| e.into())
+    }
+
+    fn set_policy(&self, table: &str, chain: &str, policy: &str) -> Result<bool> {
+        self.0
+            .set_policy(table, chain, policy)
+            .map_err(|e| e.into())
+    }
+
+    fn execute(&self, table: &str, command: &str) -> Result<Output> {
+        self.0.execute(table, command).map_err(|e| e.into())
+    }
+
+    fn exists(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        self.0.exists(table, chain, rule).map_err(|e| e.into())
+    }
+
+    fn chain_exists(&self, table: &str, chain: &str) -> Result<bool> {
+        self.0.chain_exists(table, chain).map_err(|e| e.into())
+    }
+
+    fn insert(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
+        self.0
+            .insert(table, chain, rule, position)
+            .map_err(|e| e.into())
+    }
+
+    fn insert_unique(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
+        self.0
+            .insert_unique(table, chain, rule, position)
+            .map_err(|e| e.into())
+    }
+
+    fn replace(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
+        self.0
+            .replace(table, chain, rule, position)
+            .map_err(|e| e.into())
+    }
+
+    fn append(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        self.0.append(table, chain, rule).map_err(|e| e.into())
+    }
+
+    fn append_unique(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        self.0
+            .append_unique(table, chain, rule)
+            .map_err(|e| e.into())
+    }
+
+    fn append_replace(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        self.0
+            .append_replace(table, chain, rule)
+            .map_err(|e| e.into())
+    }
+
+    fn delete(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        self.0.delete(table, chain, rule).map_err(|e| e.into())
+    }
+
+    fn delete_all(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        self.0
+            .delete_all(table, chain, rule)
+            .map_err(|e| e.into())
+    }
+
+    fn list(&self, table: &str, chain: &str) -> Result<Vec<String>> {
+        self.0.list(table, chain).map_err(|e| e.into())
+    }
+
+    fn list_table(&self, table: &str) -> Result<Vec<String>> {
+        self.0.list_table(table).map_err(|e| e.into())
+    }
+
+    fn list_chains(&self, table: &str) -> Result<Vec<String>> {
+        self.0.list_chains(table).map_err(|e| e.into())
+    }
+
+    fn new_chain(&self, table: &str, chain: &str) -> Result<bool> {
+        self.0.new_chain(table, chain).map_err(|e| e.into())
+    }
+
+    fn flush_chain(&self, table: &str, chain: &str) -> Result<bool> {
+        self.0.flush_chain(table, chain).map_err(|e| e.into())
+    }
+
+    fn rename_chain(&self, table: &str, old_chain: &str, new_chain: &str) -> Result<bool> {
+        self.0
+            .rename_chain(table, old_chain, new_chain)
+            .map_err(|e| e.into())
+    }
+
+    fn delete_chain(&self, table: &str, chain: &str) -> Result<bool> {
+        self.0.delete_chain(table, chain).map_err(|e| e.into())
+    }
+
+    fn flush_table(&self, table: &str) -> Result<bool> {
+        self.0.flush_table(table).map_err(|e| e.into())
+    }
+}
+
+pub struct IPTablesDummy;
+impl IPTables for IPTablesDummy {
+    fn get_policy(&self, table: &str, chain: &str) -> Result<String> {
+        Ok("".to_owned())
+    }
+
+    fn set_policy(&self, table: &str, chain: &str, policy: &str) -> Result<bool> {
+        Ok(false)
+    }
+
+    fn execute(&self, table: &str, command: &str) -> Result<Output> {
+        Ok(Output {
+               status: ExitStatus::from_raw(9),
+               stdout: vec![],
+               stderr: vec![],
+           })
+    }
+
+    fn exists(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        Ok(false)
+    }
+
+    fn chain_exists(&self, table: &str, chain: &str) -> Result<bool> {
+        Ok(false)
+    }
+
+    fn insert(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
+        Ok(false)
+    }
+
+    fn insert_unique(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
+        Ok(false)
+    }
+
+    fn replace(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
+        Ok(false)
+    }
+
+    fn append(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        Ok(false)
+    }
+
+    fn append_unique(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        Ok(false)
+    }
+
+    fn append_replace(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        Ok(false)
+    }
+
+    fn delete(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        Ok(false)
+    }
+
+    fn delete_all(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        Ok(false)
+    }
+
+    fn list(&self, table: &str, chain: &str) -> Result<Vec<String>> {
+        Ok(vec![])
+    }
+
+    fn list_table(&self, table: &str) -> Result<Vec<String>> {
+        Ok(vec![])
+    }
+
+    fn list_chains(&self, table: &str) -> Result<Vec<String>> {
+        Ok(vec![])
+    }
+
+    fn new_chain(&self, table: &str, chain: &str) -> Result<bool> {
+        Ok(false)
+    }
+
+    fn flush_chain(&self, table: &str, chain: &str) -> Result<bool> {
+        Ok(false)
+    }
+
+    fn rename_chain(&self, table: &str, old_chain: &str, new_chain: &str) -> Result<bool> {
+        Ok(false)
+    }
+
+    fn delete_chain(&self, table: &str, chain: &str) -> Result<bool> {
+        Ok(false)
+    }
+
+    fn flush_table(&self, table: &str) -> Result<bool> {
+        Ok(false)
+    }
+}
