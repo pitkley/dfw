@@ -10,8 +10,6 @@
 
 use std::collections::HashMap as Map;
 
-use iptables;
-use iptables::IPTables;
 use shiplift::Docker;
 use shiplift::rep::Container;
 use shiplift::rep::{NetworkDetails, NetworkContainerDetails};
@@ -19,6 +17,7 @@ use slog::Logger;
 use time;
 
 use errors::*;
+use iptables::*;
 use types::*;
 
 const DFWRS_FORWARD_CHAIN: &'static str = "DFWRS_FORWARD";
@@ -183,8 +182,8 @@ impl Rule {
 pub struct ProcessDFW<'a> {
     docker: &'a Docker,
     dfw: &'a DFW,
-    ipt4: IPTables,
-    ipt6: IPTables,
+    ipt4: &'a IPTables,
+    ipt6: &'a IPTables,
     container_map: Map<String, Container>,
     network_map: Map<String, NetworkDetails>,
     external_network_interfaces: Option<Vec<String>>,
@@ -193,7 +192,12 @@ pub struct ProcessDFW<'a> {
 }
 
 impl<'a> ProcessDFW<'a> {
-    pub fn new(docker: &'a Docker, dfw: &'a DFW, logger: &'a Logger) -> Result<ProcessDFW<'a>> {
+    pub fn new(docker: &'a Docker,
+               dfw: &'a DFW,
+               ipt4: &'a IPTables,
+               ipt6: &'a IPTables,
+               logger: &'a Logger)
+               -> Result<ProcessDFW<'a>> {
         let logger = logger.new(o!());
 
         let containers = docker.containers().list(&Default::default())?;
@@ -226,8 +230,8 @@ impl<'a> ProcessDFW<'a> {
         Ok(ProcessDFW {
                docker: docker,
                dfw: dfw,
-               ipt4: iptables::new(false)?,
-               ipt6: iptables::new(true)?,
+               ipt4: ipt4,
+               ipt6: ipt6,
                container_map: container_map,
                network_map: network_map,
                external_network_interfaces: external_network_interfaces,
@@ -240,10 +244,10 @@ impl<'a> ProcessDFW<'a> {
         info!(self.logger, "Starting processing";
               o!("started_processing_at" => format!("{}", time::now().rfc3339())));
 
-        create_and_flush_chain("filter", DFWRS_FORWARD_CHAIN, &self.ipt4, &self.ipt6)?;
-        create_and_flush_chain("filter", DFWRS_INPUT_CHAIN, &self.ipt4, &self.ipt6)?;
-        create_and_flush_chain("nat", DFWRS_PREROUTING_CHAIN, &self.ipt4, &self.ipt6)?;
-        create_and_flush_chain("nat", DFWRS_POSTROUTING_CHAIN, &self.ipt4, &self.ipt6)?;
+        create_and_flush_chain("filter", DFWRS_FORWARD_CHAIN, self.ipt4, self.ipt6)?;
+        create_and_flush_chain("filter", DFWRS_INPUT_CHAIN, self.ipt4, self.ipt6)?;
+        create_and_flush_chain("nat", DFWRS_PREROUTING_CHAIN, self.ipt4, self.ipt6)?;
+        create_and_flush_chain("nat", DFWRS_POSTROUTING_CHAIN, self.ipt4, self.ipt6)?;
         debug!(self.logger, "Created and flushed chains");
 
         if let Some(ref init) = self.dfw.initialization {
@@ -253,10 +257,10 @@ impl<'a> ProcessDFW<'a> {
         }
 
         // Setup input and forward chain
-        initialize_chain("filter", DFWRS_INPUT_CHAIN, &self.ipt4, &self.ipt6)?;
+        initialize_chain("filter", DFWRS_INPUT_CHAIN, self.ipt4, self.ipt6)?;
         self.ipt4
             .append("filter", "INPUT", &format!("-j {}", DFWRS_INPUT_CHAIN))?;
-        initialize_chain("filter", DFWRS_FORWARD_CHAIN, &self.ipt4, &self.ipt6)?;
+        initialize_chain("filter", DFWRS_FORWARD_CHAIN, self.ipt4, self.ipt6)?;
         self.ipt4
             .append("filter", "FORWARD", &format!("-j {}", DFWRS_FORWARD_CHAIN))?;
         // TODO: verify what is needed for ipt6

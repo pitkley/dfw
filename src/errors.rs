@@ -10,7 +10,7 @@ error_chain! {
     foreign_links {
         ClapError(::clap::Error);
         Docker(::shiplift::errors::Error);
-        IPTError(::iptables::error::IPTError);
+        IPTError(::ipt::error::IPTError);
         Io(::std::io::Error);
         ParseError(::url::ParseError);
         ParseIntError(::std::num::ParseIntError);

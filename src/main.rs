@@ -162,7 +162,7 @@ extern crate derive_builder;
 #[macro_use]
 extern crate error_chain;
 extern crate glob;
-extern crate iptables;
+extern crate iptables as ipt;
 extern crate libc;
 #[macro_use]
 extern crate serde_derive;
@@ -179,6 +179,7 @@ extern crate url;
 // declare modules
 mod dfwrs;
 mod errors;
+mod iptables;
 pub mod types;
 
 use std::ascii::AsciiExt;
@@ -201,6 +202,7 @@ use slog::{Logger, Drain};
 
 use dfwrs::ProcessDFW;
 use errors::*;
+use iptables::IPTablesProxy;
 use types::*;
 
 arg_enum! {
@@ -463,12 +465,18 @@ fn run(signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
     info!(root_logger, "Initial configuration loaded");
     debug!(root_logger, "Loaded config: {:#?}", toml);
 
+    let ipt4 = IPTablesProxy(ipt::new(false)?);
+    let ipt6 = IPTablesProxy(ipt::new(true)?);
+
     let process: Box<Fn() -> Result<()>> = match value_t!(matches.value_of("load-mode"),
                                                           LoadMode)? {
         LoadMode::Once => {
             trace!(root_logger, "Creating process closure according to load mode";
                    o!("load_mode" => "once"));
-            Box::new(|| ProcessDFW::new(&docker, &toml, &root_logger)?.process())
+            Box::new(|| {
+                         ProcessDFW::new(&docker, &toml, &ipt4, &ipt6, &root_logger)?
+                             .process()
+                     })
         }
         LoadMode::Always => {
             trace!(root_logger, "Creating process closure according to load mode";
@@ -478,7 +486,8 @@ fn run(signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                          info!(root_logger, "Reloaded configuration before processing");
                          debug!(root_logger, "Reloaded config: {:#?}", toml);
 
-                         ProcessDFW::new(&docker, &toml, &root_logger)?.process()
+                         ProcessDFW::new(&docker, &toml, &ipt4, &ipt6, &root_logger)?
+                             .process()
                      })
         }
     };
