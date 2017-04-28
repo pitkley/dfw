@@ -202,7 +202,7 @@ use slog::{Logger, Drain};
 
 use dfwrs::ProcessDFW;
 use errors::*;
-use iptables::IPTablesProxy;
+use iptables::{IPTables, IPTablesDummy, IPTablesProxy};
 use types::*;
 
 arg_enum! {
@@ -420,6 +420,10 @@ fn run(signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                  .takes_value(false)
                  .long("run-once")
                  .help("Process rules once, then exit."))
+        .arg(Arg::with_name("dry-run")
+                 .takes_value(false)
+                 .long("dry-run")
+                 .help("Don't touch iptables, just show what would be done"))
         .get_matches();
     debug!(root_logger, "Parsed command line arguments: {:#?}", matches);
 
@@ -461,12 +465,18 @@ fn run(signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
     trace!(root_logger, "Run once: {}", run_once;
            o!("run_once" => run_once));
 
+    let dry_run = matches.is_present("dry-run");
+    trace!(root_logger, "Dry run: {}", dry_run;
+           o!("dry_run" => dry_run));
+
     let toml = load_config(&matches)?;
     info!(root_logger, "Initial configuration loaded");
     debug!(root_logger, "Loaded config: {:#?}", toml);
 
-    let ipt4 = IPTablesProxy(ipt::new(false)?);
-    let ipt6 = IPTablesProxy(ipt::new(true)?);
+    let (ipt4_dry_run, ipt6_dry_run) = (IPTablesDummy, IPTablesDummy);
+    let (ipt4_ipt, ipt6_ipt) = (IPTablesProxy(ipt::new(false)?), IPTablesProxy(ipt::new(true)?));
+    let ipt4: &IPTables = if dry_run { &ipt4_dry_run } else { &ipt4_ipt };
+    let ipt6: &IPTables = if dry_run { &ipt6_dry_run } else { &ipt6_ipt };
 
     let process: Box<Fn() -> Result<()>> = match value_t!(matches.value_of("load-mode"),
                                                           LoadMode)? {
@@ -474,7 +484,7 @@ fn run(signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
             trace!(root_logger, "Creating process closure according to load mode";
                    o!("load_mode" => "once"));
             Box::new(|| {
-                         ProcessDFW::new(&docker, &toml, &ipt4, &ipt6, &root_logger)?
+                         ProcessDFW::new(&docker, &toml, ipt4, ipt6, &root_logger)?
                              .process()
                      })
         }
@@ -486,7 +496,7 @@ fn run(signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                          info!(root_logger, "Reloaded configuration before processing");
                          debug!(root_logger, "Reloaded config: {:#?}", toml);
 
-                         ProcessDFW::new(&docker, &toml, &ipt4, &ipt6, &root_logger)?
+                         ProcessDFW::new(&docker, &toml, ipt4, ipt6, &root_logger)?
                              .process()
                      })
         }
