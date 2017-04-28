@@ -6,15 +6,15 @@
 // option. This file may not be copied, modified or distributed
 // except according to those terms.
 
+//! Errors, using [`error-chain`][error-chain].
+//!
+//! [error-chain]: https://crates.io/crates/error-chain
+
+#![allow(missing_docs)]
+
 error_chain! {
     foreign_links {
-        ClapError(::clap::Error);
         Docker(::shiplift::errors::Error);
         IPTError(::ipt::error::IPTError);
-        Io(::std::io::Error);
-        ParseError(::url::ParseError);
-        ParseIntError(::std::num::ParseIntError);
-        TomlSer(::toml::ser::Error);
-        TomlDe(::toml::de::Error);
     }
 }

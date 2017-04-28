@@ -6,11 +6,9 @@
 // option. This file may not be copied, modified or distributed
 // except according to those terms.
 
-//! # Types
-//!
 //! The types in this module make up the structure of the configuration-file(s).
 //!
-//! ## Example
+//! # Example
 //!
 //! The following is an examplary TOML configuration, which will be parsed into this modules types.
 //!
@@ -401,10 +399,19 @@ impl FromStr for ExposePort {
     /// # Example
     ///
     /// ```
-    /// let port: ExposePort = FromStr::from_str("80/tcp").unwrap();
+    /// # use dfwrs::types::ExposePort;
+    /// let port: ExposePort = "80".parse().unwrap();
     /// assert_eq!(port.host_port, 80);
     /// assert_eq!(port.container_port, None);
     /// assert_eq!(port.family, "tcp");
+    /// ```
+    ///
+    /// ```
+    /// # use dfwrs::types::ExposePort;
+    /// let port: ExposePort = "53/udp".parse().unwrap();
+    /// assert_eq!(port.host_port, 53);
+    /// assert_eq!(port.container_port, None);
+    /// assert_eq!(port.family, "udp");
     /// ```
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let split: Vec<&str> = s.split('/').collect();
@@ -557,6 +564,7 @@ impl<'de, T> DeserializeSeed<'de> for StringOrStruct<T>
     }
 }
 
+#[allow(dead_code)]
 fn string_or_struct<'de, T, D>(deserializer: D) -> Result<T, D::Error>
     where T: Deserialize<'de> + FromStr<Err = String>,
           D: Deserializer<'de>
