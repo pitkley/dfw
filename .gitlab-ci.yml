@@ -8,15 +8,15 @@ cache:
     paths:
         - target/
 
-prepare rust image:
+prepare rust image stable:
     stage: prepare
     tags:
         - docker-available
     script:
         - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
         - docker pull "$(grep '^FROM' Dockerfile.build | awk '{ print $2; }' | head -n1)"
-        - docker build -t "${CI_REGISTRY_IMAGE}/build:current" -f Dockerfile.build .
-        - docker push "${CI_REGISTRY_IMAGE}/build:current"
+        - docker build -t "${CI_REGISTRY_IMAGE}/build:stable" -f Dockerfile.build .
+        - docker push "${CI_REGISTRY_IMAGE}/build:stable"
 
 prepare rust image beta:
     stage: prepare
@@ -40,11 +40,11 @@ prepare rust image nightly:
         - docker build -t "${CI_REGISTRY_IMAGE}/build:nightly" -f Dockerfile.build .
         - docker push "${CI_REGISTRY_IMAGE}/build:nightly"
 
-build dynamic binary on current:
+build dynamic binary on stable:
     stage: build
     tags:
         - docker
-    image: "${CI_REGISTRY_IMAGE}/build"
+    image: "${CI_REGISTRY_IMAGE}/build:stable"
     script:
         - cargo build --verbose
         - cargo build --release
@@ -104,10 +104,9 @@ rustfmt:
     stage: build
     tags:
         - docker
-    image: "${CI_REGISTRY_IMAGE}/build"
+    image: "${CI_REGISTRY_IMAGE}/build:stable"
     script:
         - cargo fmt -- --write-mode diff
-    allow_failure: true
 
 package image for feature-branch:
     stage: package
