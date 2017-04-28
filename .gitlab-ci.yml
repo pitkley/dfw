@@ -1,6 +1,7 @@
 stages:
     - prepare
     - build
+    - test
     - package
 
 cache:
@@ -40,6 +41,14 @@ prepare rust image nightly:
         - docker build -t "${CI_REGISTRY_IMAGE}/build:nightly" -f Dockerfile.build .
         - docker push "${CI_REGISTRY_IMAGE}/build:nightly"
 
+rustfmt:
+    stage: build
+    tags:
+        - docker
+    image: "${CI_REGISTRY_IMAGE}/build:stable"
+    script:
+        - cargo fmt -- --write-mode diff
+
 build dynamic binary on stable:
     stage: build
     tags:
@@ -48,6 +57,10 @@ build dynamic binary on stable:
     script:
         - cargo build --verbose
         - cargo build --release
+    cache:
+        key: "dynamic binary on stable"
+        paths:
+            - target/
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
@@ -63,6 +76,10 @@ build dynamic binary on beta:
     script:
         - cargo build --verbose
         - cargo build --release
+    cache:
+        key: "dynamic binary on beta"
+        paths:
+            - target/
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
@@ -78,6 +95,10 @@ build dynamic binary on nightly:
     script:
         - cargo build --verbose
         - cargo build --release
+    cache:
+        key: "dynamic binary on nightly"
+        paths:
+            - target/
     allow_failure: true
     artifacts:
         name: "$CI_JOB_NAME"
@@ -93,6 +114,10 @@ build static binary:
     script:
         - cross build --target x86_64-unknown-linux-musl --release
         - cp target/x86_64-unknown-linux-musl/release/dfwrs dfwrs
+    cache:
+        key: "static binary"
+        paths:
+            - target/
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
@@ -100,13 +125,53 @@ build static binary:
             - Cargo.lock
             - dfwrs
 
-rustfmt:
-    stage: build
+test dynamic binary on stable:
+    stage: test
     tags:
         - docker
     image: "${CI_REGISTRY_IMAGE}/build:stable"
     script:
-        - cargo fmt -- --write-mode diff
+        - cargo test -- --nocapture
+    cache:
+        key: "dynamic binary on stable"
+        paths:
+            - target/
+
+test dynamic binary on beta:
+    stage: test
+    tags:
+        - docker
+    image: "${CI_REGISTRY_IMAGE}/build:beta"
+    script:
+        - cargo test -- --nocapture
+    cache:
+        key: "dynamic binary on beta"
+        paths:
+            - target/
+
+test dynamic binary on nightly:
+    stage: test
+    tags:
+        - docker
+    image: "${CI_REGISTRY_IMAGE}/build:nightly"
+    script:
+        - cargo test -- --nocapture
+    cache:
+        key: "dynamic binary on nightly"
+        paths:
+            - target/
+    allow_failure: true
+
+test static binary:
+    stage: test
+    tags:
+        - rust-cross
+    script:
+        - cross test --target x86_64-unknown-linux-musl -- --nocapture
+    cache:
+        key: "static binary"
+        paths:
+            - target/
 
 package image for feature-branch:
     stage: package
