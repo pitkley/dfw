@@ -1,0 +1,55 @@
+[defaults]
+external_network_interfaces = "eni"
+
+[initialization.v4]
+filter = ["-P INPUT ACCEPT"]
+
+[initialization.v6]
+nat = ["-P PREROUTING ACCEPT"]
+
+[container_to_container]
+default_policy = "DROP"
+
+[[container_to_container.rules]]
+network = "network"
+src_container = "src_container"
+dst_container = "dst_container"
+filter = "FILTER"
+action = "ACCEPT"
+
+[container_to_wider_world]
+default_policy = "ACCEPT"
+
+[[container_to_wider_world.rules]]
+network = "network"
+src_container = "src_container"
+filter = "FILTER"
+action = "ACCEPT"
+external_network_interface = "eni"
+
+[container_to_host]
+default_policy = "ACCEPT"
+
+[[container_to_host.rules]]
+network = "network"
+src_container = "src_container"
+filter = "FILTER"
+action = "ACCEPT"
+
+[wider_world_to_container]
+
+[[wider_world_to_container.rules]]
+network = "network"
+dst_container = "dst_container"
+expose_port = 80
+external_network_interface = "eni"
+
+[container_dnat]
+
+[[container_dnat.rules]]
+src_network = "src_network"
+src_container = "src_container"
+dst_network = "dst_network"
+dst_container = "dst_container"
+expose_port = 80
+
