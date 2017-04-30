@@ -15,6 +15,8 @@
 error_chain! {
     foreign_links {
         Docker(::shiplift::errors::Error);
+        Io(::std::io::Error);
         IPTError(::ipt::error::IPTError);
+        TomlDe(::toml::de::Error);
     }
 }
