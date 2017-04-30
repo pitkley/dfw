@@ -175,6 +175,7 @@ extern crate url;
 pub mod errors;
 pub mod iptables;
 pub mod types;
+pub mod util;
 
 use std::collections::HashMap as Map;
 

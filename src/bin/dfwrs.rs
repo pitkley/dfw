@@ -20,7 +20,6 @@ extern crate clap;
 extern crate dfwrs;
 #[macro_use]
 extern crate error_chain;
-extern crate glob;
 extern crate iptables as ipt;
 extern crate libc;
 extern crate serde;
@@ -30,13 +29,9 @@ extern crate slog;
 extern crate slog_async;
 extern crate slog_term;
 extern crate time;
-extern crate toml;
 extern crate url;
 
 use std::ascii::AsciiExt;
-use std::fs::File;
-use std::io::BufReader;
-use std::io::prelude::*;
 use std::thread;
 use std::time::Duration;
 
@@ -45,8 +40,6 @@ use std::os::unix::thread::JoinHandleExt;
 use chan::{Receiver, Sender};
 use chan_signal::Signal;
 use clap::{App, Arg, ArgGroup, ArgMatches};
-use glob::glob;
-use serde::Deserialize;
 use shiplift::Docker;
 use shiplift::builder::{EventFilter, EventFilterType, EventsOptions};
 use slog::{Logger, Drain};
@@ -54,6 +47,7 @@ use slog::{Logger, Drain};
 use dfwrs::iptables::{IPTables, IPTablesDummy, IPTablesProxy};
 use dfwrs::ProcessDFW;
 use dfwrs::types::DFW;
+use dfwrs::util::*;
 
 mod errors {
     error_chain! {
@@ -64,9 +58,7 @@ mod errors {
         foreign_links {
             ClapError(::clap::Error);
             Docker(::shiplift::errors::Error);
-            Io(::std::io::Error);
             IPTError(::ipt::error::IPTError);
-            TomlDe(::toml::de::Error);
             UrlParseError(::url::ParseError);
         }
     }
@@ -80,30 +72,6 @@ arg_enum! {
         Once,
         Always
     }
-}
-
-fn load_file<'de, T>(file: &str, contents: &'de mut String) -> Result<T>
-    where T: Deserialize<'de>
-{
-    let mut file = BufReader::new(File::open(file)?);
-    file.read_to_string(contents)?;
-    Ok(toml::from_str(contents)?)
-}
-
-fn load_path<'de, T>(path: &str, contents: &'de mut String) -> Result<T>
-    where T: Deserialize<'de>
-{
-    for entry in glob(&format!("{}/*.toml", path)).expect("Failed to read glob pattern") {
-        match entry {
-            Ok(path) => {
-                let mut file = BufReader::new(File::open(path)?);
-                file.read_to_string(contents)?;
-            }
-            Err(e) => println!("{:?}", e),
-        }
-    }
-
-    Ok(toml::from_str(contents)?)
 }
 
 fn load_config(matches: &ArgMatches) -> Result<DFW> {
