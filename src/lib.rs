@@ -177,15 +177,14 @@ pub mod iptables;
 pub mod types;
 pub mod util;
 
-use std::collections::HashMap as Map;
-
-use shiplift::Docker;
-use shiplift::rep::Container;
-use shiplift::rep::{NetworkDetails, NetworkContainerDetails};
-use slog::Logger;
-
 use errors::*;
 use iptables::*;
+
+use shiplift::Docker;
+use shiplift::rep::{NetworkDetails, NetworkContainerDetails};
+use shiplift::rep::Container;
+use slog::Logger;
+use std::collections::HashMap as Map;
 use types::*;
 
 const DFWRS_FORWARD_CHAIN: &'static str = "DFWRS_FORWARD";
