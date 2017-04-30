@@ -69,7 +69,7 @@ const DEFAULT_PROTOCOL: &'static str = "tcp";
 /// firewall rules.
 ///
 /// Every section is optional.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct DFW {
     /// The `defaults` configuration section
@@ -89,7 +89,7 @@ pub struct DFW {
 }
 
 /// The default configuration section, used by DFWRS for rule processing.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct Defaults {
     /// This defines the external network interfaces of the host to consider during building the
@@ -124,7 +124,7 @@ pub struct Defaults {
 ///     # ...
 /// ]
 /// ```
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct Initialization {
     /// Initialization rules for iptables (IPv4). Expects a map where the key is a specific table
@@ -158,7 +158,7 @@ pub struct Initialization {
 }
 
 /// The container-to-container section, defining how containers can communicate amongst each other.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerToContainer {
     /// The `default_policy` defines the default for when there is not a specific rule.
@@ -183,7 +183,7 @@ pub struct ContainerToContainer {
 }
 
 /// Definition for a rule to be used in the container-to-container section.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerToContainerRule {
     /// Common network between the source container and the destination container to apply the rule
@@ -201,7 +201,7 @@ pub struct ContainerToContainerRule {
 
 /// The container-to-wider-world section, defining how containers can communicate with the wider
 /// world.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerToWiderWorld {
     /// The `default_policy` defines the default for when there is not a specific rule.
@@ -226,7 +226,7 @@ pub struct ContainerToWiderWorld {
 }
 
 /// Definition for a rule to be used in the container-to-wider-world section.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerToWiderWorldRule {
     /// Network of the source container to apply the rule to.
@@ -242,7 +242,7 @@ pub struct ContainerToWiderWorldRule {
 }
 
 /// The container-to-host section, defining how containers can communicate with the host.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerToHost {
     /// The `default_policy` defines the default for when there is not a specific rule.
@@ -267,7 +267,7 @@ pub struct ContainerToHost {
 }
 
 /// Definition for a rule to be used in the container-to-host section.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerToHostRule {
     /// Network of the source container to apply the rule to.
@@ -281,7 +281,7 @@ pub struct ContainerToHostRule {
 }
 
 /// The wider-world-to-container section, defining how containers can reached from the wider world.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct WiderWorldToContainer {
     /// An optional list of rules, see
@@ -304,7 +304,7 @@ pub struct WiderWorldToContainer {
 }
 
 /// Definition for a rule to be used in the wider-world-to-container section.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct WiderWorldToContainerRule {
     /// Network of the destination container to apply the rule to.
@@ -359,7 +359,7 @@ pub struct WiderWorldToContainerRule {
 }
 
 /// Struct to hold a port definition to expose on the host/between containers.
-#[derive(Deserialize, Debug, Clone, Default, Builder)]
+#[derive(Deserialize, Debug, Clone, Default, Builder, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ExposePort {
     /// Port the `container_port` should be exposed to on the host.
@@ -436,7 +436,7 @@ impl FromStr for ExposePort {
 
 /// The container-DNAT section, defining how containers can communicate with each other over
 /// non-common networks.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerDNAT {
     /// An optional list of rules, see
@@ -459,7 +459,7 @@ pub struct ContainerDNAT {
 }
 
 /// Definition for a rule to be used in the container-DNAT section.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerDNATRule {
     /// Network of the source container to apply the rule to.
