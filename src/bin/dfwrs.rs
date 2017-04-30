@@ -31,23 +31,20 @@ extern crate slog_term;
 extern crate time;
 extern crate url;
 
-use std::ascii::AsciiExt;
-use std::thread;
-use std::time::Duration;
-
-use std::os::unix::thread::JoinHandleExt;
-
 use chan::{Receiver, Sender};
 use chan_signal::Signal;
 use clap::{App, Arg, ArgGroup, ArgMatches};
+use dfwrs::ProcessDFW;
+use dfwrs::iptables::{IPTables, IPTablesDummy, IPTablesProxy};
+use dfwrs::types::DFW;
+use dfwrs::util::*;
 use shiplift::Docker;
 use shiplift::builder::{EventFilter, EventFilterType, EventsOptions};
 use slog::{Logger, Drain};
-
-use dfwrs::iptables::{IPTables, IPTablesDummy, IPTablesProxy};
-use dfwrs::ProcessDFW;
-use dfwrs::types::DFW;
-use dfwrs::util::*;
+use std::ascii::AsciiExt;
+use std::os::unix::thread::JoinHandleExt;
+use std::thread;
+use std::time::Duration;
 
 mod errors {
     error_chain! {

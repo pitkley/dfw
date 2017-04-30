@@ -12,10 +12,9 @@
 //!
 //! [rust-iptables]: https://crates.io/crates/iptables
 
+use errors::*;
 use std::os::unix::process::ExitStatusExt;
 use std::process::{ExitStatus, Output};
-
-use errors::*;
 
 /// Compatibility trait to generalize the API used by [`rust-iptables`][rust-iptables].
 ///

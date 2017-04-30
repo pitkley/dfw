@@ -56,12 +56,11 @@
 //! expose_port = { host_port = 8080, container_port = 80, family = "tcp" }
 //! ```
 
+use serde::de::{self, Deserialize, Deserializer, DeserializeSeed};
 use std::collections::HashMap as Map;
 use std::fmt;
 use std::marker::PhantomData;
 use std::str::FromStr;
-
-use serde::de::{self, Deserialize, Deserializer, DeserializeSeed};
 
 const DEFAULT_PROTOCOL: &'static str = "tcp";
 

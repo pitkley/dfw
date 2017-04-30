@@ -8,15 +8,14 @@
 
 //! Utilities module
 
-use std::fs::File;
-use std::io::BufReader;
-use std::io::prelude::*;
+use errors::*;
 
 use glob::glob;
 use serde::Deserialize;
+use std::fs::File;
+use std::io::BufReader;
+use std::io::prelude::*;
 use toml;
-
-use errors::*;
 
 /// Load single TOML-file from path and deserialize it into type `T`.
 pub fn load_file<'de, T>(file: &str, contents: &'de mut String) -> Result<T>
