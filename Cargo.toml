@@ -25,6 +25,7 @@ url = "~1.4.0"
 
 [[bin]]
 name = "dfwrs"
+path = "src/bin/dfwrs.rs"
 doc = false
 
 [package.metadata.release]

@@ -98,17 +98,34 @@ I have reimplemented DFWFW in Rust for two reasons:
 
   * [`clap`][crates-clap], for parsing of command line arguments
   * [`chan`][crates-chan], for easy messaging and coordination between threads
-  * [`error_chain`][crates-error_chain], for simplified application wide error handling
+  * [`error-chain`][crates-error-chain], for simplified application wide error handling
   * [Serde][crates-serde], for deserialization of the TOML configuration
   * [`slog`][crates-slog], for structured logging
 
     Disregarding the obvious hair-pulling moments regarding ownership, borrowing and lifetimes,
     my experience with Rust, and its brillant eco-system has been an absolute pleasure.
 
+## License
+
+DFWRS is licensed under either of
+
+* Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
+  http://www.apache.org/licenses/LICENSE-2.0)
+* MIT license ([LICENSE-MIT](LICENSE-MIT) or
+  http://opensource.org/licenses/MIT)
+
+at your option.
+
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in DFWRS by you, as defined in the Apache-2.0 license, shall be
+dual licensed as above, without any additional terms or conditions.
+
 
 [crates-clap]: https://crates.io/crates/clap
 [crates-chan]: https://crates.io/crates/chan
-[crates-error_chain]: https://crates.io/crates/error-chain
+[crates-error-chain]: https://crates.io/crates/error-chain
 [crates-serde]: https://crates.io/crates/serde
 [crates-slog]: https://crates.io/crates/slog
 
@@ -121,4 +138,3 @@ I have reimplemented DFWFW in Rust for two reasons:
 [moby-issue-32686]: https://github.com/moby/moby/issues/32686
 
 [types.rs]: types/index.html
->>>>>>> Add documentation
