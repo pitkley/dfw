@@ -279,6 +279,42 @@ fn parse_expose_port_seq_struct() {
 }
 
 #[test]
+#[should_panic(expected = "port string has invalid format")]
+fn parse_expose_port_string_invalid_format() {
+    let fragment = r#"
+        network = "network"
+        dst_container = "dst_container"
+        expose_port = "80/tcp/what"
+        "#;
+
+    toml::from_str::<WiderWorldToContainerRule>(fragment).unwrap();
+}
+
+#[test]
+#[should_panic(expected = "invalid digit found in string")]
+fn parse_expose_port_string_invalid_int() {
+    let fragment = r#"
+        network = "network"
+        dst_container = "dst_container"
+        expose_port = "noint"
+        "#;
+
+    toml::from_str::<WiderWorldToContainerRule>(fragment).unwrap();
+}
+
+#[test]
+#[should_panic(expected = "invalid digit found in string")]
+fn parse_expose_port_string_invalid_int2() {
+    let fragment = r#"
+        network = "network"
+        dst_container = "dst_container"
+        expose_port = "noint/tcp"
+        "#;
+
+    toml::from_str::<WiderWorldToContainerRule>(fragment).unwrap();
+}
+
+#[test]
 fn parse_external_network_interfaces_single() {
     let fragment = r#"external_network_interfaces = "eni""#;
 
