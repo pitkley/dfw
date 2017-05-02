@@ -277,3 +277,24 @@ fn parse_expose_port_seq_struct() {
 
     assert_eq!(expected, actual);
 }
+
+#[test]
+fn parse_external_network_interfaces_single() {
+    let fragment = r#"external_network_interfaces = "eni""#;
+
+    let expected = Defaults { external_network_interfaces: Some(vec!["eni".to_owned()]) };
+    let actual: Defaults = toml::from_str(fragment).unwrap();
+
+    assert_eq!(expected, actual);
+}
+
+#[test]
+fn parse_external_network_interfaces_seq() {
+    let fragment = r#"external_network_interfaces = ["eni1", "eni2"]"#;
+
+    let expected =
+        Defaults { external_network_interfaces: Some(vec!["eni1".to_owned(), "eni2".to_owned()]) };
+    let actual: Defaults = toml::from_str(fragment).unwrap();
+
+    assert_eq!(expected, actual);
+}
