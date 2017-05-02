@@ -13,6 +13,7 @@
 //! [rust-iptables]: https://crates.io/crates/iptables
 
 use errors::*;
+use std::convert::Into;
 use std::os::unix::process::ExitStatusExt;
 use std::process::{ExitStatus, Output};
 
@@ -111,103 +112,103 @@ pub struct IPTablesProxy(pub ::ipt::IPTables);
 
 impl IPTables for IPTablesProxy {
     fn get_policy(&self, table: &str, chain: &str) -> Result<String> {
-        self.0.get_policy(table, chain).map_err(|e| e.into())
+        self.0.get_policy(table, chain).map_err(Into::into)
     }
 
     fn set_policy(&self, table: &str, chain: &str, policy: &str) -> Result<bool> {
         self.0
             .set_policy(table, chain, policy)
-            .map_err(|e| e.into())
+            .map_err(Into::into)
     }
 
     fn execute(&self, table: &str, command: &str) -> Result<Output> {
-        self.0.execute(table, command).map_err(|e| e.into())
+        self.0.execute(table, command).map_err(Into::into)
     }
 
     fn exists(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        self.0.exists(table, chain, rule).map_err(|e| e.into())
+        self.0.exists(table, chain, rule).map_err(Into::into)
     }
 
     fn chain_exists(&self, table: &str, chain: &str) -> Result<bool> {
-        self.0.chain_exists(table, chain).map_err(|e| e.into())
+        self.0.chain_exists(table, chain).map_err(Into::into)
     }
 
     fn insert(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
         self.0
             .insert(table, chain, rule, position)
-            .map_err(|e| e.into())
+            .map_err(Into::into)
     }
 
     fn insert_unique(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
         self.0
             .insert_unique(table, chain, rule, position)
-            .map_err(|e| e.into())
+            .map_err(Into::into)
     }
 
     fn replace(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
         self.0
             .replace(table, chain, rule, position)
-            .map_err(|e| e.into())
+            .map_err(Into::into)
     }
 
     fn append(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        self.0.append(table, chain, rule).map_err(|e| e.into())
+        self.0.append(table, chain, rule).map_err(Into::into)
     }
 
     fn append_unique(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
         self.0
             .append_unique(table, chain, rule)
-            .map_err(|e| e.into())
+            .map_err(Into::into)
     }
 
     fn append_replace(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
         self.0
             .append_replace(table, chain, rule)
-            .map_err(|e| e.into())
+            .map_err(Into::into)
     }
 
     fn delete(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        self.0.delete(table, chain, rule).map_err(|e| e.into())
+        self.0.delete(table, chain, rule).map_err(Into::into)
     }
 
     fn delete_all(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
         self.0
             .delete_all(table, chain, rule)
-            .map_err(|e| e.into())
+            .map_err(Into::into)
     }
 
     fn list(&self, table: &str, chain: &str) -> Result<Vec<String>> {
-        self.0.list(table, chain).map_err(|e| e.into())
+        self.0.list(table, chain).map_err(Into::into)
     }
 
     fn list_table(&self, table: &str) -> Result<Vec<String>> {
-        self.0.list_table(table).map_err(|e| e.into())
+        self.0.list_table(table).map_err(Into::into)
     }
 
     fn list_chains(&self, table: &str) -> Result<Vec<String>> {
-        self.0.list_chains(table).map_err(|e| e.into())
+        self.0.list_chains(table).map_err(Into::into)
     }
 
     fn new_chain(&self, table: &str, chain: &str) -> Result<bool> {
-        self.0.new_chain(table, chain).map_err(|e| e.into())
+        self.0.new_chain(table, chain).map_err(Into::into)
     }
 
     fn flush_chain(&self, table: &str, chain: &str) -> Result<bool> {
-        self.0.flush_chain(table, chain).map_err(|e| e.into())
+        self.0.flush_chain(table, chain).map_err(Into::into)
     }
 
     fn rename_chain(&self, table: &str, old_chain: &str, new_chain: &str) -> Result<bool> {
         self.0
             .rename_chain(table, old_chain, new_chain)
-            .map_err(|e| e.into())
+            .map_err(Into::into)
     }
 
     fn delete_chain(&self, table: &str, chain: &str) -> Result<bool> {
-        self.0.delete_chain(table, chain).map_err(|e| e.into())
+        self.0.delete_chain(table, chain).map_err(Into::into)
     }
 
     fn flush_table(&self, table: &str) -> Result<bool> {
-        self.0.flush_table(table).map_err(|e| e.into())
+        self.0.flush_table(table).map_err(Into::into)
     }
 }
 
