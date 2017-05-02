@@ -31,6 +31,10 @@ name = "dfwrs"
 path = "src/bin/dfwrs.rs"
 doc = false
 
+[features]
+docker-tests = []
+iptables-tests = []
+
 [package.metadata.release]
 sign-commit = true
 upload-doc = false
