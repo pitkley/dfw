@@ -602,10 +602,10 @@ impl<'a> ProcessDFW<'a> {
     }
 
     fn process_container_to_container(&self, ctc: &ContainerToContainer) -> Result<()> {
-        if ctc.rules.is_some() {
+        if let Some(ref ctcr) = ctc.rules {
             info!(self.logger, "Process rules";
                   o!("part" => "container_to_container"));
-            self.process_ctc_rules(ctc.rules.as_ref().unwrap())?;
+            self.process_ctc_rules(ctcr)?;
         }
 
         Ok(())
@@ -659,7 +659,7 @@ impl<'a> ProcessDFW<'a> {
                                 .IPv4Address
                                 .split("/")
                                 .next()
-                                .unwrap()
+                                .ok_or(Error::from("IPv4 address is empty"))?
                                 .to_owned());
             }
 
@@ -686,7 +686,7 @@ impl<'a> ProcessDFW<'a> {
                                      .IPv4Address
                                      .split("/")
                                      .next()
-                                     .unwrap()
+                                     .ok_or(Error::from("IPv4 address is empty"))?
                                      .to_owned());
             }
 
@@ -709,10 +709,10 @@ impl<'a> ProcessDFW<'a> {
 
     fn process_container_to_wider_world(&self, ctww: &ContainerToWiderWorld) -> Result<()> {
         // Rules
-        if ctww.rules.is_some() {
+        if let Some(ref ctwwr) = ctww.rules {
             info!(self.logger, "Process rules";
                   o!("part" => "container_to_wider_world"));
-            self.process_ctww_rules(ctww.rules.as_ref().unwrap())?;
+            self.process_ctww_rules(ctwwr)?;
         }
 
         // Default policy
@@ -789,7 +789,7 @@ impl<'a> ProcessDFW<'a> {
                                             .IPv4Address
                                             .split("/")
                                             .next()
-                                            .unwrap()
+                                            .ok_or(Error::from("IPv4 address is empty"))?
                                             .to_owned());
                         }
                     }
@@ -835,10 +835,10 @@ impl<'a> ProcessDFW<'a> {
 
     fn process_container_to_host(&self, cth: &ContainerToHost) -> Result<()> {
         // Rules
-        if cth.rules.is_some() {
+        if let Some(ref cthr) = cth.rules {
             info!(self.logger, "Process rules";
                   o!("part" => "container_to_host"));
-            self.process_cth_rules(cth.rules.as_ref().unwrap())?;
+            self.process_cth_rules(cthr)?;
         }
 
         // Default policy
@@ -899,7 +899,7 @@ impl<'a> ProcessDFW<'a> {
                                         .IPv4Address
                                         .split("/")
                                         .next()
-                                        .unwrap()
+                                        .ok_or(Error::from("IPv4 address is empty"))?
                                         .to_owned());
                 }
             }
@@ -931,15 +931,17 @@ impl<'a> ProcessDFW<'a> {
     }
 
     fn process_wider_world_to_container(&self, wwtc: &WiderWorldToContainer) -> Result<()> {
-        if wwtc.rules.is_none() {
-            trace!(self.logger, "No rules";
-                   o!("part" => "wider_world_to_container"));
-            return Ok(());
-        }
+        let rules = match wwtc.rules {
+            Some(ref wwtcr) => wwtcr,
+            None => {
+                trace!(self.logger, "No rules";
+                       o!("part" => "wider_world_to_container"));
+                return Ok(());
+            }
+        };
+
         info!(self.logger, "Process rules";
               o!("part" => "wider_world_to_container"));
-
-        let rules = wwtc.rules.as_ref().unwrap();
 
         for rule in rules {
             info!(self.logger, "Process rule";
@@ -977,7 +979,7 @@ impl<'a> ProcessDFW<'a> {
                                                      .IPv4Address
                                                      .split("/")
                                                      .next()
-                                                     .unwrap()
+                                                     .ok_or(Error::from("IPv4 address is empty"))?
                                                      .to_owned());
 
                     let destination_port = match expose_port.container_port {
@@ -991,7 +993,7 @@ impl<'a> ProcessDFW<'a> {
                                                      .IPv4Address
                                                      .split("/")
                                                      .next()
-                                                     .unwrap(),
+                                                     .ok_or(Error::from("IPv4 address is empty"))?,
                                                  destination_port));
                 } else {
                     // Network for container has to exist
@@ -1058,15 +1060,17 @@ impl<'a> ProcessDFW<'a> {
     }
 
     fn process_container_dnat(&self, cd: &ContainerDNAT) -> Result<()> {
-        if cd.rules.is_none() {
-            trace!(self.logger, "No rules";
-                   o!("part" => "container_dnat"));
-            return Ok(());
-        }
+        let rules = match cd.rules {
+            Some(ref cdr) => cdr,
+            None => {
+                trace!(self.logger, "No rules";
+                       o!("part" => "container_dnat"));
+                return Ok(());
+            }
+        };
+
         info!(self.logger, "Process rules";
               o!("part" => "container_dnat"));
-
-        let rules = cd.rules.as_ref().unwrap();
 
         for rule in rules {
             info!(self.logger, "Process rule";
@@ -1109,7 +1113,7 @@ impl<'a> ProcessDFW<'a> {
                                                 .IPv4Address
                                                 .split("/")
                                                 .next()
-                                                .unwrap()
+                                                .ok_or(Error::from("IPv4 address is empty"))?
                                                 .to_owned());
                             }
                         }
@@ -1133,7 +1137,11 @@ impl<'a> ProcessDFW<'a> {
                 };
                 ipt_rule.destination_port(destination_port.to_owned());
                 ipt_rule.filter(format!("--to-destination {}:{}",
-                                        dst_network.IPv4Address.split("/").next().unwrap(),
+                                        dst_network
+                                            .IPv4Address
+                                            .split("/")
+                                            .next()
+                                            .ok_or(Error::from("IPv4 address is empty"))?,
                                         destination_port));
 
                 ipt_rule.jump("DNAT".to_owned());

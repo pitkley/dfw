@@ -417,16 +417,14 @@ impl FromStr for ExposePort {
         Ok(match split.len() {
                1 => {
                    ExposePortBuilder::default()
-                       .host_port(split[0].parse().unwrap())
-                       .build()
-                       .unwrap()
+                       .host_port(split[0].parse().map_err(|e| format!("{}", e))?)
+                       .build()?
                }
                2 => {
                    ExposePortBuilder::default()
-                       .host_port(split[0].parse().unwrap())
+                       .host_port(split[0].parse().map_err(|e| format!("{}", e))?)
                        .family(split[1].to_owned())
-                       .build()
-                       .unwrap()
+                       .build()?
                }
                _ => return Err(format!("port string has invalid format '{}'", s)),
            })
@@ -586,13 +584,17 @@ impl<'de, T> de::Visitor<'de> for SingleOrSeqStringOrStruct<T>
     fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
         where E: de::Error
     {
-        Ok(vec![FromStr::from_str(&value.to_string()).unwrap()])
+        FromStr::from_str(&value.to_string())
+            .map(|e| vec![e])
+            .map_err(de::Error::custom)
     }
 
     fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
         where E: de::Error
     {
-        Ok(vec![FromStr::from_str(value).unwrap()])
+        FromStr::from_str(value)
+            .map(|e| vec![e])
+            .map_err(de::Error::custom)
     }
 
     fn visit_map<M>(self, visitor: M) -> Result<Self::Value, M::Error>
