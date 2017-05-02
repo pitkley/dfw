@@ -1,0 +1,9 @@
+[container_to_host]
+default_policy = "ACCEPT"
+
+[[container_to_host.rules]]
+network = "network"
+src_container = "src_container"
+filter = "FILTER"
+action = "ACCEPT"
+

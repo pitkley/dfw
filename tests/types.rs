@@ -16,7 +16,7 @@ fn resource(segment: &str) -> Option<String> {
 }
 
 #[test]
-fn parse_conf_01() {
+fn parse_conf_file() {
     let defaults = Defaults { external_network_interfaces: Some(vec!["eni".to_owned()]) };
     let initialization = Initialization {
         v4: Some(hashmap!{
@@ -92,7 +92,89 @@ fn parse_conf_01() {
     };
 
     let mut s = String::new();
-    let actual: DFW = load_file(&resource("01_conf.toml").unwrap(), &mut s).unwrap();
+    let actual: DFW = load_file(&resource("conf-file.toml").unwrap(), &mut s).unwrap();
+
+    assert_eq!(expected, actual);
+}
+
+#[test]
+fn parse_conf_path() {
+    let defaults = Defaults { external_network_interfaces: Some(vec!["eni".to_owned()]) };
+    let initialization = Initialization {
+        v4: Some(hashmap!{
+                     "filter".to_owned() => vec!["-P INPUT ACCEPT".to_owned()],
+                 }),
+        v6: Some(hashmap!{
+                     "nat".to_owned() => vec!["-P PREROUTING ACCEPT".to_owned()],
+                 }),
+    };
+    let container_to_container = ContainerToContainer {
+        default_policy: "DROP".to_owned(),
+        rules: Some(vec![ContainerToContainerRule {
+                             network: "network".to_owned(),
+                             src_container: Some("src_container".to_owned()),
+                             dst_container: Some("dst_container".to_owned()),
+                             filter: Some("FILTER".to_owned()),
+                             action: "ACCEPT".to_owned(),
+                         }]),
+    };
+    let container_to_wider_world = ContainerToWiderWorld {
+        default_policy: "ACCEPT".to_owned(),
+        rules: Some(vec![ContainerToWiderWorldRule {
+                             network: Some("network".to_owned()),
+                             src_container: Some("src_container".to_owned()),
+                             filter: Some("FILTER".to_owned()),
+                             action: "ACCEPT".to_owned(),
+                             external_network_interface: Some("eni".to_owned()),
+                         }]),
+    };
+    let container_to_host = ContainerToHost {
+        default_policy: "ACCEPT".to_owned(),
+        rules: Some(vec![ContainerToHostRule {
+                             network: "network".to_owned(),
+                             src_container: Some("src_container".to_owned()),
+                             filter: Some("FILTER".to_owned()),
+                             action: "ACCEPT".to_owned(),
+                         }]),
+    };
+    let wider_world_to_container = WiderWorldToContainer {
+        rules: Some(vec![WiderWorldToContainerRule {
+                             network: "network".to_owned(),
+                             dst_container: "dst_container".to_owned(),
+                             expose_port: vec![ExposePort {
+                                                   host_port: 80,
+                                                   container_port: None,
+                                                   family: "tcp".to_owned(),
+                                               }],
+                             external_network_interface: Some("eni".to_owned()),
+                         }]),
+    };
+    let container_dnat = ContainerDNAT {
+        rules: Some(vec![ContainerDNATRule {
+                             src_network: Some("src_network".to_owned()),
+                             src_container: Some("src_container".to_owned()),
+                             dst_network: "dst_network".to_owned(),
+                             dst_container: "dst_container".to_owned(),
+                             expose_port: vec![ExposePort {
+                                                   host_port: 80,
+                                                   container_port: None,
+                                                   family: "tcp".to_owned(),
+                                               }],
+                         }]),
+    };
+
+    let expected: DFW = DFW {
+        defaults: Some(defaults),
+        initialization: Some(initialization),
+        container_to_container: Some(container_to_container),
+        container_to_wider_world: Some(container_to_wider_world),
+        container_to_host: Some(container_to_host),
+        wider_world_to_container: Some(wider_world_to_container),
+        container_dnat: Some(container_dnat),
+    };
+
+    let mut s = String::new();
+    let actual: DFW = load_path(&resource("conf_path").unwrap(), &mut s).unwrap();
 
     assert_eq!(expected, actual);
 }
