@@ -1,0 +1,12 @@
+[defaults]
+external_network_interfaces = "eni"
+
+[initialization.v4]
+filter = [
+    "-P INPUT ACCEPT",
+]
+
+[initialization.v6]
+filter = [
+    "-P INPUT ACCEPT",
+]

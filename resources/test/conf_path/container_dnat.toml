@@ -1,0 +1,9 @@
+[container_dnat]
+
+[[container_dnat.rules]]
+src_network = "src_network"
+src_container = "src_container"
+dst_network = "dst_network"
+dst_container = "dst_container"
+expose_port = 80
+

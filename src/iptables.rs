@@ -13,6 +13,7 @@
 //! [rust-iptables]: https://crates.io/crates/iptables
 
 use errors::*;
+use std::cell::RefCell;
 use std::convert::Into;
 use std::os::unix::process::ExitStatusExt;
 use std::process::{ExitStatus, Output};
@@ -304,6 +305,145 @@ impl IPTables for IPTablesDummy {
     }
 
     fn flush_table(&self, table: &str) -> Result<bool> {
+        Ok(false)
+    }
+}
+
+/// [`IPTables`](trait.IPTables.html) implementation which does not interact with the iptables
+/// binary and does not modify the rules active on the host. It does keep a log of every action
+/// executed.
+pub struct IPTablesLogger {
+    logs: RefCell<Vec<(String, String)>>,
+}
+
+impl IPTablesLogger {
+    /// Create a new instance of `IPTablesLogger`
+    pub fn new() -> IPTablesLogger {
+        IPTablesLogger { logs: RefCell::new(Vec::new()) }
+    }
+
+    fn log(&self, function: &str, params: &[&str]) {
+        self.logs
+            .borrow_mut()
+            .push((function.to_owned(), params.join(" ")));
+    }
+
+    /// Get the collected logs.
+    pub fn logs(&self) -> Vec<(String, String)> {
+        self.logs.borrow().clone()
+    }
+}
+
+impl IPTables for IPTablesLogger {
+    fn get_policy(&self, table: &str, chain: &str) -> Result<String> {
+        self.log("get_policy", &[table, chain]);
+        Ok("".to_owned())
+    }
+
+    fn set_policy(&self, table: &str, chain: &str, policy: &str) -> Result<bool> {
+        self.log("set_policy", &[table, chain, policy]);
+        Ok(false)
+    }
+
+    fn execute(&self, table: &str, command: &str) -> Result<Output> {
+        self.log("execute", &[table, command]);
+        Ok(Output {
+               status: ExitStatus::from_raw(9),
+               stdout: vec![],
+               stderr: vec![],
+           })
+    }
+
+    fn exists(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        self.log("exists", &[table, chain, rule]);
+        Ok(false)
+    }
+
+    fn chain_exists(&self, table: &str, chain: &str) -> Result<bool> {
+        self.log("chain_exists", &[table, chain]);
+        Ok(false)
+    }
+
+    fn insert(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
+        let position = position.to_string();
+        self.log("insert", &[table, chain, rule, &*position]);
+        Ok(false)
+    }
+
+    fn insert_unique(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
+        let position = position.to_string();
+        self.log("insert_unique", &[table, chain, rule, &*position]);
+        Ok(false)
+    }
+
+    fn replace(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
+        let position = position.to_string();
+        self.log("replace", &[table, chain, rule, &*position]);
+        Ok(false)
+    }
+
+    fn append(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        self.log("append", &[table, chain, rule]);
+        Ok(false)
+    }
+
+    fn append_unique(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        self.log("append_unique", &[table, chain, rule]);
+        Ok(false)
+    }
+
+    fn append_replace(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        self.log("append_replace", &[table, chain, rule]);
+        Ok(false)
+    }
+
+    fn delete(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        self.log("delete", &[table, chain, rule]);
+        Ok(false)
+    }
+
+    fn delete_all(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        self.log("delete_all", &[table, chain, rule]);
+        Ok(false)
+    }
+
+    fn list(&self, table: &str, chain: &str) -> Result<Vec<String>> {
+        self.log("list", &[table, chain]);
+        Ok(vec![])
+    }
+
+    fn list_table(&self, table: &str) -> Result<Vec<String>> {
+        self.log("list_table", &[table]);
+        Ok(vec![])
+    }
+
+    fn list_chains(&self, table: &str) -> Result<Vec<String>> {
+        self.log("list_chains", &[table]);
+        Ok(vec![])
+    }
+
+    fn new_chain(&self, table: &str, chain: &str) -> Result<bool> {
+        self.log("new_chain", &[table, chain]);
+        Ok(false)
+    }
+
+    fn flush_chain(&self, table: &str, chain: &str) -> Result<bool> {
+        self.log("flush_chain", &[table, chain]);
+        Ok(false)
+    }
+
+    fn rename_chain(&self, table: &str, old_chain: &str, new_chain: &str) -> Result<bool> {
+        self.log("rename_chain", &[table, old_chain, new_chain]);
+        Ok(false)
+    }
+
+    fn delete_chain(&self, table: &str, chain: &str) -> Result<bool> {
+        self.log("delete_chain", &[table, chain]);
+        Ok(false)
+    }
+
+    fn flush_table(&self, table: &str) -> Result<bool> {
+        self.log("flush_table", &[table]);
         Ok(false)
     }
 }
