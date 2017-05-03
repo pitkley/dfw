@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+
+exec 2>&1
+
+# Update README
+cargo readme --no-indent-headings --no-title -o README.md >/dev/null
+# Only continue if the README didn't change
+git diff --quiet --diff-filter=M HEAD -- README.md || {
+    code=$?
+    echo "README changed, please stage and recommit"
+    exit $code
+}
+
+# Check if code is formatted
+cargo fmt -- --write-mode=diff
+
+cargo check
+cargo test
+
