@@ -59,17 +59,21 @@
 //!
 //! ## Supported Docker versions
 //!
-//! At least Docker 1.9.0 is required, since we heavily rely on the Docker [networking
-//! feature][docker-networks] which was introduced in 1.9.0.
+//! At least Docker 1.13.0 is required.
 //!
 //! DFWRS has been successfully tested under the following Docker versions:
+//!
+//! * `1.13.0`
+//!
+//! * `1.13.1`
+//!
+//! * `17.03.0-ce`
 //!
 //! * `17.03.1-ce`
 //!
 //! * `17.04.0-ce`
 //!
-//! It is planned to introduce some form of automated testing to cover as many Docker versions as
-//! possible.
+//! * `17.05.0-ce-rc2`
 //!
 //! ## Installation
 //!
