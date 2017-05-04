@@ -97,11 +97,12 @@ fn with_compose_environment<F: FnOnce() -> ()>(compose_path: &str, project_name:
     }
 }
 
-#[test]
-fn dc_01() {
+fn dc_template(num: &str) {
     // Load toml
     let mut s = String::new();
-    let toml: DFW = load_file(&resource("docker/01/conf.toml").unwrap(), &mut s).unwrap();
+    let toml: DFW = load_file(&resource(&format!("docker/{}/conf.toml", num)).unwrap(),
+                              &mut s)
+            .unwrap();
 
     // Setup docker instance
     let docker = Docker::new();
@@ -124,15 +125,16 @@ fn dc_01() {
     // not `UnwindSafe`.
     let docker = AssertUnwindSafe(docker);
 
-    with_compose_environment(&resource("docker/01/docker-compose.yml").unwrap(),
-                             "dfwrs_test_01",
+    with_compose_environment(&resource(&format!("docker/{}/docker-compose.yml", num)).unwrap(),
+                             &format!("dfwrs_test_{}", num),
                              || {
         let process = ProcessDFW::new(&docker, &toml, &*ipt4, &*ipt6, &PROCESSING_OPTIONS, &logger)
             .unwrap();
 
         // Test if container is available
         let containers = docker.containers();
-        let container = containers.get("dfwrstest01_a_1");
+        let container_name = format!("dfwrstest{}_a_1", num);
+        let container = containers.get(&container_name);
         let inspect = container.inspect();
         assert!(inspect.is_ok());
         let inspect = inspect.unwrap();
@@ -145,12 +147,19 @@ fn dc_01() {
 
         // Verify logs for iptables (IPv4)
         let logs4 = ipt4.logs();
-        let expected4 = load_log(&resource("docker/01/expected-iptables-v4-logs.txt").unwrap());
+        let expected4 =
+            load_log(&resource(&format!("docker/{}/expected-iptables-v4-logs.txt", num)).unwrap());
         assert_eq!(logs4, expected4);
 
         // Verify logs for ip6tables (IPv6)
         let logs6 = ipt6.logs();
-        let expected6 = load_log(&resource("docker/01/expected-iptables-v6-logs.txt").unwrap());
+        let expected6 =
+            load_log(&resource(&format!("docker/{}/expected-iptables-v6-logs.txt", num)).unwrap());
         assert_eq!(logs6, expected6);
     });
+}
+
+#[test]
+fn dc_01() {
+    dc_template("01");
 }
