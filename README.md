@@ -89,16 +89,12 @@ your configuration.
 
 I have reimplemented DFWFW in Rust for two reasons:
 
-1. DFWFW has lost compatibility with the Docker API starting with release 17.04.0-ce.
+1. DFWFW had lost compatibility with the Docker API starting with release 17.04.0-ce, although
+   this [has been fixed][dfwfw-issue-13] in the meantime.
 
-    This is very likely due to a change in Dockers web API regarding getting networks and their
-    containers, see [this relevant issue][moby-issue-32686]. Now, it would almost certainly have
-    been easier to fix this issue in DFWFW -- if not for me, maybe for the maintainer. I have
-    [created an issue][dfwfw-issue-13] to give the DFWFW maintainer a heads-up.
-
-2. But the main reason for this reimplementation was that I found a real-life project to tackle
-   with Rust. This project allowed me to delve into quite a few different aspects and facets of
-   Rust and especially its eco-system, amongst others:
+2. The main reason for this reimplementation was that I found a real-life project to tackle with
+   Rust. This project allowed me to delve into quite a few different aspects and facets of Rust
+   and especially its eco-system, amongst others:
 
   * [`clap`][crates-clap], for parsing of command line arguments
   * [`chan`][crates-chan], for easy messaging and coordination between threads
@@ -107,7 +103,7 @@ I have reimplemented DFWFW in Rust for two reasons:
   * [`slog`][crates-slog], for structured logging
 
     Disregarding the obvious hair-pulling moments regarding ownership, borrowing and lifetimes,
-    my experience with Rust, and its brillant eco-system has been an absolute pleasure.
+    my experience with Rust and its brillant eco-system has been an absolute pleasure.
 
 ## License
 
