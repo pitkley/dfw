@@ -19,6 +19,9 @@ use std::panic::{AssertUnwindSafe, UnwindSafe};
 use std::path::PathBuf;
 use std::process::Command;
 
+static PROCESSING_OPTIONS: ProcessingOptions =
+    ProcessingOptions { container_filter: ContainerFilter::All };
+
 fn load_log(log_path: &str) -> Vec<(String, String)> {
     let file = BufReader::new(File::open(log_path).unwrap());
 
@@ -124,7 +127,8 @@ fn dc_01() {
     with_compose_environment(&resource("docker/01/docker-compose.yml").unwrap(),
                              "dfwrs_test_01",
                              || {
-        let process = ProcessDFW::new(&docker, &toml, &*ipt4, &*ipt6, &logger).unwrap();
+        let process = ProcessDFW::new(&docker, &toml, &*ipt4, &*ipt6, &PROCESSING_OPTIONS, &logger)
+            .unwrap();
 
         // Test if container is available
         let containers = docker.containers();
