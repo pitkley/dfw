@@ -11,11 +11,11 @@ mod common;
 mod logs;
 
 use common::*;
-use logs::*;
 use dfwrs::*;
 use dfwrs::iptables::IPTablesLogger;
 use dfwrs::types::*;
 use dfwrs::util::load_file;
+use logs::*;
 use shiplift::Docker;
 use slog::{Drain, Fuse, Logger, OwnedKVList, Record};
 use std::panic;
@@ -163,4 +163,9 @@ fn dc_template(num: &str) {
 #[test]
 fn dc_01() {
     dc_template("01");
+}
+
+#[test]
+fn dc_02() {
+    dc_template("02");
 }

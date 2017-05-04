@@ -1,0 +1,12 @@
+[container_to_container]
+default_policy = "DROP"
+
+[[container_to_container.rules]]
+network = "dfwrstest02_default"
+action = "REJECT"
+
+[[container_to_container.rules]]
+network = "dfwrstest02_default"
+src_container = "dfwrstest02_a_1"
+dst_container = "dfwrstest02_b_1"
+action = "ACCEPT"
