@@ -1,5 +1,0 @@
-FROM nginx
-
-ARG BUILD_NAME
-
-RUN sed -i "s|Welcome to nginx!|Welcome to <b>${BUILD_NAME}</b>!|g" /usr/share/nginx/html/index.html
