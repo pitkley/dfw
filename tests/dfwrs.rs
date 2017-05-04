@@ -20,7 +20,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 static PROCESSING_OPTIONS: ProcessingOptions =
-    ProcessingOptions { container_filter: ContainerFilter::All };
+    ProcessingOptions { container_filter: ContainerFilter::Running };
 
 fn load_log(log_path: &str) -> Vec<(String, String)> {
     let file = BufReader::new(File::open(log_path).unwrap());
