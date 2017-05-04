@@ -1,20 +1,20 @@
-new_chain   filter DFWRS_FORWARD
-flush_chain filter DFWRS_FORWARD
-new_chain   filter DFWRS_INPUT
-flush_chain filter DFWRS_INPUT
-new_chain   nat DFWRS_PREROUTING
-flush_chain nat DFWRS_PREROUTING
-new_chain   nat DFWRS_POSTROUTING
-flush_chain nat DFWRS_POSTROUTING
-execute     filter -P INPUT ACCEPT
-append      filter DFWRS_INPUT -m state --state INVALID -j DROP
-append      filter DFWRS_INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
-append      filter INPUT -j DFWRS_INPUT
-append      filter DFWRS_FORWARD -m state --state INVALID -j DROP
-append      filter DFWRS_FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
-append      filter FORWARD -j DFWRS_FORWARD
-append      nat PREROUTING -j DFWRS_PREROUTING
-append      nat POSTROUTING -j DFWRS_POSTROUTING
-append      filter DFWRS_FORWARD -i docker0 -o eni -j ACCEPT
-append      filter DFWRS_INPUT -i docker0 -j ACCEPT
-append      nat DFWRS_POSTROUTING -o eni -j MASQUERADE
+new_chain	filter DFWRS_FORWARD
+flush_chain	filter DFWRS_FORWARD
+new_chain	filter DFWRS_INPUT
+flush_chain	filter DFWRS_INPUT
+new_chain	nat DFWRS_PREROUTING
+flush_chain	nat DFWRS_PREROUTING
+new_chain	nat DFWRS_POSTROUTING
+flush_chain	nat DFWRS_POSTROUTING
+execute	filter -P INPUT ACCEPT
+append	filter DFWRS_INPUT -m state --state INVALID -j DROP
+append	filter DFWRS_INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+append	filter INPUT -j DFWRS_INPUT
+append	filter DFWRS_FORWARD -m state --state INVALID -j DROP
+append	filter DFWRS_FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
+append	filter FORWARD -j DFWRS_FORWARD
+append	nat PREROUTING -j DFWRS_PREROUTING
+append	nat POSTROUTING -j DFWRS_POSTROUTING
+append	filter DFWRS_FORWARD -i docker0 -o eni -j ACCEPT
+append	filter DFWRS_INPUT -i docker0 -j ACCEPT
+append	nat DFWRS_POSTROUTING -o eni -j MASQUERADE
