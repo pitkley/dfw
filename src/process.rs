@@ -6,19 +6,17 @@
 // option. This file may not be copied, modified or distributed
 // except according to those terms.
 
-//! DFWRS
-
-use std::collections::HashMap as Map;
-
-use iptables;
-use iptables::IPTables;
-use shiplift::Docker;
-use shiplift::rep::Container;
-use shiplift::rep::{NetworkDetails, NetworkContainerDetails};
-use slog::Logger;
-use time;
+//! This module holds the types related to configuration processing and rule creation.
 
 use errors::*;
+use iptables::*;
+use shiplift::Docker;
+use shiplift::builder::{ContainerFilter as ContainerFilterShiplift, ContainerListOptions};
+use shiplift::rep::{NetworkDetails, NetworkContainerDetails};
+use shiplift::rep::Container;
+use slog::Logger;
+use std::collections::HashMap as Map;
+use time;
 use types::*;
 
 const DFWRS_FORWARD_CHAIN: &'static str = "DFWRS_FORWARD";
@@ -26,165 +24,12 @@ const DFWRS_INPUT_CHAIN: &'static str = "DFWRS_INPUT";
 const DFWRS_POSTROUTING_CHAIN: &'static str = "DFWRS_POSTROUTING";
 const DFWRS_PREROUTING_CHAIN: &'static str = "DFWRS_PREROUTING";
 
-#[derive(Debug, Clone, Default)]
-struct Rule {
-    pub source: Option<String>,
-    pub destination: Option<String>,
-
-    pub in_interface: Option<String>,
-    pub out_interface: Option<String>,
-
-    pub not_in_interface: bool,
-    pub not_out_interface: bool,
-
-    pub protocol: Option<String>,
-    pub source_port: Option<String>,
-    pub destination_port: Option<String>,
-
-    pub filter: Option<String>,
-    pub jump: Option<String>,
-}
-
-#[allow(dead_code)]
-impl Rule {
-    pub fn source(&mut self, value: String) -> &mut Self {
-        let mut new = self;
-        new.source = Some(value);
-        new
-    }
-
-    pub fn destination(&mut self, value: String) -> &mut Self {
-        let mut new = self;
-        new.destination = Some(value);
-        new
-    }
-
-    pub fn in_interface(&mut self, value: String) -> &mut Self {
-        let mut new = self;
-        new.in_interface = Some(value);
-        new
-    }
-
-    pub fn out_interface(&mut self, value: String) -> &mut Self {
-        let mut new = self;
-        new.out_interface = Some(value);
-        new
-    }
-
-    pub fn not_in_interface(&mut self, value: bool) -> &mut Self {
-        let mut new = self;
-        new.not_in_interface = value;
-        new
-    }
-
-    pub fn not_out_interface(&mut self, value: bool) -> &mut Self {
-        let mut new = self;
-        new.not_out_interface = value;
-        new
-    }
-
-    pub fn protocol(&mut self, value: String) -> &mut Self {
-        let mut new = self;
-        new.protocol = Some(value);
-        new
-    }
-
-    pub fn source_port(&mut self, value: String) -> &mut Self {
-        let mut new = self;
-        new.source_port = Some(value);
-        new
-    }
-
-    pub fn destination_port(&mut self, value: String) -> &mut Self {
-        let mut new = self;
-        new.destination_port = Some(value);
-        new
-    }
-
-    pub fn filter(&mut self, value: String) -> &mut Self {
-        let mut new = self;
-        new.filter = Some(value);
-        new
-    }
-
-    pub fn jump(&mut self, value: String) -> &mut Self {
-        let mut new = self;
-        new.jump = Some(value);
-        new
-    }
-
-    pub fn build(&self) -> Result<String> {
-        let mut args: Vec<String> = Vec::new();
-
-        if let Some(ref source) = self.source {
-            args.push("-s".to_owned());
-            args.push(source.to_owned());
-        }
-        if let Some(ref destination) = self.destination {
-            args.push("-d".to_owned());
-            args.push(destination.to_owned());
-        }
-        if let Some(ref in_interface) = self.in_interface {
-            if self.not_in_interface {
-                args.push("!".to_owned());
-            }
-            args.push("-i".to_owned());
-            args.push(in_interface.to_owned());
-        }
-        if let Some(ref out_interface) = self.out_interface {
-            if self.not_out_interface {
-                args.push("!".to_owned());
-            }
-            args.push("-o".to_owned());
-            args.push(out_interface.to_owned());
-        }
-
-        // Bail if none of the above was initialized
-        if args.len() <= 0 && self.filter.is_none() {
-            bail!("one of `source`, `destination`, `in_interface`, `out_interface` \
-                   or `filter` must be initialized");
-        }
-
-        if let Some(ref protocol) = self.protocol {
-            args.push("-p".to_owned());
-            args.push(protocol.to_owned());
-        } else if self.source_port.is_some() || self.destination_port.is_some() {
-            // Source and destination ports require that the protocol is set.
-            // If it hasn't been specified explicitly, use "tcp" as default.
-            args.push("-p".to_owned());
-            args.push("tcp".to_owned());
-        }
-
-        if let Some(ref source_port) = self.source_port {
-            args.push("--sport".to_owned());
-            args.push(source_port.to_owned());
-        }
-
-        if let Some(ref destination_port) = self.destination_port {
-            args.push("--dport".to_owned());
-            args.push(destination_port.to_owned());
-        }
-
-        if let Some(ref jump) = self.jump {
-            args.push("-j".to_owned());
-            args.push(jump.to_owned());
-        } else {
-            bail!("`jump` must be initialized");
-        }
-
-        if let Some(ref filter) = self.filter {
-            args.push(filter.to_owned());
-        }
-
-        Ok(args.join(" "))
-    }
-}
-
+/// Enclosing struct to manage rule processing.
 pub struct ProcessDFW<'a> {
     docker: &'a Docker,
     dfw: &'a DFW,
-    ipt4: IPTables,
-    ipt6: IPTables,
+    ipt4: &'a IPTables,
+    ipt6: &'a IPTables,
     container_map: Map<String, Container>,
     network_map: Map<String, NetworkDetails>,
     external_network_interfaces: Option<Vec<String>>,
@@ -193,10 +38,25 @@ pub struct ProcessDFW<'a> {
 }
 
 impl<'a> ProcessDFW<'a> {
-    pub fn new(docker: &'a Docker, dfw: &'a DFW, logger: &'a Logger) -> Result<ProcessDFW<'a>> {
+    /// Create a new instance of `ProcessDFW` for rule processing.
+    pub fn new(docker: &'a Docker,
+               dfw: &'a DFW,
+               ipt4: &'a IPTables,
+               ipt6: &'a IPTables,
+               processing_options: &'a ProcessingOptions,
+               logger: &'a Logger)
+               -> Result<ProcessDFW<'a>> {
         let logger = logger.new(o!());
 
-        let containers = docker.containers().list(&Default::default())?;
+        let container_list_options = match processing_options.container_filter {
+            ContainerFilter::All => Default::default(),
+            ContainerFilter::Running => {
+                ContainerListOptions::builder()
+                    .filter(vec![ContainerFilterShiplift::Status("running".to_owned())])
+                    .build()
+            }
+        };
+        let containers = docker.containers().list(&container_list_options)?;
         debug!(logger, "Got list of containers";
                o!("containers" => format!("{:#?}", containers)));
 
@@ -226,8 +86,8 @@ impl<'a> ProcessDFW<'a> {
         Ok(ProcessDFW {
                docker: docker,
                dfw: dfw,
-               ipt4: iptables::new(false)?,
-               ipt6: iptables::new(true)?,
+               ipt4: ipt4,
+               ipt6: ipt6,
                container_map: container_map,
                network_map: network_map,
                external_network_interfaces: external_network_interfaces,
@@ -236,14 +96,15 @@ impl<'a> ProcessDFW<'a> {
            })
     }
 
+    /// Start the processing using the configuration given at creation.
     pub fn process(&self) -> Result<()> {
         info!(self.logger, "Starting processing";
               o!("started_processing_at" => format!("{}", time::now().rfc3339())));
 
-        create_and_flush_chain("filter", DFWRS_FORWARD_CHAIN, &self.ipt4, &self.ipt6)?;
-        create_and_flush_chain("filter", DFWRS_INPUT_CHAIN, &self.ipt4, &self.ipt6)?;
-        create_and_flush_chain("nat", DFWRS_PREROUTING_CHAIN, &self.ipt4, &self.ipt6)?;
-        create_and_flush_chain("nat", DFWRS_POSTROUTING_CHAIN, &self.ipt4, &self.ipt6)?;
+        create_and_flush_chain("filter", DFWRS_FORWARD_CHAIN, self.ipt4, self.ipt6)?;
+        create_and_flush_chain("filter", DFWRS_INPUT_CHAIN, self.ipt4, self.ipt6)?;
+        create_and_flush_chain("nat", DFWRS_PREROUTING_CHAIN, self.ipt4, self.ipt6)?;
+        create_and_flush_chain("nat", DFWRS_POSTROUTING_CHAIN, self.ipt4, self.ipt6)?;
         debug!(self.logger, "Created and flushed chains");
 
         if let Some(ref init) = self.dfw.initialization {
@@ -253,10 +114,10 @@ impl<'a> ProcessDFW<'a> {
         }
 
         // Setup input and forward chain
-        initialize_chain("filter", DFWRS_INPUT_CHAIN, &self.ipt4, &self.ipt6)?;
+        initialize_chain("filter", DFWRS_INPUT_CHAIN, self.ipt4, self.ipt6)?;
         self.ipt4
             .append("filter", "INPUT", &format!("-j {}", DFWRS_INPUT_CHAIN))?;
-        initialize_chain("filter", DFWRS_FORWARD_CHAIN, &self.ipt4, &self.ipt6)?;
+        initialize_chain("filter", DFWRS_FORWARD_CHAIN, self.ipt4, self.ipt6)?;
         self.ipt4
             .append("filter", "FORWARD", &format!("-j {}", DFWRS_FORWARD_CHAIN))?;
         // TODO: verify what is needed for ipt6
@@ -428,10 +289,10 @@ impl<'a> ProcessDFW<'a> {
     }
 
     fn process_container_to_container(&self, ctc: &ContainerToContainer) -> Result<()> {
-        if ctc.rules.is_some() {
+        if let Some(ref ctcr) = ctc.rules {
             info!(self.logger, "Process rules";
                   o!("part" => "container_to_container"));
-            self.process_ctc_rules(ctc.rules.as_ref().unwrap())?;
+            self.process_ctc_rules(ctcr)?;
         }
 
         Ok(())
@@ -485,7 +346,7 @@ impl<'a> ProcessDFW<'a> {
                                 .IPv4Address
                                 .split("/")
                                 .next()
-                                .unwrap()
+                                .ok_or(Error::from("IPv4 address is empty"))?
                                 .to_owned());
             }
 
@@ -512,7 +373,7 @@ impl<'a> ProcessDFW<'a> {
                                      .IPv4Address
                                      .split("/")
                                      .next()
-                                     .unwrap()
+                                     .ok_or(Error::from("IPv4 address is empty"))?
                                      .to_owned());
             }
 
@@ -535,10 +396,10 @@ impl<'a> ProcessDFW<'a> {
 
     fn process_container_to_wider_world(&self, ctww: &ContainerToWiderWorld) -> Result<()> {
         // Rules
-        if ctww.rules.is_some() {
+        if let Some(ref ctwwr) = ctww.rules {
             info!(self.logger, "Process rules";
                   o!("part" => "container_to_wider_world"));
-            self.process_ctww_rules(ctww.rules.as_ref().unwrap())?;
+            self.process_ctww_rules(ctwwr)?;
         }
 
         // Default policy
@@ -615,7 +476,7 @@ impl<'a> ProcessDFW<'a> {
                                             .IPv4Address
                                             .split("/")
                                             .next()
-                                            .unwrap()
+                                            .ok_or(Error::from("IPv4 address is empty"))?
                                             .to_owned());
                         }
                     }
@@ -661,10 +522,10 @@ impl<'a> ProcessDFW<'a> {
 
     fn process_container_to_host(&self, cth: &ContainerToHost) -> Result<()> {
         // Rules
-        if cth.rules.is_some() {
+        if let Some(ref cthr) = cth.rules {
             info!(self.logger, "Process rules";
                   o!("part" => "container_to_host"));
-            self.process_cth_rules(cth.rules.as_ref().unwrap())?;
+            self.process_cth_rules(cthr)?;
         }
 
         // Default policy
@@ -725,7 +586,7 @@ impl<'a> ProcessDFW<'a> {
                                         .IPv4Address
                                         .split("/")
                                         .next()
-                                        .unwrap()
+                                        .ok_or(Error::from("IPv4 address is empty"))?
                                         .to_owned());
                 }
             }
@@ -757,15 +618,17 @@ impl<'a> ProcessDFW<'a> {
     }
 
     fn process_wider_world_to_container(&self, wwtc: &WiderWorldToContainer) -> Result<()> {
-        if wwtc.rules.is_none() {
-            trace!(self.logger, "No rules";
-                   o!("part" => "wider_world_to_container"));
-            return Ok(());
-        }
+        let rules = match wwtc.rules {
+            Some(ref wwtcr) => wwtcr,
+            None => {
+                trace!(self.logger, "No rules";
+                       o!("part" => "wider_world_to_container"));
+                return Ok(());
+            }
+        };
+
         info!(self.logger, "Process rules";
               o!("part" => "wider_world_to_container"));
-
-        let rules = wwtc.rules.as_ref().unwrap();
 
         for rule in rules {
             info!(self.logger, "Process rule";
@@ -803,7 +666,7 @@ impl<'a> ProcessDFW<'a> {
                                                      .IPv4Address
                                                      .split("/")
                                                      .next()
-                                                     .unwrap()
+                                                     .ok_or(Error::from("IPv4 address is empty"))?
                                                      .to_owned());
 
                     let destination_port = match expose_port.container_port {
@@ -817,7 +680,7 @@ impl<'a> ProcessDFW<'a> {
                                                      .IPv4Address
                                                      .split("/")
                                                      .next()
-                                                     .unwrap(),
+                                                     .ok_or(Error::from("IPv4 address is empty"))?,
                                                  destination_port));
                 } else {
                     // Network for container has to exist
@@ -884,15 +747,17 @@ impl<'a> ProcessDFW<'a> {
     }
 
     fn process_container_dnat(&self, cd: &ContainerDNAT) -> Result<()> {
-        if cd.rules.is_none() {
-            trace!(self.logger, "No rules";
-                   o!("part" => "container_dnat"));
-            return Ok(());
-        }
+        let rules = match cd.rules {
+            Some(ref cdr) => cdr,
+            None => {
+                trace!(self.logger, "No rules";
+                       o!("part" => "container_dnat"));
+                return Ok(());
+            }
+        };
+
         info!(self.logger, "Process rules";
               o!("part" => "container_dnat"));
-
-        let rules = cd.rules.as_ref().unwrap();
 
         for rule in rules {
             info!(self.logger, "Process rule";
@@ -935,7 +800,7 @@ impl<'a> ProcessDFW<'a> {
                                                 .IPv4Address
                                                 .split("/")
                                                 .next()
-                                                .unwrap()
+                                                .ok_or(Error::from("IPv4 address is empty"))?
                                                 .to_owned());
                             }
                         }
@@ -959,7 +824,11 @@ impl<'a> ProcessDFW<'a> {
                 };
                 ipt_rule.destination_port(destination_port.to_owned());
                 ipt_rule.filter(format!("--to-destination {}:{}",
-                                        dst_network.IPv4Address.split("/").next().unwrap(),
+                                        dst_network
+                                            .IPv4Address
+                                            .split("/")
+                                            .next()
+                                            .ok_or(Error::from("IPv4 address is empty"))?,
                                         destination_port));
 
                 ipt_rule.jump("DNAT".to_owned());
@@ -1003,8 +872,182 @@ impl<'a> ProcessDFW<'a> {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+struct Rule {
+    pub source: Option<String>,
+    pub destination: Option<String>,
 
+    pub in_interface: Option<String>,
+    pub out_interface: Option<String>,
 
+    pub not_in_interface: bool,
+    pub not_out_interface: bool,
+
+    pub protocol: Option<String>,
+    pub source_port: Option<String>,
+    pub destination_port: Option<String>,
+
+    pub filter: Option<String>,
+    pub jump: Option<String>,
+}
+
+#[allow(dead_code)]
+impl Rule {
+    pub fn source(&mut self, value: String) -> &mut Self {
+        let mut new = self;
+        new.source = Some(value);
+        new
+    }
+
+    pub fn destination(&mut self, value: String) -> &mut Self {
+        let mut new = self;
+        new.destination = Some(value);
+        new
+    }
+
+    pub fn in_interface(&mut self, value: String) -> &mut Self {
+        let mut new = self;
+        new.in_interface = Some(value);
+        new
+    }
+
+    pub fn out_interface(&mut self, value: String) -> &mut Self {
+        let mut new = self;
+        new.out_interface = Some(value);
+        new
+    }
+
+    pub fn not_in_interface(&mut self, value: bool) -> &mut Self {
+        let mut new = self;
+        new.not_in_interface = value;
+        new
+    }
+
+    pub fn not_out_interface(&mut self, value: bool) -> &mut Self {
+        let mut new = self;
+        new.not_out_interface = value;
+        new
+    }
+
+    pub fn protocol(&mut self, value: String) -> &mut Self {
+        let mut new = self;
+        new.protocol = Some(value);
+        new
+    }
+
+    pub fn source_port(&mut self, value: String) -> &mut Self {
+        let mut new = self;
+        new.source_port = Some(value);
+        new
+    }
+
+    pub fn destination_port(&mut self, value: String) -> &mut Self {
+        let mut new = self;
+        new.destination_port = Some(value);
+        new
+    }
+
+    pub fn filter(&mut self, value: String) -> &mut Self {
+        let mut new = self;
+        new.filter = Some(value);
+        new
+    }
+
+    pub fn jump(&mut self, value: String) -> &mut Self {
+        let mut new = self;
+        new.jump = Some(value);
+        new
+    }
+
+    pub fn build(&self) -> Result<String> {
+        let mut args: Vec<String> = Vec::new();
+
+        if let Some(ref source) = self.source {
+            args.push("-s".to_owned());
+            args.push(source.to_owned());
+        }
+        if let Some(ref destination) = self.destination {
+            args.push("-d".to_owned());
+            args.push(destination.to_owned());
+        }
+        if let Some(ref in_interface) = self.in_interface {
+            if self.not_in_interface {
+                args.push("!".to_owned());
+            }
+            args.push("-i".to_owned());
+            args.push(in_interface.to_owned());
+        }
+        if let Some(ref out_interface) = self.out_interface {
+            if self.not_out_interface {
+                args.push("!".to_owned());
+            }
+            args.push("-o".to_owned());
+            args.push(out_interface.to_owned());
+        }
+
+        // Bail if none of the above was initialized
+        if args.len() <= 0 && self.filter.is_none() {
+            bail!("one of `source`, `destination`, `in_interface`, `out_interface` \
+                   or `filter` must be initialized");
+        }
+
+        if let Some(ref protocol) = self.protocol {
+            args.push("-p".to_owned());
+            args.push(protocol.to_owned());
+        } else if self.source_port.is_some() || self.destination_port.is_some() {
+            // Source and destination ports require that the protocol is set.
+            // If it hasn't been specified explicitly, use "tcp" as default.
+            args.push("-p".to_owned());
+            args.push("tcp".to_owned());
+        }
+
+        if let Some(ref source_port) = self.source_port {
+            args.push("--sport".to_owned());
+            args.push(source_port.to_owned());
+        }
+
+        if let Some(ref destination_port) = self.destination_port {
+            args.push("--dport".to_owned());
+            args.push(destination_port.to_owned());
+        }
+
+        if let Some(ref jump) = self.jump {
+            args.push("-j".to_owned());
+            args.push(jump.to_owned());
+        } else {
+            bail!("`jump` must be initialized");
+        }
+
+        if let Some(ref filter) = self.filter {
+            args.push(filter.to_owned());
+        }
+
+        Ok(args.join(" "))
+    }
+}
+
+/// Option to filter the containers to be processed
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ContainerFilter {
+    /// Process all containers, i.e. don't filter.
+    All,
+    /// Only process running containers.
+    Running,
+}
+
+/// Options to configure the processing procedure.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProcessingOptions {
+    /// Option to filter the containers to be processed, see
+    /// [`ContainerFilter`](enum.ContainerFilter.html).
+    pub container_filter: ContainerFilter,
+}
+
+impl Default for ProcessingOptions {
+    fn default() -> Self {
+        ProcessingOptions { container_filter: ContainerFilter::All }
+    }
+}
 
 fn create_and_flush_chain(table: &str,
                           chain: &str,

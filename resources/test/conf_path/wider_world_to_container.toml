@@ -1,0 +1,8 @@
+[wider_world_to_container]
+
+[[wider_world_to_container.rules]]
+network = "network"
+dst_container = "dst_container"
+expose_port = 80
+external_network_interface = "eni"
+

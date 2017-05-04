@@ -23,6 +23,18 @@ time = "~0.1.37"
 toml = "~0.4.0"
 url = "~1.4.0"
 
+[dev-dependencies]
+maplit = "~0.1.4"
+
+[[bin]]
+name = "dfwrs"
+path = "src/bin/dfwrs.rs"
+doc = false
+
+[features]
+docker-tests = []
+iptables-tests = []
+
 [package.metadata.release]
 sign-commit = true
 upload-doc = false

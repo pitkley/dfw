@@ -1,0 +1,10 @@
+[container_to_wider_world]
+default_policy = "ACCEPT"
+
+[[container_to_wider_world.rules]]
+network = "network"
+src_container = "src_container"
+filter = "FILTER"
+action = "ACCEPT"
+external_network_interface = "eni"
+

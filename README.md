@@ -51,17 +51,21 @@ description of every configuration section.
 
 ## Supported Docker versions
 
-At least Docker 1.9.0 is required, since we heavily rely on the Docker [networking
-feature][docker-networks] which was introduced in 1.9.0.
+At least Docker 1.13.0 is required.
 
 DFWRS has been successfully tested under the following Docker versions:
+
+* `1.13.0`
+
+* `1.13.1`
+
+* `17.03.0-ce`
 
 * `17.03.1-ce`
 
 * `17.04.0-ce`
 
-It is planned to introduce some form of automated testing to cover as many Docker versions as
-possible.
+* `17.05.0-ce-rc2`
 
 ## Installation
 
@@ -85,30 +89,43 @@ your configuration.
 
 I have reimplemented DFWFW in Rust for two reasons:
 
-1. DFWFW has lost compatibility with the Docker API starting with release 17.04.0-ce.
+1. DFWFW had lost compatibility with the Docker API starting with release 17.04.0-ce, although
+   this [has been fixed][dfwfw-issue-13] in the meantime.
 
-    This is very likely due to a change in Dockers web API regarding getting networks and their
-    containers, see [this relevant issue][moby-issue-32686]. Now, it would almost certainly have
-    been easier to fix this issue in DFWFW -- if not for me, maybe for the maintainer. I have
-    [created an issue][dfwfw-issue-13] to give the DFWFW maintainer a heads-up.
-
-2. But the main reason for this reimplementation was that I found a real-life project to tackle
-   with Rust. This project allowed me to delve into quite a few different aspects and facets of
-   Rust and especially its eco-system, amongst others:
+2. The main reason for this reimplementation was that I found a real-life project to tackle with
+   Rust. This project allowed me to delve into quite a few different aspects and facets of Rust
+   and especially its eco-system, amongst others:
 
   * [`clap`][crates-clap], for parsing of command line arguments
   * [`chan`][crates-chan], for easy messaging and coordination between threads
-  * [`error_chain`][crates-error_chain], for simplified application wide error handling
+  * [`error-chain`][crates-error-chain], for simplified application wide error handling
   * [Serde][crates-serde], for deserialization of the TOML configuration
   * [`slog`][crates-slog], for structured logging
 
     Disregarding the obvious hair-pulling moments regarding ownership, borrowing and lifetimes,
-    my experience with Rust, and its brillant eco-system has been an absolute pleasure.
+    my experience with Rust and its brillant eco-system has been an absolute pleasure.
+
+## License
+
+DFWRS is licensed under either of
+
+* Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
+  http://www.apache.org/licenses/LICENSE-2.0)
+* MIT license ([LICENSE-MIT](LICENSE-MIT) or
+  http://opensource.org/licenses/MIT)
+
+at your option.
+
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in DFWRS by you, as defined in the Apache-2.0 license, shall be
+dual licensed as above, without any additional terms or conditions.
 
 
 [crates-clap]: https://crates.io/crates/clap
 [crates-chan]: https://crates.io/crates/chan
-[crates-error_chain]: https://crates.io/crates/error-chain
+[crates-error-chain]: https://crates.io/crates/error-chain
 [crates-serde]: https://crates.io/crates/serde
 [crates-slog]: https://crates.io/crates/slog
 
@@ -121,4 +138,3 @@ I have reimplemented DFWFW in Rust for two reasons:
 [moby-issue-32686]: https://github.com/moby/moby/issues/32686
 
 [types.rs]: types/index.html
->>>>>>> Add documentation

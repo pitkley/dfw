@@ -6,11 +6,9 @@
 // option. This file may not be copied, modified or distributed
 // except according to those terms.
 
-//! # Types
-//!
 //! The types in this module make up the structure of the configuration-file(s).
 //!
-//! ## Example
+//! # Example
 //!
 //! The following is an examplary TOML configuration, which will be parsed into this modules types.
 //!
@@ -58,12 +56,11 @@
 //! expose_port = { host_port = 8080, container_port = 80, family = "tcp" }
 //! ```
 
+use serde::de::{self, Deserialize, Deserializer, DeserializeSeed};
 use std::collections::HashMap as Map;
 use std::fmt;
 use std::marker::PhantomData;
 use std::str::FromStr;
-
-use serde::de::{self, Deserialize, Deserializer, DeserializeSeed};
 
 const DEFAULT_PROTOCOL: &'static str = "tcp";
 
@@ -71,7 +68,7 @@ const DEFAULT_PROTOCOL: &'static str = "tcp";
 /// firewall rules.
 ///
 /// Every section is optional.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct DFW {
     /// The `defaults` configuration section
@@ -91,7 +88,7 @@ pub struct DFW {
 }
 
 /// The default configuration section, used by DFWRS for rule processing.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct Defaults {
     /// This defines the external network interfaces of the host to consider during building the
@@ -126,7 +123,7 @@ pub struct Defaults {
 ///     # ...
 /// ]
 /// ```
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct Initialization {
     /// Initialization rules for iptables (IPv4). Expects a map where the key is a specific table
@@ -160,7 +157,7 @@ pub struct Initialization {
 }
 
 /// The container-to-container section, defining how containers can communicate amongst each other.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerToContainer {
     /// The `default_policy` defines the default for when there is not a specific rule.
@@ -185,7 +182,7 @@ pub struct ContainerToContainer {
 }
 
 /// Definition for a rule to be used in the container-to-container section.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerToContainerRule {
     /// Common network between the source container and the destination container to apply the rule
@@ -203,7 +200,7 @@ pub struct ContainerToContainerRule {
 
 /// The container-to-wider-world section, defining how containers can communicate with the wider
 /// world.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerToWiderWorld {
     /// The `default_policy` defines the default for when there is not a specific rule.
@@ -228,7 +225,7 @@ pub struct ContainerToWiderWorld {
 }
 
 /// Definition for a rule to be used in the container-to-wider-world section.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerToWiderWorldRule {
     /// Network of the source container to apply the rule to.
@@ -244,7 +241,7 @@ pub struct ContainerToWiderWorldRule {
 }
 
 /// The container-to-host section, defining how containers can communicate with the host.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerToHost {
     /// The `default_policy` defines the default for when there is not a specific rule.
@@ -269,7 +266,7 @@ pub struct ContainerToHost {
 }
 
 /// Definition for a rule to be used in the container-to-host section.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerToHostRule {
     /// Network of the source container to apply the rule to.
@@ -283,7 +280,7 @@ pub struct ContainerToHostRule {
 }
 
 /// The wider-world-to-container section, defining how containers can reached from the wider world.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct WiderWorldToContainer {
     /// An optional list of rules, see
@@ -306,7 +303,7 @@ pub struct WiderWorldToContainer {
 }
 
 /// Definition for a rule to be used in the wider-world-to-container section.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct WiderWorldToContainerRule {
     /// Network of the destination container to apply the rule to.
@@ -361,7 +358,7 @@ pub struct WiderWorldToContainerRule {
 }
 
 /// Struct to hold a port definition to expose on the host/between containers.
-#[derive(Deserialize, Debug, Clone, Default, Builder)]
+#[derive(Deserialize, Debug, Clone, Default, Builder, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ExposePort {
     /// Port the `container_port` should be exposed to on the host.
@@ -401,26 +398,33 @@ impl FromStr for ExposePort {
     /// # Example
     ///
     /// ```
-    /// let port: ExposePort = FromStr::from_str("80/tcp").unwrap();
+    /// # use dfwrs::types::ExposePort;
+    /// let port: ExposePort = "80".parse().unwrap();
     /// assert_eq!(port.host_port, 80);
     /// assert_eq!(port.container_port, None);
     /// assert_eq!(port.family, "tcp");
+    /// ```
+    ///
+    /// ```
+    /// # use dfwrs::types::ExposePort;
+    /// let port: ExposePort = "53/udp".parse().unwrap();
+    /// assert_eq!(port.host_port, 53);
+    /// assert_eq!(port.container_port, None);
+    /// assert_eq!(port.family, "udp");
     /// ```
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let split: Vec<&str> = s.split('/').collect();
         Ok(match split.len() {
                1 => {
                    ExposePortBuilder::default()
-                       .host_port(split[0].parse().unwrap())
-                       .build()
-                       .unwrap()
+                       .host_port(split[0].parse().map_err(|e| format!("{}", e))?)
+                       .build()?
                }
                2 => {
                    ExposePortBuilder::default()
-                       .host_port(split[0].parse().unwrap())
+                       .host_port(split[0].parse().map_err(|e| format!("{}", e))?)
                        .family(split[1].to_owned())
-                       .build()
-                       .unwrap()
+                       .build()?
                }
                _ => return Err(format!("port string has invalid format '{}'", s)),
            })
@@ -429,7 +433,7 @@ impl FromStr for ExposePort {
 
 /// The container-DNAT section, defining how containers can communicate with each other over
 /// non-common networks.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerDNAT {
     /// An optional list of rules, see
@@ -452,7 +456,7 @@ pub struct ContainerDNAT {
 }
 
 /// Definition for a rule to be used in the container-DNAT section.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerDNATRule {
     /// Network of the source container to apply the rule to.
@@ -557,6 +561,7 @@ impl<'de, T> DeserializeSeed<'de> for StringOrStruct<T>
     }
 }
 
+#[allow(dead_code)]
 fn string_or_struct<'de, T, D>(deserializer: D) -> Result<T, D::Error>
     where T: Deserialize<'de> + FromStr<Err = String>,
           D: Deserializer<'de>
@@ -579,13 +584,17 @@ impl<'de, T> de::Visitor<'de> for SingleOrSeqStringOrStruct<T>
     fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
         where E: de::Error
     {
-        Ok(vec![FromStr::from_str(&value.to_string()).unwrap()])
+        FromStr::from_str(&value.to_string())
+            .map(|e| vec![e])
+            .map_err(de::Error::custom)
     }
 
     fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
         where E: de::Error
     {
-        Ok(vec![FromStr::from_str(value).unwrap()])
+        FromStr::from_str(value)
+            .map(|e| vec![e])
+            .map_err(de::Error::custom)
     }
 
     fn visit_map<M>(self, visitor: M) -> Result<Self::Value, M::Error>

@@ -1,6 +1,7 @@
 stages:
     - prepare
     - build
+    - test
     - package
 
 cache:
@@ -8,52 +9,46 @@ cache:
     paths:
         - target/
 
-prepare rust image:
+.prepare-rust-image: &prepare-rust-image
     stage: prepare
     tags:
         - docker-available
+        - local
     script:
+        - JOB_NAME=( $CI_JOB_NAME )
         - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
         - docker pull "$(grep '^FROM' Dockerfile.build | awk '{ print $2; }' | head -n1)"
-        - docker build -t "${CI_REGISTRY_IMAGE}/build:current" -f Dockerfile.build .
-        - docker push "${CI_REGISTRY_IMAGE}/build:current"
+        - docker build -t "${CI_REGISTRY_IMAGE}/build:${JOB_NAME[3]}" -f Dockerfile.build .
+        - docker push "${CI_REGISTRY_IMAGE}/build:${JOB_NAME[3]}"
 
-prepare rust image beta:
-    stage: prepare
-    tags:
-        - docker-available
-    script:
-        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
-        - sed -i '0,/FROM /{s/:.*/:beta/}' Dockerfile.build
-        - docker pull "$(grep '^FROM' Dockerfile.build | awk '{ print $2; }' | head -n1)"
-        - docker build -t "${CI_REGISTRY_IMAGE}/build:beta" -f Dockerfile.build .
-        - docker push "${CI_REGISTRY_IMAGE}/build:beta"
+prepare rust image stable: *prepare-rust-image
+prepare rust image beta: *prepare-rust-image
+prepare rust image nightly: *prepare-rust-image
 
-prepare rust image nightly:
-    stage: prepare
-    tags:
-        - docker-available
-    script:
-        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
-        - sed -i '0,/FROM /{s/:.*/:nightly/}' Dockerfile.build
-        - docker pull "$(grep '^FROM' Dockerfile.build | awk '{ print $2; }' | head -n1)"
-        - docker build -t "${CI_REGISTRY_IMAGE}/build:nightly" -f Dockerfile.build .
-        - docker push "${CI_REGISTRY_IMAGE}/build:nightly"
-
-build dynamic binary on current:
+rustfmt:
     stage: build
     tags:
         - docker
-    image: "${CI_REGISTRY_IMAGE}/build"
+    image: "${CI_REGISTRY_IMAGE}/build:stable"
+    script:
+        - cargo fmt -- --write-mode diff
+
+build dynamic binary on stable:
+    stage: build
+    tags:
+        - docker
+    image: "${CI_REGISTRY_IMAGE}/build:stable"
     script:
         - cargo build --verbose
-        - cargo build --release
+    cache:
+        key: "dynamic binary on stable"
+        paths:
+            - target/
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
             - Cargo.toml
             - Cargo.lock
-            - target/release/dfwrs
 
 build dynamic binary on beta:
     stage: build
@@ -62,13 +57,15 @@ build dynamic binary on beta:
     image: "${CI_REGISTRY_IMAGE}/build:beta"
     script:
         - cargo build --verbose
-        - cargo build --release
+    cache:
+        key: "dynamic binary on beta"
+        paths:
+            - target/
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
             - Cargo.toml
             - Cargo.lock
-            - target/release/dfwrs
 
 build dynamic binary on nightly:
     stage: build
@@ -77,22 +74,29 @@ build dynamic binary on nightly:
     image: "${CI_REGISTRY_IMAGE}/build:nightly"
     script:
         - cargo build --verbose
-        - cargo build --release
+    cache:
+        key: "dynamic binary on nightly"
+        paths:
+            - target/
     allow_failure: true
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
             - Cargo.toml
             - Cargo.lock
-            - target/release/dfwrs
 
 build static binary:
     stage: build
     tags:
         - rust-cross
+        - local
     script:
         - cross build --target x86_64-unknown-linux-musl --release
         - cp target/x86_64-unknown-linux-musl/release/dfwrs dfwrs
+    cache:
+        key: "static binary"
+        paths:
+            - target/
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
@@ -100,19 +104,102 @@ build static binary:
             - Cargo.lock
             - dfwrs
 
-rustfmt:
-    stage: build
+test dynamic binary on stable:
+    stage: test
     tags:
         - docker
-    image: "${CI_REGISTRY_IMAGE}/build"
+    image: "${CI_REGISTRY_IMAGE}/build:stable"
+    dependencies: []
     script:
-        - cargo fmt -- --write-mode diff
+        - cargo test -- --nocapture
+    cache:
+        key: "dynamic binary on stable"
+        paths:
+            - target/
+
+test dynamic binary on beta:
+    stage: test
+    tags:
+        - docker
+    image: "${CI_REGISTRY_IMAGE}/build:beta"
+    dependencies: []
+    script:
+        - cargo test -- --nocapture
+    cache:
+        key: "dynamic binary on beta"
+        paths:
+            - target/
+
+test dynamic binary on nightly:
+    stage: test
+    tags:
+        - docker
+    image: "${CI_REGISTRY_IMAGE}/build:nightly"
+    dependencies: []
+    script:
+        - cargo test -- --nocapture
+    cache:
+        key: "dynamic binary on nightly"
+        paths:
+            - target/
     allow_failure: true
+
+test static binary:
+    stage: test
+    tags:
+        - rust-cross
+        - local
+    dependencies: []
+    script:
+        - cross test --target x86_64-unknown-linux-musl -- --nocapture
+    cache:
+        key: "static binary"
+        paths:
+            - target/
+
+.test-docker-tests: &test-docker-tests
+    stage: test
+    tags:
+        - rust
+        - docker-available
+    dependencies: []
+    before_script:
+        # Extract docker version
+        - JOB_NAME=( $CI_JOB_NAME )
+        - echo "$JOB_NAME"
+        - DIND_VERSION="${JOB_NAME[3]}"
+        - echo "$DIND_VERSION"
+        # Start dind-container
+        - >
+            docker run
+            --rm -d --name "dind-runner-${CI_JOB_ID}" --privileged
+            "docker:$DIND_VERSION-dind" --iptables=false
+        # Get dind-container IP
+        - DIND_IP_ADDRESS="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "dind-runner-${CI_JOB_ID}")"
+        - echo "$DIND_IP_ADDRESS"
+        # Wait for dind-container to be ready
+        - >
+            until docker -H "tcp://${DIND_IP_ADDRESS}:2375" info >/dev/null 2>&1; do sleep 1; done
+        - export DOCKER_HOST="http://${DIND_IP_ADDRESS}:2375"
+        - echo "$DOCKER_HOST"
+    script:
+        - cargo test --all-features -- --nocapture
+    after_script:
+        - docker stop "dind-runner-${CI_JOB_ID}"
+
+# API from 1.12.6 and below is not compatible.
+test on docker 1.13.0: *test-docker-tests
+test on docker 1.13.1: *test-docker-tests
+test on docker 17.03.0-ce: *test-docker-tests
+test on docker 17.03.1-ce: *test-docker-tests
+test on docker 17.04.0-ce: *test-docker-tests
+test on docker 17.05.0-ce-rc2: *test-docker-tests
 
 package image for feature-branch:
     stage: package
     tags:
         - docker-available
+        - local
     dependencies:
         - build static binary
     only:
@@ -128,6 +215,7 @@ package and push image for tags:
     stage: package
     tags:
         - docker-available
+        - local
     dependencies:
         - build static binary
     only:
@@ -141,6 +229,7 @@ package and push image on develop patch:
     stage: package
     tags:
         - docker-available
+        - local
     dependencies:
         - build static binary
     only:
@@ -154,6 +243,7 @@ package and push image on develop minor:
     stage: package
     tags:
         - docker-available
+        - local
     dependencies:
         - build static binary
     only:
@@ -167,6 +257,7 @@ package and push image on master:
     stage: package
     tags:
         - docker-available
+        - local
     dependencies:
         - build static binary
     only:
