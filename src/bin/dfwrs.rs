@@ -34,7 +34,7 @@ extern crate url;
 use chan::{Receiver, Sender};
 use chan_signal::Signal;
 use clap::{App, Arg, ArgGroup, ArgMatches};
-use dfwrs::ProcessDFW;
+use dfwrs::{ContainerFilter, ProcessDFW, ProcessingOptions};
 use dfwrs::iptables::{IPTables, IPTablesDummy, IPTablesProxy};
 use dfwrs::types::DFW;
 use dfwrs::util::*;
@@ -246,9 +246,16 @@ fn run(signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                  .value_name("TIMEOUT")
                  .help("Time to wait after a event was received before processing the rules, in \
                         milliseconds"))
+        .arg(Arg::with_name("container-filter")
+                 .takes_value(true)
+                 .long("container-filter")
+                 .value_name("FILTER")
+                 .possible_values(&["all", "running"])
+                 .default_value("all")
+                 .help("Filter the containers to be included during processing"))
         .arg(Arg::with_name("disable-event-monitoring")
                  .takes_value(false)
-                 .long("--disable-event-monitoring")
+                 .long("disable-event-monitoring")
                  .help("Disable Docker event monitoring"))
         .arg(Arg::with_name("run-once")
                  .takes_value(false)
@@ -291,6 +298,14 @@ fn run(signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
             r_dummy
         }
     };
+
+    let container_filter = match matches.value_of("container-filter") {
+        Some("all") => ContainerFilter::All,
+        Some("running") => ContainerFilter::Running,
+        Some(_) | None => bail!("wrong or no container filter specified"),
+    };
+    let processing_options = ProcessingOptions { container_filter: container_filter };
+
     let monitor_events = !matches.is_present("disable-event-monitoring");
     trace!(root_logger, "Monitoring events: {}", monitor_events;
            o!("monitor_events" => monitor_events));
@@ -318,10 +333,15 @@ fn run(signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
             trace!(root_logger, "Creating process closure according to load mode";
                    o!("load_mode" => "once"));
             Box::new(|| {
-                         ProcessDFW::new(&docker, &toml, ipt4, ipt6, &root_logger)?
-                             .process()
-                             .map_err(From::from)
-                     })
+                ProcessDFW::new(&docker,
+                                &toml,
+                                ipt4,
+                                ipt6,
+                                &processing_options,
+                                &root_logger)?
+                        .process()
+                        .map_err(From::from)
+            })
         }
         LoadMode::Always => {
             trace!(root_logger, "Creating process closure according to load mode";
@@ -331,9 +351,14 @@ fn run(signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                 info!(root_logger, "Reloaded configuration before processing");
                 debug!(root_logger, "Reloaded config: {:#?}", toml);
 
-                ProcessDFW::new(&docker, &toml, ipt4, ipt6, &root_logger)?
-                    .process()
-                    .map_err(From::from)
+                ProcessDFW::new(&docker,
+                                &toml,
+                                ipt4,
+                                ipt6,
+                                &processing_options,
+                                &root_logger)?
+                        .process()
+                        .map_err(From::from)
             })
         }
     };

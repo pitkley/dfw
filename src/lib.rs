@@ -185,6 +185,7 @@ use errors::*;
 use iptables::*;
 
 use shiplift::Docker;
+use shiplift::builder::{ContainerFilter as ContainerFilterShiplift, ContainerListOptions};
 use shiplift::rep::{NetworkDetails, NetworkContainerDetails};
 use shiplift::rep::Container;
 use slog::Logger;
@@ -350,6 +351,29 @@ impl Rule {
     }
 }
 
+/// Option to filter the containers to be processed
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ContainerFilter {
+    /// Process all containers, i.e. don't filter.
+    All,
+    /// Only process running containers.
+    Running,
+}
+
+/// Options to configure the processing procedure.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProcessingOptions {
+    /// Option to filter the containers to be processed, see
+    /// [`ContainerFilter`](enum.ContainerFilter.html).
+    pub container_filter: ContainerFilter,
+}
+
+impl Default for ProcessingOptions {
+    fn default() -> Self {
+        ProcessingOptions { container_filter: ContainerFilter::All }
+    }
+}
+
 /// Enclosing struct to manage rule processing.
 pub struct ProcessDFW<'a> {
     docker: &'a Docker,
@@ -369,11 +393,20 @@ impl<'a> ProcessDFW<'a> {
                dfw: &'a DFW,
                ipt4: &'a IPTables,
                ipt6: &'a IPTables,
+               processing_options: &'a ProcessingOptions,
                logger: &'a Logger)
                -> Result<ProcessDFW<'a>> {
         let logger = logger.new(o!());
 
-        let containers = docker.containers().list(&Default::default())?;
+        let container_list_options = match processing_options.container_filter {
+            ContainerFilter::All => Default::default(),
+            ContainerFilter::Running => {
+                ContainerListOptions::builder()
+                    .filter(vec![ContainerFilterShiplift::Status("running".to_owned())])
+                    .build()
+            }
+        };
+        let containers = docker.containers().list(&container_list_options)?;
         debug!(logger, "Got list of containers";
                o!("containers" => format!("{:#?}", containers)));
 
