@@ -251,7 +251,7 @@ fn run(signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                  .long("container-filter")
                  .value_name("FILTER")
                  .possible_values(&["all", "running"])
-                 .default_value("all")
+                 .default_value("running")
                  .help("Filter the containers to be included during processing"))
         .arg(Arg::with_name("disable-event-monitoring")
                  .takes_value(false)
