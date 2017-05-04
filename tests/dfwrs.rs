@@ -7,117 +7,23 @@ extern crate shiplift;
 #[macro_use]
 extern crate slog;
 
+mod common;
+mod logs;
+
+use common::*;
+use logs::*;
 use dfwrs::*;
 use dfwrs::iptables::IPTablesLogger;
 use dfwrs::types::*;
 use dfwrs::util::load_file;
-use regex::Regex;
 use shiplift::Docker;
 use slog::{Drain, Fuse, Logger, OwnedKVList, Record};
-use std::fs::File;
-use std::io::BufReader;
-use std::io::prelude::*;
 use std::panic;
 use std::panic::{AssertUnwindSafe, UnwindSafe};
-use std::path::PathBuf;
 use std::process::Command;
 
 static PROCESSING_OPTIONS: ProcessingOptions =
     ProcessingOptions { container_filter: ContainerFilter::Running };
-
-#[derive(Debug)]
-struct LogLine {
-    function: String,
-    regex: bool,
-    command: String,
-    eval: Option<String>,
-}
-
-impl PartialEq for LogLine {
-    fn eq(&self, other: &LogLine) -> bool {
-        // If `function` is unequal, we don't have to do further comparisons
-        if self.function != other.function {
-            return false;
-        }
-
-        if self.regex {
-            if other.regex {
-                // Both are regex, not equal by our definition.
-                return false;
-            }
-
-            // Handle regex
-            let re = Regex::new(&self.command).unwrap();
-
-            // Verify we have a match
-            if !re.is_match(&other.command) {
-                return false;
-            }
-
-            // Check if we have to have constraints to evaluate
-            if let Some(ref eval) = self.eval {
-                // Get capture groups
-                let captures = re.captures(&other.command).unwrap();
-
-                // Try to expand the capture groups used in the eval-string
-                let mut expansion = String::new();
-                captures.expand(&eval, &mut expansion);
-
-                // Evaluate the string
-                let e = eval::eval(&expansion);
-                return e.is_ok() && e.unwrap() == eval::to_value(true);
-            } else {
-                // Nothing to evaluate, `is_match` was successful.
-                return true;
-            }
-        } else {
-            if other.regex {
-                // We don't want to duplicate the regex handling, just ask `other` for the result.
-                return other.eq(self);
-            } else {
-                // No regex involved, just `command` left to compare
-                return self.command == other.command;
-            }
-        }
-    }
-}
-
-impl Eq for LogLine {}
-
-fn load_log(log_path: &str) -> Vec<LogLine> {
-    let file = BufReader::new(File::open(log_path).unwrap());
-    let mut v = Vec::new();
-
-    for line in file.lines() {
-        if line.is_err() {
-            continue;
-        }
-        let line = line.unwrap();
-
-        let s = line.split("\t").collect::<Vec<_>>();
-        v.push(match s.len() {
-                   2 => {
-                       LogLine {
-                           function: s[0].to_owned(),
-                           command: s[1].to_owned(),
-                           regex: false,
-                           eval: None,
-                       }
-                   }
-                   3 => {
-                       LogLine {
-                           function: s[0].to_owned(),
-                           command: s[1].to_owned(),
-                           regex: true,
-                           eval: Some(s[2].to_owned()),
-                       }
-                   }
-                   _ => panic!("log line split incorrectly"),
-               });
-    }
-
-    v
-}
 
 fn logger() -> Logger {
     struct NoopDrain;
@@ -133,14 +39,6 @@ fn logger() -> Logger {
     let drain = Fuse(NoopDrain);
     let logger = Logger::root(drain, o!());
     logger
-}
-
-fn resource(segment: &str) -> Option<String> {
-    let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    p.push("resources/test");
-    p.push(segment);
-
-    p.to_str().map(|s| s.to_owned())
 }
 
 fn with_compose_environment<F: FnOnce() -> ()>(compose_path: &str, project_name: &str, body: F)
