@@ -193,3 +193,8 @@ fn dc_01() {
 fn dc_02() {
     dc_template("02");
 }
+
+#[test]
+fn dc_03() {
+    dc_template("03");
+}

@@ -1,0 +1,13 @@
+[container_to_wider_world]
+default_policy = "DROP"
+
+[[container_to_wider_world.rules]]
+network = "dfwrstest03_default"
+action = "REJECT"
+
+[[container_to_wider_world.rules]]
+network = "dfwrstest03_default"
+src_container = "dfwrstest02_a_1"
+filter = "-m state --state RELATED"
+action = "ACCEPT"
+external_network_interface = "eni"
