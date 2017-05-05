@@ -140,6 +140,17 @@ fn dc_template(num: &str) {
             .collect::<Vec<_>>();
         let expected4 =
             load_log(&resource(&format!("docker/{}/expected-iptables-v4-logs.txt", num)).unwrap());
+
+        // If the logs don't match, include correctly formatted output for comparison.
+        if logs4 != expected4 {
+            println!("IPv4 logs didn't match");
+            println!("----------------------");
+            for line in &logs4 {
+                println!("{}\t{}", line.function, line.command);
+            }
+            println!();
+        }
+
         assert_eq!(logs4, expected4);
 
         // Verify logs for ip6tables (IPv6)
@@ -156,6 +167,17 @@ fn dc_template(num: &str) {
             .collect::<Vec<_>>();
         let expected6 =
             load_log(&resource(&format!("docker/{}/expected-iptables-v6-logs.txt", num)).unwrap());
+
+        // If the logs don't match, include correctly formatted output for comparison.
+        if logs6 != expected6 {
+            println!("IPv6 logs didn't match");
+            println!("----------------------");
+            for line in &logs6 {
+                println!("{}\t{}", line.function, line.command);
+            }
+            println!();
+        }
+
         assert_eq!(logs6, expected6);
     });
 }
