@@ -2,6 +2,8 @@
 
 extern crate dfwrs;
 extern crate eval;
+#[macro_use]
+extern crate lazy_static;
 extern crate regex;
 extern crate shiplift;
 #[macro_use]

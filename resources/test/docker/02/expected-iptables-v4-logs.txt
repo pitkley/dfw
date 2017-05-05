@@ -14,6 +14,6 @@ append	filter DFWRS_FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
 append	filter FORWARD -j DFWRS_FORWARD
 append	nat PREROUTING -j DFWRS_PREROUTING
 append	nat POSTROUTING -j DFWRS_POSTROUTING
-append	filter DFWRS_FORWARD -i (?P<input>br-[a-f0-9]{12}) -o (?P<output>br-[a-f0-9]{12}) -j REJECT	"$input" == "$output"
-append	filter DFWRS_FORWARD -s (?P<src_ip>.+) -d (?P<dst_ip>.+) -i (?P<input>br-[a-f0-9]{12}) -o (?P<output>br-[a-f0-9]{12}) -j ACCEPT	"$input" == "$output"
+append	filter DFWRS_FORWARD -i $input=bridge -o $output=bridge -j REJECT	"$input" == "$output"
+append	filter DFWRS_FORWARD -s $src_ip=ip -d $dst_ip=ip -i $input=bridge -o $output=bridge -j ACCEPT	"$input" == "$output"
 append	filter DFWRS_FORWARD -j DROP

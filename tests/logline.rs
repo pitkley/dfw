@@ -1,4 +1,6 @@
 extern crate eval;
+#[macro_use]
+extern crate lazy_static;
 extern crate regex;
 
 mod logs;
