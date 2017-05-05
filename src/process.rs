@@ -377,6 +377,10 @@ impl<'a> ProcessDFW<'a> {
                                      .to_owned());
             }
 
+            if let Some(ref filter) = rule.filter {
+                ipt_rule.filter(filter.to_owned());
+            }
+
             // Set jump
             ipt_rule.jump(rule.action.to_owned());
 
