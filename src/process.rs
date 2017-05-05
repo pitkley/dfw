@@ -823,15 +823,13 @@ impl<'a> ProcessDFW<'a> {
                     None => expose_port.host_port.to_string(),
                 };
                 ipt_rule.destination_port(destination_port.to_owned());
-                ipt_rule.filter(format!("--to-destination {}:{}",
-                                        dst_network
-                                            .IPv4Address
-                                            .split("/")
-                                            .next()
-                                            .ok_or(Error::from("IPv4 address is empty"))?,
-                                        destination_port));
-
-                ipt_rule.jump("DNAT".to_owned());
+                ipt_rule.jump(format!("DNAT --to-destination {}:{}",
+                                      dst_network
+                                          .IPv4Address
+                                          .split("/")
+                                          .next()
+                                          .ok_or(Error::from("IPv4 address is empty"))?,
+                                      destination_port));
 
                 // Try to build the rule without the out_interface defined to see if any of the
                 // other mandatory fields has been populated.
@@ -1011,15 +1009,15 @@ impl Rule {
             args.push(destination_port.to_owned());
         }
 
+        if let Some(ref filter) = self.filter {
+            args.push(filter.to_owned());
+        }
+
         if let Some(ref jump) = self.jump {
             args.push("-j".to_owned());
             args.push(jump.to_owned());
         } else {
             bail!("`jump` must be initialized");
-        }
-
-        if let Some(ref filter) = self.filter {
-            args.push(filter.to_owned());
         }
 
         Ok(args.join(" "))
