@@ -5,6 +5,16 @@ use std::fs::File;
 use std::io::BufReader;
 use std::io::prelude::*;
 
+lazy_static! {
+    static ref RE: Regex = Regex::new(r"^\$(?P<group_name>\w+)=(?P<pattern>\w+)$").unwrap();
+    static ref PATTERNS: Map<&'static str, &'static str> = {
+        let mut m = Map::new();
+        m.insert("ip", r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}");
+        m.insert("bridge", r"br-[a-f0-9]{12}");
+        m
+    };
+}
+
 #[derive(Debug)]
 pub struct LogLine {
     pub function: String,
@@ -62,16 +72,38 @@ impl PartialEq for LogLine {
     }
 }
 
+fn expand_command(command: &str) -> (String, bool) {
+    let mut expanded = false;
+    (command
+         .split(" ")
+         .into_iter()
+         .map(|e| if !RE.is_match(e) {
+                  // Segment of command is not in the form `$group_name=pattern`,
+                  // return as is.
+                  e.to_owned()
+              } else {
+                  let c = RE.captures(e).unwrap();
+                  // Since the regex matched, the named groups can't be none, so
+                  // unwrapping is safe.
+                  let (group_name, pattern) = (c.name("group_name").unwrap().as_str(),
+                                               c.name("pattern").unwrap().as_str());
+
+                  // Check if the pattern exists, otherwise leave the segment
+                  // unchanged.
+                  if let Some(ref pattern) = PATTERNS.get(pattern) {
+                      expanded = true;
+                      format!(r"(?P<{}>{})", group_name, pattern)
+                  } else {
+                      e.to_owned()
+                  }
+              })
+         .collect::<Vec<_>>()
+         .join(" ")
+         .to_owned(),
+     expanded)
+}
+
 pub fn load_log(log_path: &str) -> Vec<LogLine> {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"^\$(?P<group_name>\w+)=(?P<pattern>\w+)$").unwrap();
-        static ref PATTERNS: Map<&'static str, &'static str> = {
-            let mut m = Map::new();
-            m.insert("ip", r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}");
-            m.insert("bridge", r"br-[a-f0-9]{12}");
-            m
-        };
-    }
 
     let file = BufReader::new(File::open(log_path).unwrap());
     let mut v = Vec::new();
@@ -82,58 +114,27 @@ pub fn load_log(log_path: &str) -> Vec<LogLine> {
         }
         let line = line.unwrap();
 
+        // Split line on tabs
         let s = line.split("\t").collect::<Vec<_>>();
-        let logline = match s.len() {
-            2 => {
-                LogLine {
-                    function: s[0].to_owned(),
-                    command: s[1].to_owned(),
-                    regex: false,
-                    eval: None,
-                }
-            }
-            3 => {
-                let eval = if s[2] == "R" {
-                    None
-                } else {
-                    Some(s[2].to_owned())
-                };
 
-                let command =
-                    &s[1]
-                         .split(" ")
-                         .into_iter()
-                         .map(|e| if !RE.is_match(e) {
-                                  // Segment of command is not in the form `$group_name=pattern`,
-                                  // return as is.
-                                  e.to_owned()
-                              } else {
-                                  let c = RE.captures(e).unwrap();
-                                  // Since the regex matched, the named groups can't be none, so
-                                  // unwrapping is safe.
-                                  let (group_name, pattern) =
-                                      (c.name("group_name").unwrap().as_str(),
-                                       c.name("pattern").unwrap().as_str());
-
-                                  // Check if the pattern exists, otherwise leave the segment
-                                  // unchanged.
-                                  if let Some(ref pattern) = PATTERNS.get(pattern) {
-                                      format!(r"(?P<{}>{})", group_name, pattern)
-                                  } else {
-                                      e.to_owned()
-                                  }
-                              })
-                         .collect::<Vec<_>>()
-                         .join(" ");
-
-                LogLine {
-                    function: s[0].to_owned(),
-                    command: command.to_owned(),
-                    regex: true,
-                    eval: eval,
-                }
-            }
+        // Line has to be either:
+        //     function<TAB>command
+        // or
+        //     function<TAB>command<TAB>eval
+        let eval = match s.len() {
+            2 => None,
+            3 => Some(s[2].to_owned()),
             _ => panic!("log line split incorrectly"),
+        };
+
+        // The command might contain pattern-expansions in the form `$group_name=pattern`.
+        let (command, expanded) = expand_command(s[1]);
+
+        let logline = LogLine {
+            function: s[0].to_owned(),
+            command: command,
+            regex: expanded,
+            eval: eval,
         };
         v.push(logline);
     }
