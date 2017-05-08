@@ -1,0 +1,14 @@
+version: '2'
+
+services:
+    a:
+        image: nginx:alpine
+
+    b:
+        image: nginx:alpine
+        networks:
+            - default
+            - other
+
+networks:
+    other:

@@ -1,0 +1,19 @@
+new_chain	filter DFWRS_FORWARD
+flush_chain	filter DFWRS_FORWARD
+new_chain	filter DFWRS_INPUT
+flush_chain	filter DFWRS_INPUT
+new_chain	nat DFWRS_PREROUTING
+flush_chain	nat DFWRS_PREROUTING
+new_chain	nat DFWRS_POSTROUTING
+flush_chain	nat DFWRS_POSTROUTING
+append	filter DFWRS_INPUT -m state --state INVALID -j DROP
+append	filter DFWRS_INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+append	filter INPUT -j DFWRS_INPUT
+append	filter DFWRS_FORWARD -m state --state INVALID -j DROP
+append	filter DFWRS_FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
+append	filter FORWARD -j DFWRS_FORWARD
+append	nat PREROUTING -j DFWRS_PREROUTING
+append	nat POSTROUTING -j DFWRS_POSTROUTING
+append	nat DFWRS_PREROUTING -o $output=bridge -p tcp --dport 80 -j DNAT --to-destination ${dnat_ip=ip}:80
+append	nat DFWRS_PREROUTING -s $dst_ip=ip -i $input=bridge -o $output=bridge -p tcp --dport 80 -j DNAT --to-destination ${dnat_ip=ip}:80	"$input" == "$output"
+append	nat DFWRS_PREROUTING -s $dst_ip=ip -i $input=bridge -o $output=bridge -p tcp --dport 443 -j DNAT --to-destination ${dnat_ip=ip}:443	"$input" != "$output"

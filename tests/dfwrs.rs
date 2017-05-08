@@ -208,3 +208,8 @@ fn dc_04() {
 fn dc_05() {
     dc_template("05");
 }
+
+#[test]
+fn dc_06() {
+    dc_template("06");
+}
