@@ -3,17 +3,11 @@ extern crate dfwrs;
 extern crate maplit;
 extern crate toml;
 
+mod common;
+
+use common::resource;
 use dfwrs::types::*;
 use dfwrs::util::*;
-use std::path::PathBuf;
-
-fn resource(segment: &str) -> Option<String> {
-    let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    p.push("resources/test");
-    p.push(segment);
-
-    p.to_str().map(|s| s.to_owned())
-}
 
 #[test]
 fn parse_conf_file() {

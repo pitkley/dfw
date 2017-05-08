@@ -377,6 +377,10 @@ impl<'a> ProcessDFW<'a> {
                                      .to_owned());
             }
 
+            if let Some(ref filter) = rule.filter {
+                ipt_rule.filter(filter.to_owned());
+            }
+
             // Set jump
             ipt_rule.jump(rule.action.to_owned());
 
@@ -818,20 +822,29 @@ impl<'a> ProcessDFW<'a> {
                     Some(dst_network) => dst_network,
                     None => continue,
                 };
+                trace!(self.logger, "Got destination network";
+                       o!("network_name" => &network.Name,
+                          "dst_network" => format!("{:?}", dst_network)));
+
+                let bridge_name = get_bridge_name(&network.Id)?;
+                trace!(self.logger, "Got bridge name";
+                       o!("network_name" => &network.Name,
+                          "bridge_name" => &bridge_name));
+
+                ipt_rule.out_interface(bridge_name.to_owned());
+
                 let destination_port = match expose_port.container_port {
                     Some(destination_port) => destination_port.to_string(),
                     None => expose_port.host_port.to_string(),
                 };
                 ipt_rule.destination_port(destination_port.to_owned());
-                ipt_rule.filter(format!("--to-destination {}:{}",
-                                        dst_network
-                                            .IPv4Address
-                                            .split("/")
-                                            .next()
-                                            .ok_or(Error::from("IPv4 address is empty"))?,
-                                        destination_port));
-
-                ipt_rule.jump("DNAT".to_owned());
+                ipt_rule.jump(format!("DNAT --to-destination {}:{}",
+                                      dst_network
+                                          .IPv4Address
+                                          .split("/")
+                                          .next()
+                                          .ok_or(Error::from("IPv4 address is empty"))?,
+                                      destination_port));
 
                 // Try to build the rule without the out_interface defined to see if any of the
                 // other mandatory fields has been populated.
@@ -1011,15 +1024,15 @@ impl Rule {
             args.push(destination_port.to_owned());
         }
 
+        if let Some(ref filter) = self.filter {
+            args.push(filter.to_owned());
+        }
+
         if let Some(ref jump) = self.jump {
             args.push("-j".to_owned());
             args.push(jump.to_owned());
         } else {
             bail!("`jump` must be initialized");
-        }
-
-        if let Some(ref filter) = self.filter {
-            args.push(filter.to_owned());
         }
 
         Ok(args.join(" "))

@@ -1,0 +1,24 @@
+[defaults]
+external_network_interfaces = "eni"
+
+[wider_world_to_container]
+[[wider_world_to_container.rules]]
+network = "dfwrstest05_default"
+dst_container = "dfwrstest05_a_1"
+expose_port = "80/tcp"
+
+[[wider_world_to_container.rules]]
+network = "dfwrstest05_default"
+dst_container = "dfwrstest05_a_1"
+expose_port = { host_port = 8080, container_port = 80, family = "tcp" }
+
+[[wider_world_to_container.rules]]
+network = "dfwrstest05_default"
+dst_container = "dfwrstest05_a_1"
+expose_port = { host_port = 5353, container_port = 53, family = "udp" }
+
+[[wider_world_to_container.rules]]
+network = "dfwrstest05_default"
+dst_container = "dfwrstest05_a_1"
+expose_port = "443/tcp"
+external_network_interface = "other"
