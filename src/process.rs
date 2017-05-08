@@ -822,6 +822,17 @@ impl<'a> ProcessDFW<'a> {
                     Some(dst_network) => dst_network,
                     None => continue,
                 };
+                trace!(self.logger, "Got destination network";
+                       o!("network_name" => &network.Name,
+                          "dst_network" => format!("{:?}", dst_network)));
+
+                let bridge_name = get_bridge_name(&network.Id)?;
+                trace!(self.logger, "Got bridge name";
+                       o!("network_name" => &network.Name,
+                          "bridge_name" => &bridge_name));
+
+                ipt_rule.out_interface(bridge_name.to_owned());
+
                 let destination_port = match expose_port.container_port {
                     Some(destination_port) => destination_port.to_string(),
                     None => expose_port.host_port.to_string(),
