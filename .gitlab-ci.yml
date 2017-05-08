@@ -193,7 +193,7 @@ test on docker 1.13.1: *test-docker-tests
 test on docker 17.03.0-ce: *test-docker-tests
 test on docker 17.03.1-ce: *test-docker-tests
 test on docker 17.04.0-ce: *test-docker-tests
-test on docker 17.05.0-ce-rc2: *test-docker-tests
+test on docker 17.05.0-ce: *test-docker-tests
 
 package image for feature-branch:
     stage: package
