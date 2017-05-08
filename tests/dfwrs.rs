@@ -203,3 +203,8 @@ fn dc_03() {
 fn dc_04() {
     dc_template("04");
 }
+
+#[test]
+fn dc_05() {
+    dc_template("05");
+}
