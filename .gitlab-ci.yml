@@ -183,7 +183,7 @@ test static binary:
         - export DOCKER_HOST="http://${DIND_IP_ADDRESS}:2375"
         - echo "$DOCKER_HOST"
     script:
-        - cargo test --all-features -- --nocapture
+        - RUST_TEST_THREADS=1 cargo test --all-features -j1 -- --nocapture
     after_script:
         - docker stop "dind-runner-${CI_JOB_ID}"
 
