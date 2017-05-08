@@ -52,7 +52,7 @@ impl PartialEq for LogLine {
 
                 // Try to expand the capture groups used in the eval-string
                 let mut expansion = String::new();
-                captures.expand(&eval, &mut expansion);
+                captures.expand(eval, &mut expansion);
 
                 // Evaluate the string
                 let e = eval::eval(&expansion);
@@ -61,14 +61,12 @@ impl PartialEq for LogLine {
                 // Nothing to evaluate, `is_match` was successful.
                 return true;
             }
+        } else if other.regex {
+            // We don't want to duplicate the regex handling, just ask `other` for the result.
+            other.eq(self)
         } else {
-            if other.regex {
-                // We don't want to duplicate the regex handling, just ask `other` for the result.
-                return other.eq(self);
-            } else {
-                // No regex involved, just `command` left to compare
-                return self.command == other.command;
-            }
+            // No regex involved, just `command` left to compare
+            self.command == other.command
         }
     }
 }
@@ -76,7 +74,7 @@ impl PartialEq for LogLine {
 fn expand_command(command: &str) -> (String, bool) {
     let mut expanded = false;
     (command
-         .split(" ")
+         .split(' ')
          .into_iter()
          .map(|e| if !RE.is_match(e) && RE.find(e).is_none() {
                   // Segment of command is not in the form `$group_name=pattern`,
@@ -93,7 +91,7 @@ fn expand_command(command: &str) -> (String, bool) {
 
                   // Check if the pattern exists, otherwise leave the segment
                   // unchanged.
-                  if let Some(ref pattern) = PATTERNS.get(pattern) {
+                  if let Some(pattern) = PATTERNS.get(pattern) {
                       expanded = true;
                       // Match could be in the middle of a string, keep the parts before and after.
                       let (before, after) = (&e[..c0.start()], &e[c0.end()..]);
@@ -120,7 +118,7 @@ pub fn load_log(log_path: &str) -> Vec<LogLine> {
         let line = line.unwrap();
 
         // Split line on tabs
-        let s = line.split("\t").collect::<Vec<_>>();
+        let s = line.split('\t').collect::<Vec<_>>();
 
         // Line has to be either:
         //     function<TAB>command

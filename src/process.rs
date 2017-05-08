@@ -77,7 +77,7 @@ impl<'a> ProcessDFW<'a> {
         let external_network_interfaces = dfw.defaults
             .as_ref()
             .and_then(|d| d.external_network_interfaces.as_ref())
-            .map(Clone::clone);
+            .cloned();
         let primary_external_network_interface = external_network_interfaces
             .as_ref()
             .and_then(|v| v.get(0))
@@ -298,7 +298,7 @@ impl<'a> ProcessDFW<'a> {
         Ok(())
     }
 
-    fn process_ctc_rules(&self, rules: &Vec<ContainerToContainerRule>) -> Result<()> {
+    fn process_ctc_rules(&self, rules: &[ContainerToContainerRule]) -> Result<()> {
         for rule in rules {
             info!(self.logger, "Process rule";
                   o!("part" => "container_to_container",
@@ -323,9 +323,9 @@ impl<'a> ProcessDFW<'a> {
                 .out_interface(bridge_name.to_owned());
 
             if let Some(ref src_container) = rule.src_container {
-                let src_network = match get_network_for_container(&self.docker,
+                let src_network = match get_network_for_container(self.docker,
                                                                   &self.container_map,
-                                                                  &src_container,
+                                                                  src_container,
                                                                   &network.Id)? {
                     Some(src_network) => src_network,
                     None => continue,
@@ -344,16 +344,16 @@ impl<'a> ProcessDFW<'a> {
                     .out_interface(bridge_name.to_owned())
                     .source(src_network
                                 .IPv4Address
-                                .split("/")
+                                .split('/')
                                 .next()
-                                .ok_or(Error::from("IPv4 address is empty"))?
+                                .ok_or_else(|| Error::from("IPv4 address is empty"))?
                                 .to_owned());
             }
 
             if let Some(ref dst_container) = rule.dst_container {
-                let dst_network = match get_network_for_container(&self.docker,
+                let dst_network = match get_network_for_container(self.docker,
                                                                   &self.container_map,
-                                                                  &dst_container,
+                                                                  dst_container,
                                                                   &network.Id)? {
                     Some(dst_network) => dst_network,
                     None => continue,
@@ -371,9 +371,9 @@ impl<'a> ProcessDFW<'a> {
                     .out_interface(bridge_name.to_owned())
                     .destination(dst_network
                                      .IPv4Address
-                                     .split("/")
+                                     .split('/')
                                      .next()
-                                     .ok_or(Error::from("IPv4 address is empty"))?
+                                     .ok_or_else(|| Error::from("IPv4 address is empty"))?
                                      .to_owned());
             }
 
@@ -417,7 +417,7 @@ impl<'a> ProcessDFW<'a> {
                        o!("part" => "container_to_wider_world",
                           "external_network_interface" => external_network_interface,
                           "default_policy" => &ctww.default_policy));
-                for (_, network) in &self.network_map {
+                for network in self.network_map.values() {
                     let bridge_name = get_bridge_name(&network.Id)?;
                     trace!(self.logger, "Got bridge name";
                            o!("network_name" => &network.Name,
@@ -443,7 +443,7 @@ impl<'a> ProcessDFW<'a> {
         Ok(())
     }
 
-    fn process_ctww_rules(&self, rules: &Vec<ContainerToWiderWorldRule>) -> Result<()> {
+    fn process_ctww_rules(&self, rules: &[ContainerToWiderWorldRule]) -> Result<()> {
         for rule in rules {
             info!(self.logger, "Process rule";
                   o!("part" => "container_to_wider_world",
@@ -461,9 +461,9 @@ impl<'a> ProcessDFW<'a> {
 
                     if let Some(ref src_container) = rule.src_container {
                         if let Some(src_network) =
-                            get_network_for_container(&self.docker,
+                            get_network_for_container(self.docker,
                                                       &self.container_map,
-                                                      &src_container,
+                                                      src_container,
                                                       &network.Id)? {
                             trace!(self.logger, "Got source network";
                                    o!("network_name" => &network.Name,
@@ -478,9 +478,9 @@ impl<'a> ProcessDFW<'a> {
                                 .in_interface(bridge_name.to_owned())
                                 .source(src_network
                                             .IPv4Address
-                                            .split("/")
+                                            .split('/')
                                             .next()
-                                            .ok_or(Error::from("IPv4 address is empty"))?
+                                            .ok_or_else(|| Error::from("IPv4 address is empty"))?
                                             .to_owned());
                         }
                     }
@@ -533,7 +533,7 @@ impl<'a> ProcessDFW<'a> {
         }
 
         // Default policy
-        for (_, network) in &self.network_map {
+        for network in self.network_map.values() {
             let bridge_name = get_bridge_name(&network.Id)?;
             trace!(self.logger, "Got bridge name";
                    o!("network_name" => &network.Name,
@@ -555,7 +555,7 @@ impl<'a> ProcessDFW<'a> {
         Ok(())
     }
 
-    fn process_cth_rules(&self, rules: &Vec<ContainerToHostRule>) -> Result<()> {
+    fn process_cth_rules(&self, rules: &[ContainerToHostRule]) -> Result<()> {
         for rule in rules {
             info!(self.logger, "Process rule";
                   o!("part" => "container_to_host",
@@ -579,18 +579,18 @@ impl<'a> ProcessDFW<'a> {
 
             if let Some(ref src_container) = rule.src_container {
                 if let Some(src_network) =
-                    get_network_for_container(&self.docker,
+                    get_network_for_container(self.docker,
                                               &self.container_map,
-                                              &src_container,
+                                              src_container,
                                               &network.Id)? {
                     trace!(self.logger, "Got source network";
                            o!("network_name" => &network.Name,
                               "src_network" => format!("{:?}", src_network)));
                     ipt_rule.source(src_network
                                         .IPv4Address
-                                        .split("/")
+                                        .split('/')
                                         .next()
-                                        .ok_or(Error::from("IPv4 address is empty"))?
+                                        .ok_or_else(|| Error::from("IPv4 address is empty"))?
                                         .to_owned());
                 }
             }
@@ -658,7 +658,7 @@ impl<'a> ProcessDFW<'a> {
                 ipt_forward_rule.out_interface(bridge_name.to_owned());
 
                 if let Some(dst_network) =
-                    get_network_for_container(&self.docker,
+                    get_network_for_container(self.docker,
                                               &self.container_map,
                                               &rule.dst_container,
                                               &network.Id)? {
@@ -666,12 +666,13 @@ impl<'a> ProcessDFW<'a> {
                            o!("network_name" => &network.Name,
                               "dst_network" => format!("{:?}", dst_network)));
 
-                    ipt_forward_rule.destination(dst_network
-                                                     .IPv4Address
-                                                     .split("/")
-                                                     .next()
-                                                     .ok_or(Error::from("IPv4 address is empty"))?
-                                                     .to_owned());
+                    ipt_forward_rule
+                        .destination(dst_network
+                                         .IPv4Address
+                                         .split('/')
+                                         .next()
+                                         .ok_or_else(|| Error::from("IPv4 address is empty"))?
+                                         .to_owned());
 
                     let destination_port = match expose_port.container_port {
                         Some(destination_port) => destination_port.to_string(),
@@ -680,12 +681,12 @@ impl<'a> ProcessDFW<'a> {
                     ipt_forward_rule.destination_port(destination_port.to_owned());
                     ipt_dnat_rule.destination_port(destination_port.to_owned());
                     ipt_dnat_rule.filter(format!("--to-destination {}:{}",
-                                                 dst_network
-                                                     .IPv4Address
-                                                     .split("/")
-                                                     .next()
-                                                     .ok_or(Error::from("IPv4 address is empty"))?,
-                                                 destination_port));
+                                        dst_network
+                                            .IPv4Address
+                                            .split('/')
+                                            .next()
+                                            .ok_or_else(|| Error::from("IPv4 address is empty"))?,
+                                        destination_port));
                 } else {
                     // Network for container has to exist
                     continue;
@@ -785,9 +786,9 @@ impl<'a> ProcessDFW<'a> {
 
                         if let Some(ref src_container) = rule.src_container {
                             if let Some(src_network) =
-                                get_network_for_container(&self.docker,
+                                get_network_for_container(self.docker,
                                                           &self.container_map,
-                                                          &src_container,
+                                                          src_container,
                                                           &network.Id)? {
                                 trace!(self.logger, "Got source network";
                                        o!("network_name" => &network.Name,
@@ -802,9 +803,10 @@ impl<'a> ProcessDFW<'a> {
                                     .in_interface(bridge_name.to_owned())
                                     .source(src_network
                                                 .IPv4Address
-                                                .split("/")
+                                                .split('/')
                                                 .next()
-                                                .ok_or(Error::from("IPv4 address is empty"))?
+                                                .ok_or_else(||
+                                                            Error::from("IPv4 address is empty"))?
                                                 .to_owned());
                             }
                         }
@@ -815,7 +817,7 @@ impl<'a> ProcessDFW<'a> {
                     Some(network) => network,
                     None => continue,
                 };
-                let dst_network = match get_network_for_container(&self.docker,
+                let dst_network = match get_network_for_container(self.docker,
                                                                   &self.container_map,
                                                                   &rule.dst_container,
                                                                   &network.Id)? {
@@ -841,9 +843,9 @@ impl<'a> ProcessDFW<'a> {
                 ipt_rule.jump(format!("DNAT --to-destination {}:{}",
                                       dst_network
                                           .IPv4Address
-                                          .split("/")
+                                          .split('/')
                                           .next()
-                                          .ok_or(Error::from("IPv4 address is empty"))?,
+                                          .ok_or_else(|| Error::from("IPv4 address is empty"))?,
                                       destination_port));
 
                 // Try to build the rule without the out_interface defined to see if any of the
@@ -999,7 +1001,7 @@ impl Rule {
         }
 
         // Bail if none of the above was initialized
-        if args.len() <= 0 && self.filter.is_none() {
+        if args.is_empty() && self.filter.is_none() {
             bail!("one of `source`, `destination`, `in_interface`, `out_interface` \
                    or `filter` must be initialized");
         }
@@ -1118,11 +1120,11 @@ fn get_network_for_container(docker: &Docker,
        })
 }
 
-fn get_container_map(containers: &Vec<Container>) -> Result<Option<Map<String, Container>>> {
+fn get_container_map(containers: &[Container]) -> Result<Option<Map<String, Container>>> {
     let mut container_map: Map<String, Container> = Map::new();
     for container in containers {
         for name in &container.Names {
-            container_map.insert(name.clone().trim_left_matches("/").to_owned(),
+            container_map.insert(name.clone().trim_left_matches('/').to_owned(),
                                  container.clone());
         }
     }
@@ -1134,7 +1136,7 @@ fn get_container_map(containers: &Vec<Container>) -> Result<Option<Map<String, C
     }
 }
 
-fn get_network_map(networks: &Vec<NetworkDetails>) -> Result<Option<Map<String, NetworkDetails>>> {
+fn get_network_map(networks: &[NetworkDetails]) -> Result<Option<Map<String, NetworkDetails>>> {
     let mut network_map: Map<String, NetworkDetails> = Map::new();
     for network in networks {
         network_map.insert(network.Name.clone(), network.clone());
