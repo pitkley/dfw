@@ -312,6 +312,7 @@ impl IPTables for IPTablesDummy {
 /// [`IPTables`](trait.IPTables.html) implementation which does not interact with the iptables
 /// binary and does not modify the rules active on the host. It does keep a log of every action
 /// executed.
+#[derive(Default)]
 pub struct IPTablesLogger {
     logs: RefCell<Vec<(String, String)>>,
 }

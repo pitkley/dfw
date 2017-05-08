@@ -226,7 +226,7 @@ fn parse_expose_port_seq_int() {
 
 #[test]
 fn parse_expose_port_single_string() {
-    for (port, family) in vec![(80, "tcp"), (53, "udp"), (1234, "other")] {
+    for &(port, family) in &[(80, "tcp"), (53, "udp"), (1234, "other")] {
         let fragment = format!(r#"
             network = "network"
             dst_container = "dst_container"
@@ -286,8 +286,8 @@ fn parse_expose_port_seq_string() {
 
 #[test]
 fn parse_expose_port_single_struct() {
-    for port in vec!["{ host_port = 80 }",
-                     r#"{ host_port = 80, family = "tcp" }"#] {
+    for port in &["{ host_port = 80 }",
+                  r#"{ host_port = 80, family = "tcp" }"#] {
         let fragment = format!(r#"
             network = "network"
             dst_container = "dst_container"
@@ -349,7 +349,7 @@ fn parse_expose_port_seq_struct() {
                           }],
         external_network_interface: None,
     };
-    let actual: WiderWorldToContainerRule = toml::from_str(&fragment).unwrap();
+    let actual: WiderWorldToContainerRule = toml::from_str(fragment).unwrap();
 
     assert_eq!(expected, actual);
 }
