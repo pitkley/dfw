@@ -4,6 +4,7 @@ use std::collections::HashMap as Map;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::prelude::*;
+use std::str::FromStr;
 
 lazy_static! {
     static ref RE: Regex = Regex::new(r"(^\$\{?|\$\{)(?P<group_name>\w+)=(?P<pattern>\w+)(\}?$|\})")
@@ -71,6 +72,49 @@ impl PartialEq for LogLine {
     }
 }
 
+impl FromStr for LogLine {
+    type Err = String;
+
+    /// Convert a formatted string into a [`LogLine`](struct.LogLine.html).
+    ///
+    /// The string has to be in the format `<FUNCTION>\t<COMMAND>` or
+    /// `<FUNCTION>\t<COMMAND>\t<EVAL>`.
+    ///
+    /// # Example
+    ///
+    /// ```norun
+    /// let logline: LogLine = "function\tcommand".parse().unwrap();
+    /// assert_eq!(logline.function, "function");
+    /// assert_eq!(logline.command, "command");
+    /// assert_eq!(logline.regex, false);
+    /// assert_eq!(logline.eval, None);
+    /// ```
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // Split string on tabs
+        let s = s.split('\t').collect::<Vec<_>>();
+
+        // String has to be either:
+        //     function<TAB>command
+        // or
+        //     function<TAB>command<TAB>eval
+        let eval = match s.len() {
+            2 => None,
+            3 => Some(s[2].to_owned()),
+            _ => return Err("string split incorrectly".to_owned()),
+        };
+
+        // The command might contain pattern-expansions in the form `$group_name=pattern`.
+        let (command, expanded) = expand_command(s[1]);
+
+        Ok(LogLine {
+               function: s[0].to_owned(),
+               command: command,
+               regex: expanded,
+               eval: eval,
+           })
+    }
+}
+
 fn expand_command(command: &str) -> (String, bool) {
     let mut expanded = false;
     (command
@@ -109,7 +153,7 @@ fn expand_command(command: &str) -> (String, bool) {
 pub fn load_log(log_path: &str) -> Vec<LogLine> {
 
     let file = BufReader::new(File::open(log_path).unwrap());
-    let mut v = Vec::new();
+    let mut v: Vec<LogLine> = Vec::new();
 
     for line in file.lines() {
         if line.is_err() {
@@ -117,29 +161,7 @@ pub fn load_log(log_path: &str) -> Vec<LogLine> {
         }
         let line = line.unwrap();
 
-        // Split line on tabs
-        let s = line.split('\t').collect::<Vec<_>>();
-
-        // Line has to be either:
-        //     function<TAB>command
-        // or
-        //     function<TAB>command<TAB>eval
-        let eval = match s.len() {
-            2 => None,
-            3 => Some(s[2].to_owned()),
-            _ => panic!("log line split incorrectly"),
-        };
-
-        // The command might contain pattern-expansions in the form `$group_name=pattern`.
-        let (command, expanded) = expand_command(s[1]);
-
-        let logline = LogLine {
-            function: s[0].to_owned(),
-            command: command,
-            regex: expanded,
-            eval: eval,
-        };
-        v.push(logline);
+        v.push(FromStr::from_str(&line).expect("invalid log line"));
     }
 
     v
