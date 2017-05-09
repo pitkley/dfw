@@ -75,6 +75,20 @@ impl PartialEq for LogLine {
 impl FromStr for LogLine {
     type Err = String;
 
+    /// Convert a formatted string into a [`LogLine`](struct.LogLine.html).
+    ///
+    /// The string has to be in the format `<FUNCTION>\t<COMMAND>` or
+    /// `<FUNCTION>\t<COMMAND>\t<EVAL>`.
+    ///
+    /// # Example
+    ///
+    /// ```norun
+    /// let logline: LogLine = "function\tcommand".parse().unwrap();
+    /// assert_eq!(logline.function, "function");
+    /// assert_eq!(logline.command, "command");
+    /// assert_eq!(logline.regex, false);
+    /// assert_eq!(logline.eval, None);
+    /// ```
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // Split string on tabs
         let s = s.split('\t').collect::<Vec<_>>();

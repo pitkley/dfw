@@ -179,3 +179,55 @@ fn string_ne_regex_eval() {
     assert_ne!(a, b);
     assert_ne!(b, a);
 }
+
+#[test]
+fn logline_from_string() {
+    let logline: LogLine = "function\tcommand".parse().unwrap();
+    assert_eq!(logline.function, "function");
+    assert_eq!(logline.command, "command");
+    assert_eq!(logline.regex, false);
+    assert_eq!(logline.eval, None);
+}
+
+#[test]
+fn logline_from_string_with_eval() {
+    let logline: LogLine = "function\tcommand\teval".parse().unwrap();
+    assert_eq!(logline.function, "function");
+    assert_eq!(logline.command, "command");
+    assert_eq!(logline.regex, false);
+    assert_eq!(logline.eval, Some("eval".to_owned()));
+}
+
+#[test]
+fn logline_from_string_with_expansions() {
+    let logline: LogLine = "function\t$name=ip".parse().unwrap();
+    assert_eq!(logline.function, "function");
+    assert_eq!(logline.command,
+               r"(?P<name>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})");
+    assert_eq!(logline.regex, true);
+    assert_eq!(logline.eval, None);
+
+    let logline: LogLine = "function\t$name=bridge".parse().unwrap();
+    assert_eq!(logline.function, "function");
+    assert_eq!(logline.command, r"(?P<name>br-[a-f0-9]{12})");
+    assert_eq!(logline.regex, true);
+    assert_eq!(logline.eval, None);
+}
+
+#[test]
+fn logline_from_string_with_wrong_expansion() {
+    let logline: LogLine = "function\t$name=wrong".parse().unwrap();
+    assert_eq!(logline.function, "function");
+    assert_eq!(logline.command, "$name=wrong");
+    assert_eq!(logline.regex, false);
+    assert_eq!(logline.eval, None);
+}
+
+#[test]
+fn logline_from_wrong_string() {
+    let result: Result<LogLine, String> = "notab".parse();
+    assert!(result.is_err());
+
+    let result: Result<LogLine, String> = "one\ttoo\tmany\ttabs".parse();
+    assert!(result.is_err());
+}
