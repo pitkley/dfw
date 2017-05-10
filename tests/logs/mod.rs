@@ -1,10 +1,9 @@
 use eval;
 use regex::Regex;
-use std::collections::{HashMap as Map, HashSet as Set};
+use std::collections::HashMap as Map;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::prelude::*;
-use std::iter::FromIterator;
 use std::str::FromStr;
 
 lazy_static! {
@@ -16,80 +15,6 @@ lazy_static! {
         m.insert("bridge", r"br-[a-f0-9]{12}");
         m
     };
-}
-
-#[derive(Debug)]
-pub struct LogFile {
-    pub loglines: Vec<LogLine>,
-}
-
-impl LogFile {
-    pub fn new(log_path: &str) -> LogFile {
-        let file = BufReader::new(File::open(log_path).unwrap());
-        let mut v: Vec<LogLine> = Vec::new();
-
-        for line in file.lines() {
-            if line.is_err() {
-                continue;
-            }
-            let line = line.unwrap();
-
-            v.push(FromStr::from_str(&line).expect("invalid log line"));
-        }
-
-        LogFile { loglines: v }
-    }
-
-    pub fn from_loglines(loglines: Vec<LogLine>) -> LogFile {
-        LogFile { loglines: loglines }
-    }
-}
-
-impl PartialEq for LogFile {
-    fn eq(&self, other: &LogFile) -> bool {
-        let ref this = self.loglines;
-        let ref that = other.loglines;
-
-        if this.len() != that.len() {
-            return false;
-        }
-
-        let mut m: Map<String, &str> = Map::new();
-        for (a, b) in this.iter().zip(that.iter()) {
-            if a != b {
-                return false;
-            }
-            if (!a.regex && !b.regex) && (a.eval.is_none() && b.eval.is_none()) {
-                continue;
-            }
-
-            let (a, b) = if b.regex { (b, a) } else { (a, b) };
-            let re = Regex::new(&a.command).unwrap();
-            let captures = re.captures(&b.command).unwrap();
-            let capture_names = re.capture_names();
-
-            for name in capture_names {
-                if name.is_none() {
-                    continue;
-                }
-                let name = name.unwrap();
-
-                let capture = captures.name(name);
-                if capture.is_none() {
-                    continue;
-                }
-                let capture = capture.unwrap().as_str();
-
-                let result = m.insert(name.to_owned(), capture);
-                if let Some(ref old) = result {
-                    return &capture == old;
-                }
-            }
-        }
-        let s: Set<&&str> = Set::from_iter(m.values());
-        let unique_length = s.len();
-        return m.values().len() == unique_length;
-    }
 }
 
 #[derive(Debug)]
