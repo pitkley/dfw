@@ -3,10 +3,8 @@ extern crate eval;
 extern crate lazy_static;
 extern crate regex;
 
-mod common;
 mod logs;
 
-use common::*;
 use logs::*;
 
 #[test]
@@ -232,40 +230,4 @@ fn logline_from_wrong_string() {
 
     let result: Result<LogLine, String> = "one\ttoo\tmany\ttabs".parse();
     assert!(result.is_err());
-}
-
-#[test]
-fn logfile_no_patterns() {
-    let a = LogFile::new(&resource("logfile/01_a.txt").unwrap());
-    let b = LogFile::new(&resource("logfile/01_b.txt").unwrap());
-
-    assert_eq!(a, b);
-    assert_eq!(b, a);
-}
-
-#[test]
-fn logfile_different_patterns() {
-    let a = LogFile::new(&resource("logfile/02_a.txt").unwrap());
-    let b = LogFile::new(&resource("logfile/02_b.txt").unwrap());
-
-    assert_eq!(a, b);
-    assert_eq!(b, a);
-}
-
-#[test]
-fn logfile_same_patterns() {
-    let a = LogFile::new(&resource("logfile/03_a.txt").unwrap());
-    let b = LogFile::new(&resource("logfile/03_b.txt").unwrap());
-
-    assert_eq!(a, b);
-    assert_eq!(b, a);
-}
-
-#[test]
-fn logfile_same_patterns_unequal() {
-    let a = LogFile::new(&resource("logfile/04_a.txt").unwrap());
-    let b = LogFile::new(&resource("logfile/04_b.txt").unwrap());
-
-    assert_ne!(a, b);
-    assert_ne!(b, a);
 }
