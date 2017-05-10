@@ -1,0 +1,2 @@
+function	$group=bridge
+function2	$group=bridge
