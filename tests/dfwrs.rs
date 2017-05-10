@@ -129,25 +129,26 @@ fn dc_template(num: &str) {
         assert_eq!(result.unwrap(), ());
 
         // Verify logs for iptables (IPv4)
-        let logs4 = ipt4.logs()
-            .iter()
-            .map(|&(ref f, ref c)| {
-                     LogLine {
-                         function: f.to_owned(),
-                         command: c.to_owned(),
-                         regex: false,
-                         eval: None,
-                     }
-                 })
-            .collect::<Vec<_>>();
-        let expected4 =
-            load_log(&resource(&format!("docker/{}/expected-iptables-v4-logs.txt", num)).unwrap());
+        let logs4 = LogFile::from_loglines(ipt4.logs()
+                                               .iter()
+                                               .map(|&(ref f, ref c)| {
+                                                        LogLine {
+                                                            function: f.to_owned(),
+                                                            command: c.to_owned(),
+                                                            regex: false,
+                                                            eval: None,
+                                                        }
+                                                    })
+                                               .collect::<Vec<_>>());
+        let expected4 = LogFile::new(&resource(&format!("docker/{}/expected-iptables-v4-logs.txt",
+                                                        num))
+                                              .unwrap());
 
         // If the logs don't match, include correctly formatted output for comparison.
         if logs4 != expected4 {
             println!("IPv4 logs didn't match");
             println!("----------------------");
-            for line in &logs4 {
+            for line in &logs4.loglines {
                 println!("{}\t{}", line.function, line.command);
             }
             println!();
@@ -156,25 +157,26 @@ fn dc_template(num: &str) {
         assert_eq!(logs4, expected4);
 
         // Verify logs for ip6tables (IPv6)
-        let logs6 = ipt6.logs()
-            .iter()
-            .map(|&(ref f, ref c)| {
-                     LogLine {
-                         function: f.to_owned(),
-                         command: c.to_owned(),
-                         regex: false,
-                         eval: None,
-                     }
-                 })
-            .collect::<Vec<_>>();
-        let expected6 =
-            load_log(&resource(&format!("docker/{}/expected-iptables-v6-logs.txt", num)).unwrap());
+        let logs6 = LogFile::from_loglines(ipt6.logs()
+                                               .iter()
+                                               .map(|&(ref f, ref c)| {
+                                                        LogLine {
+                                                            function: f.to_owned(),
+                                                            command: c.to_owned(),
+                                                            regex: false,
+                                                            eval: None,
+                                                        }
+                                                    })
+                                               .collect::<Vec<_>>());
+        let expected6 = LogFile::new(&resource(&format!("docker/{}/expected-iptables-v6-logs.txt",
+                                                        num))
+                                              .unwrap());
 
         // If the logs don't match, include correctly formatted output for comparison.
         if logs6 != expected6 {
             println!("IPv6 logs didn't match");
             println!("----------------------");
-            for line in &logs6 {
+            for line in &logs6.loglines {
                 println!("{}\t{}", line.function, line.command);
             }
             println!();

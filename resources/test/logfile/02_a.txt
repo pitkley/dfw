@@ -1,0 +1,2 @@
+function	$group1=bridge
+function2	$group2=ip
