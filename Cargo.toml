@@ -1,6 +1,6 @@
 [package]
 name = "dfwrs"
-version = "0.2.2"
+version = "0.2.3-pre"
 authors = ["Pit Kleyersburg <pitkley@googlemail.com>"]
 license = "MIT/Apache-2.0"
 
