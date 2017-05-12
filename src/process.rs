@@ -680,7 +680,7 @@ impl<'a> ProcessDFW<'a> {
                     };
                     ipt_forward_rule.destination_port(destination_port.to_owned());
                     ipt_dnat_rule.destination_port(destination_port.to_owned());
-                    ipt_dnat_rule.filter(format!("--to-destination {}:{}",
+                    ipt_dnat_rule.jump(format!("DNAT --to-destination {}:{}",
                                         dst_network
                                             .IPv4Address
                                             .split('/')
@@ -697,7 +697,6 @@ impl<'a> ProcessDFW<'a> {
                 ipt_dnat_rule.protocol(expose_port.family.to_owned());
 
                 ipt_forward_rule.jump("ACCEPT".to_owned());
-                ipt_dnat_rule.jump("DNAT".to_owned());
 
                 // Try to build the rule without the out_interface defined to see if any of the
                 // other mandatory fields has been populated.
@@ -1000,12 +999,6 @@ impl Rule {
             args.push(out_interface.to_owned());
         }
 
-        // Bail if none of the above was initialized
-        if args.is_empty() && self.filter.is_none() {
-            bail!("one of `source`, `destination`, `in_interface`, `out_interface` \
-                   or `filter` must be initialized");
-        }
-
         if let Some(ref protocol) = self.protocol {
             args.push("-p".to_owned());
             args.push(protocol.to_owned());
@@ -1028,6 +1021,13 @@ impl Rule {
 
         if let Some(ref filter) = self.filter {
             args.push(filter.to_owned());
+        }
+
+        // Bail if none of the above was initialized
+        if args.is_empty() {
+            bail!("one of `source`, `destination`, `in_interface`, `out_interface` \
+                   `protocol`, `source_port`, `destination_port` or `filter` must  be \
+                   initialized");
         }
 
         if let Some(ref jump) = self.jump {
