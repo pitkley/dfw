@@ -1,6 +1,10 @@
-FROM scorpil/rust:1.16
+FROM scorpil/rust:stable
 
 ENV PATH "/root/.cargo/bin:$PATH"
+RUN \
+    # Install cargo binaries
+    cargo install --vers 0.8.3 rustfmt
+
 RUN \
     # Install required packages
     apt-get update \
@@ -9,7 +13,4 @@ RUN \
         make \
         pkg-config \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    # Install cargo binaries
-    && cargo install rustfmt
-
+    && rm -rf /var/lib/apt/lists/*
