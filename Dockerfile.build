@@ -1,4 +1,4 @@
-FROM scorpil/rust:stable
+FROM pitkley/rust:stable
 
 ENV PATH "/root/.cargo/bin:$PATH"
 RUN \
