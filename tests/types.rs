@@ -285,7 +285,7 @@ fn parse_expose_port_seq_string() {
 #[test]
 fn parse_expose_port_single_struct() {
     for port in &["{ host_port = 80 }",
-                  r#"{ host_port = 80, family = "tcp" }"#] {
+         r#"{ host_port = 80, family = "tcp" }"#] {
         let fragment = format!(r#"
             network = "network"
             dst_container = "dst_container"

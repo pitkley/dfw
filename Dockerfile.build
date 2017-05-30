@@ -3,7 +3,7 @@ FROM pitkley/rust:stable
 ENV PATH "/root/.cargo/bin:$PATH"
 RUN \
     # Install cargo binaries
-    cargo install --vers 0.8.3 rustfmt
+    cargo install --vers 0.8.4 rustfmt
 
 RUN \
     # Install required packages

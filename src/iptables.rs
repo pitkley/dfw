@@ -117,9 +117,7 @@ impl IPTables for IPTablesProxy {
     }
 
     fn set_policy(&self, table: &str, chain: &str, policy: &str) -> Result<bool> {
-        self.0
-            .set_policy(table, chain, policy)
-            .map_err(Into::into)
+        self.0.set_policy(table, chain, policy).map_err(Into::into)
     }
 
     fn execute(&self, table: &str, command: &str) -> Result<Output> {
@@ -157,9 +155,7 @@ impl IPTables for IPTablesProxy {
     }
 
     fn append_unique(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        self.0
-            .append_unique(table, chain, rule)
-            .map_err(Into::into)
+        self.0.append_unique(table, chain, rule).map_err(Into::into)
     }
 
     fn append_replace(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
@@ -173,9 +169,7 @@ impl IPTables for IPTablesProxy {
     }
 
     fn delete_all(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        self.0
-            .delete_all(table, chain, rule)
-            .map_err(Into::into)
+        self.0.delete_all(table, chain, rule).map_err(Into::into)
     }
 
     fn list(&self, table: &str, chain: &str) -> Result<Vec<String>> {

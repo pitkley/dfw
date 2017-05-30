@@ -184,8 +184,7 @@ impl<'a> ProcessDFW<'a> {
                         trace!(self.logger, "Add forward rule for external network interface";
                                o!("external_network_interface" => external_network_interface,
                                   "rule" => rule_str.to_owned()));
-                        self.ipt4
-                            .append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
+                        self.ipt4.append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
                         // TODO: verify what is needed for ipt6
 
                         let rule_str = Rule::default()
@@ -196,8 +195,7 @@ impl<'a> ProcessDFW<'a> {
                         trace!(self.logger, "Add input rule for external network interface";
                                o!("external_network_interface" => external_network_interface,
                                   "rule" => &rule_str));
-                        self.ipt4
-                            .append("filter", DFWRS_INPUT_CHAIN, &rule_str)?;
+                        self.ipt4.append("filter", DFWRS_INPUT_CHAIN, &rule_str)?;
                         // TODO: verify what is needed for ipt6
                     }
                 }
@@ -214,8 +212,7 @@ impl<'a> ProcessDFW<'a> {
                 trace!(self.logger, "Add post-routing rule for external network interface";
                        o!("external_network_interface" => external_network_interface,
                           "rule" => &rule_str));
-                self.ipt4
-                    .append("nat", DFWRS_POSTROUTING_CHAIN, &rule_str)?;
+                self.ipt4.append("nat", DFWRS_POSTROUTING_CHAIN, &rule_str)?;
                 // TODO: verify what is needed for ipt6
             }
         }
@@ -390,8 +387,7 @@ impl<'a> ProcessDFW<'a> {
                      "rule" => &rule_str));
 
             // Apply the rule
-            self.ipt4
-                .append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
+            self.ipt4.append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
             // TODO: verify what is needed for ipt6
         }
 
@@ -480,7 +476,7 @@ impl<'a> ProcessDFW<'a> {
                                             .IPv4Address
                                             .split('/')
                                             .next()
-                                            .ok_or_else(|| Error::from("IPv4 address is empty"))?
+                                            .ok_or_else(|| Error::from("IPv4 address is empty",),)?
                                             .to_owned());
                         }
                     }
@@ -516,8 +512,7 @@ impl<'a> ProcessDFW<'a> {
                      "rule" => &rule_str));
 
             // Apply the rule
-            self.ipt4
-                .append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
+            self.ipt4.append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
             // TODO: verify what is needed for ipt6
         }
 
@@ -613,8 +608,7 @@ impl<'a> ProcessDFW<'a> {
                      "rule" => &rule_str));
 
             // Apply the rule
-            self.ipt4
-                .append("filter", DFWRS_INPUT_CHAIN, &rule_str)?;
+            self.ipt4.append("filter", DFWRS_INPUT_CHAIN, &rule_str)?;
             // TODO: verify what is needed for ipt6
         }
 
@@ -718,12 +712,10 @@ impl<'a> ProcessDFW<'a> {
                     trace!(self.logger, "Rule uses primary external network interface";
                            o!("external_network_interface" => primary_external_network_interface));
 
-                    ipt_forward_rule.in_interface(primary_external_network_interface
-                                                      .to_owned()
-                                                      .to_owned());
-                    ipt_dnat_rule.in_interface(primary_external_network_interface
-                                                   .to_owned()
-                                                   .to_owned());
+                    ipt_forward_rule
+                        .in_interface(primary_external_network_interface.to_owned().to_owned());
+                    ipt_dnat_rule
+                        .in_interface(primary_external_network_interface.to_owned().to_owned());
                 } else {
                     // The DNAT rule requires the external interface
                     continue;
@@ -844,7 +836,7 @@ impl<'a> ProcessDFW<'a> {
                                           .IPv4Address
                                           .split('/')
                                           .next()
-                                          .ok_or_else(|| Error::from("IPv4 address is empty"))?,
+                                          .ok_or_else(|| Error::from("IPv4 address is empty",),)?,
                                       destination_port));
 
                 // Try to build the rule without the out_interface defined to see if any of the
@@ -876,8 +868,7 @@ impl<'a> ProcessDFW<'a> {
                          "rule" => &rule_str));
 
                 // Apply the rule
-                self.ipt4
-                    .append("nat", DFWRS_PREROUTING_CHAIN, &rule_str)?;
+                self.ipt4.append("nat", DFWRS_PREROUTING_CHAIN, &rule_str)?;
                 // TODO: verify what is needed for ipt6
             }
         }
