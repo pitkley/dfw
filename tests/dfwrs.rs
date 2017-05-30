@@ -82,10 +82,7 @@ fn with_compose_environment<F: FnOnce() -> ()>(compose_path: &str, project_name:
 
 fn dc_template(num: &str) {
     // Load toml
-    let mut s = String::new();
-    let toml: DFW = load_file(&resource(&format!("docker/{}/conf.toml", num)).unwrap(),
-                              &mut s)
-            .unwrap();
+    let toml: DFW = load_file(&resource(&format!("docker/{}/conf.toml", num)).unwrap()).unwrap();
 
     // Setup docker instance
     let docker = Docker::new();

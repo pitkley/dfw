@@ -72,12 +72,10 @@ arg_enum! {
 }
 
 fn load_config(matches: &ArgMatches) -> Result<DFW> {
-    // TODO somehow get rid of this lifetime-workaround
-    let mut contents = String::new();
     let toml: DFW = if matches.is_present("config-file") {
-        load_file(matches.value_of("config-file").unwrap(), &mut contents)?
+        load_file(matches.value_of("config-file").unwrap())?
     } else if matches.is_present("config-path") {
-        load_path(matches.value_of("config-path").unwrap(), &mut contents)?
+        load_path(matches.value_of("config-path").unwrap())?
     } else {
         // This statement should be unreachable, since clap verifies that either config-file or
         // config-path is populated.

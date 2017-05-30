@@ -85,8 +85,7 @@ fn parse_conf_file() {
         container_dnat: Some(container_dnat),
     };
 
-    let mut s = String::new();
-    let actual: DFW = load_file(&resource("conf-file.toml").unwrap(), &mut s).unwrap();
+    let actual: DFW = load_file(&resource("conf-file.toml").unwrap()).unwrap();
 
     assert_eq!(expected, actual);
 }
@@ -167,8 +166,7 @@ fn parse_conf_path() {
         container_dnat: Some(container_dnat),
     };
 
-    let mut s = String::new();
-    let actual: DFW = load_path(&resource("conf_path").unwrap(), &mut s).unwrap();
+    let actual: DFW = load_path(&resource("conf_path").unwrap()).unwrap();
 
     assert_eq!(expected, actual);
 }
