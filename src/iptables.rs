@@ -111,99 +111,43 @@ pub trait IPTables {
 /// [rust-iptables]: https://crates.io/crates/iptables
 pub struct IPTablesProxy(pub ::ipt::IPTables);
 
+macro_rules! proxy {
+    ( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty ) => {
+        fn $name(&self, $( $param: $ty ),+) -> Result<$ret> {
+            (self.0).$name($($param),+).map_err(Into::into)
+        }
+    };
+}
+
+macro_rules! proxies {
+    ( $( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty );+ ) => {
+        $( proxy!( $name ( $( $param : $ty ),+ ) -> $ret ); )+
+    };
+}
+
 impl IPTables for IPTablesProxy {
-    fn get_policy(&self, table: &str, chain: &str) -> Result<String> {
-        self.0.get_policy(table, chain).map_err(Into::into)
-    }
-
-    fn set_policy(&self, table: &str, chain: &str, policy: &str) -> Result<bool> {
-        self.0.set_policy(table, chain, policy).map_err(Into::into)
-    }
-
-    fn execute(&self, table: &str, command: &str) -> Result<Output> {
-        self.0.execute(table, command).map_err(Into::into)
-    }
-
-    fn exists(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        self.0.exists(table, chain, rule).map_err(Into::into)
-    }
-
-    fn chain_exists(&self, table: &str, chain: &str) -> Result<bool> {
-        self.0.chain_exists(table, chain).map_err(Into::into)
-    }
-
-    fn insert(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
-        self.0
-            .insert(table, chain, rule, position)
-            .map_err(Into::into)
-    }
-
-    fn insert_unique(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
-        self.0
-            .insert_unique(table, chain, rule, position)
-            .map_err(Into::into)
-    }
-
-    fn replace(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
-        self.0
-            .replace(table, chain, rule, position)
-            .map_err(Into::into)
-    }
-
-    fn append(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        self.0.append(table, chain, rule).map_err(Into::into)
-    }
-
-    fn append_unique(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        self.0.append_unique(table, chain, rule).map_err(Into::into)
-    }
-
-    fn append_replace(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        self.0
-            .append_replace(table, chain, rule)
-            .map_err(Into::into)
-    }
-
-    fn delete(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        self.0.delete(table, chain, rule).map_err(Into::into)
-    }
-
-    fn delete_all(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        self.0.delete_all(table, chain, rule).map_err(Into::into)
-    }
-
-    fn list(&self, table: &str, chain: &str) -> Result<Vec<String>> {
-        self.0.list(table, chain).map_err(Into::into)
-    }
-
-    fn list_table(&self, table: &str) -> Result<Vec<String>> {
-        self.0.list_table(table).map_err(Into::into)
-    }
-
-    fn list_chains(&self, table: &str) -> Result<Vec<String>> {
-        self.0.list_chains(table).map_err(Into::into)
-    }
-
-    fn new_chain(&self, table: &str, chain: &str) -> Result<bool> {
-        self.0.new_chain(table, chain).map_err(Into::into)
-    }
-
-    fn flush_chain(&self, table: &str, chain: &str) -> Result<bool> {
-        self.0.flush_chain(table, chain).map_err(Into::into)
-    }
-
-    fn rename_chain(&self, table: &str, old_chain: &str, new_chain: &str) -> Result<bool> {
-        self.0
-            .rename_chain(table, old_chain, new_chain)
-            .map_err(Into::into)
-    }
-
-    fn delete_chain(&self, table: &str, chain: &str) -> Result<bool> {
-        self.0.delete_chain(table, chain).map_err(Into::into)
-    }
-
-    fn flush_table(&self, table: &str) -> Result<bool> {
-        self.0.flush_table(table).map_err(Into::into)
+    proxies! {
+        get_policy(table: &str, chain: &str) -> String;
+        set_policy(table: &str, chain: &str, policy: &str) -> bool;
+        execute(table: &str, command: &str) -> Output;
+        exists(table: &str, chain: &str, rule: &str) -> bool;
+        chain_exists(table: &str, chain: &str) -> bool;
+        insert(table: &str, chain: &str, rule: &str, position: i32) -> bool;
+        insert_unique(table: &str, chain: &str, rule: &str, position: i32) -> bool;
+        replace(table: &str, chain: &str, rule: &str, position: i32) -> bool;
+        append(table: &str, chain: &str, rule: &str) -> bool;
+        append_unique(table: &str, chain: &str, rule: &str) -> bool;
+        append_replace(table: &str, chain: &str, rule: &str) -> bool;
+        delete(table: &str, chain: &str, rule: &str) -> bool;
+        delete_all(table: &str, chain: &str, rule: &str) -> bool;
+        list(table: &str, chain: &str) -> Vec<String>;
+        list_table(table: &str) -> Vec<String>;
+        list_chains(table: &str) -> Vec<String>;
+        new_chain(table: &str, chain: &str) -> bool;
+        flush_chain(table: &str, chain: &str) -> bool;
+        rename_chain(table: &str, old_chain: &str, new_chain: &str) -> bool;
+        delete_chain(table: &str, chain: &str) -> bool;
+        flush_table(table: &str) -> bool
     }
 }
 
@@ -212,14 +156,44 @@ impl IPTables for IPTablesProxy {
 ///
 /// This is currently used when running `dfwrs --dry-run`.
 pub struct IPTablesDummy;
+
+macro_rules! dummy {
+    ( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty ) => {
+        fn $name(&self, $( $param: $ty ),+) -> Result<$ret> {
+            Ok(Default::default())
+        }
+    };
+}
+
+macro_rules! dummies {
+    ( $( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty );+ ) => {
+        $( dummy!( $name ( $( $param : $ty ),+ ) -> $ret ); )+
+    };
+}
+
 #[allow(unused_variables)]
 impl IPTables for IPTablesDummy {
-    fn get_policy(&self, table: &str, chain: &str) -> Result<String> {
-        Ok("".to_owned())
-    }
-
-    fn set_policy(&self, table: &str, chain: &str, policy: &str) -> Result<bool> {
-        Ok(false)
+    dummies! {
+        get_policy(table: &str, chain: &str) -> String;
+        set_policy(table: &str, chain: &str, policy: &str) -> bool;
+        exists(table: &str, chain: &str, rule: &str) -> bool;
+        chain_exists(table: &str, chain: &str) -> bool;
+        insert(table: &str, chain: &str, rule: &str, position: i32) -> bool;
+        insert_unique(table: &str, chain: &str, rule: &str, position: i32) -> bool;
+        replace(table: &str, chain: &str, rule: &str, position: i32) -> bool;
+        append(table: &str, chain: &str, rule: &str) -> bool;
+        append_unique(table: &str, chain: &str, rule: &str) -> bool;
+        append_replace(table: &str, chain: &str, rule: &str) -> bool;
+        delete(table: &str, chain: &str, rule: &str) -> bool;
+        delete_all(table: &str, chain: &str, rule: &str) -> bool;
+        list(table: &str, chain: &str) -> Vec<String>;
+        list_table(table: &str) -> Vec<String>;
+        list_chains(table: &str) -> Vec<String>;
+        new_chain(table: &str, chain: &str) -> bool;
+        flush_chain(table: &str, chain: &str) -> bool;
+        rename_chain(table: &str, old_chain: &str, new_chain: &str) -> bool;
+        delete_chain(table: &str, chain: &str) -> bool;
+        flush_table(table: &str) -> bool
     }
 
     fn execute(&self, table: &str, command: &str) -> Result<Output> {
@@ -228,78 +202,6 @@ impl IPTables for IPTablesDummy {
                stdout: vec![],
                stderr: vec![],
            })
-    }
-
-    fn exists(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        Ok(false)
-    }
-
-    fn chain_exists(&self, table: &str, chain: &str) -> Result<bool> {
-        Ok(false)
-    }
-
-    fn insert(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
-        Ok(false)
-    }
-
-    fn insert_unique(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
-        Ok(false)
-    }
-
-    fn replace(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
-        Ok(false)
-    }
-
-    fn append(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        Ok(false)
-    }
-
-    fn append_unique(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        Ok(false)
-    }
-
-    fn append_replace(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        Ok(false)
-    }
-
-    fn delete(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        Ok(false)
-    }
-
-    fn delete_all(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        Ok(false)
-    }
-
-    fn list(&self, table: &str, chain: &str) -> Result<Vec<String>> {
-        Ok(vec![])
-    }
-
-    fn list_table(&self, table: &str) -> Result<Vec<String>> {
-        Ok(vec![])
-    }
-
-    fn list_chains(&self, table: &str) -> Result<Vec<String>> {
-        Ok(vec![])
-    }
-
-    fn new_chain(&self, table: &str, chain: &str) -> Result<bool> {
-        Ok(false)
-    }
-
-    fn flush_chain(&self, table: &str, chain: &str) -> Result<bool> {
-        Ok(false)
-    }
-
-    fn rename_chain(&self, table: &str, old_chain: &str, new_chain: &str) -> Result<bool> {
-        Ok(false)
-    }
-
-    fn delete_chain(&self, table: &str, chain: &str) -> Result<bool> {
-        Ok(false)
-    }
-
-    fn flush_table(&self, table: &str) -> Result<bool> {
-        Ok(false)
     }
 }
 
@@ -329,15 +231,43 @@ impl IPTablesLogger {
     }
 }
 
-impl IPTables for IPTablesLogger {
-    fn get_policy(&self, table: &str, chain: &str) -> Result<String> {
-        self.log("get_policy", &[table, chain]);
-        Ok("".to_owned())
-    }
+macro_rules! logger {
+    ( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty ) => {
+        fn $name(&self, $( $param: $ty ),+) -> Result<$ret> {
+            self.log(stringify!($name), &[ $( &$param.to_string() ),+ ]);
+            Ok(Default::default())
+        }
+    };
+}
 
-    fn set_policy(&self, table: &str, chain: &str, policy: &str) -> Result<bool> {
-        self.log("set_policy", &[table, chain, policy]);
-        Ok(false)
+macro_rules! loggers {
+    ( $( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty );+ ) => {
+        $( logger!( $name ( $( $param : $ty ),+ ) -> $ret ); )+
+    };
+}
+
+impl IPTables for IPTablesLogger {
+    loggers! {
+        get_policy(table: &str, chain: &str) -> String;
+        set_policy(table: &str, chain: &str, policy: &str) -> bool;
+        exists(table: &str, chain: &str, rule: &str) -> bool;
+        chain_exists(table: &str, chain: &str) -> bool;
+        insert(table: &str, chain: &str, rule: &str, position: i32) -> bool;
+        insert_unique(table: &str, chain: &str, rule: &str, position: i32) -> bool;
+        replace(table: &str, chain: &str, rule: &str, position: i32) -> bool;
+        append(table: &str, chain: &str, rule: &str) -> bool;
+        append_unique(table: &str, chain: &str, rule: &str) -> bool;
+        append_replace(table: &str, chain: &str, rule: &str) -> bool;
+        delete(table: &str, chain: &str, rule: &str) -> bool;
+        delete_all(table: &str, chain: &str, rule: &str) -> bool;
+        list(table: &str, chain: &str) -> Vec<String>;
+        list_table(table: &str) -> Vec<String>;
+        list_chains(table: &str) -> Vec<String>;
+        new_chain(table: &str, chain: &str) -> bool;
+        flush_chain(table: &str, chain: &str) -> bool;
+        rename_chain(table: &str, old_chain: &str, new_chain: &str) -> bool;
+        delete_chain(table: &str, chain: &str) -> bool;
+        flush_table(table: &str) -> bool
     }
 
     fn execute(&self, table: &str, command: &str) -> Result<Output> {
@@ -347,98 +277,5 @@ impl IPTables for IPTablesLogger {
                stdout: vec![],
                stderr: vec![],
            })
-    }
-
-    fn exists(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        self.log("exists", &[table, chain, rule]);
-        Ok(false)
-    }
-
-    fn chain_exists(&self, table: &str, chain: &str) -> Result<bool> {
-        self.log("chain_exists", &[table, chain]);
-        Ok(false)
-    }
-
-    fn insert(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
-        let position = position.to_string();
-        self.log("insert", &[table, chain, rule, &*position]);
-        Ok(false)
-    }
-
-    fn insert_unique(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
-        let position = position.to_string();
-        self.log("insert_unique", &[table, chain, rule, &*position]);
-        Ok(false)
-    }
-
-    fn replace(&self, table: &str, chain: &str, rule: &str, position: i32) -> Result<bool> {
-        let position = position.to_string();
-        self.log("replace", &[table, chain, rule, &*position]);
-        Ok(false)
-    }
-
-    fn append(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        self.log("append", &[table, chain, rule]);
-        Ok(false)
-    }
-
-    fn append_unique(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        self.log("append_unique", &[table, chain, rule]);
-        Ok(false)
-    }
-
-    fn append_replace(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        self.log("append_replace", &[table, chain, rule]);
-        Ok(false)
-    }
-
-    fn delete(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        self.log("delete", &[table, chain, rule]);
-        Ok(false)
-    }
-
-    fn delete_all(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
-        self.log("delete_all", &[table, chain, rule]);
-        Ok(false)
-    }
-
-    fn list(&self, table: &str, chain: &str) -> Result<Vec<String>> {
-        self.log("list", &[table, chain]);
-        Ok(vec![])
-    }
-
-    fn list_table(&self, table: &str) -> Result<Vec<String>> {
-        self.log("list_table", &[table]);
-        Ok(vec![])
-    }
-
-    fn list_chains(&self, table: &str) -> Result<Vec<String>> {
-        self.log("list_chains", &[table]);
-        Ok(vec![])
-    }
-
-    fn new_chain(&self, table: &str, chain: &str) -> Result<bool> {
-        self.log("new_chain", &[table, chain]);
-        Ok(false)
-    }
-
-    fn flush_chain(&self, table: &str, chain: &str) -> Result<bool> {
-        self.log("flush_chain", &[table, chain]);
-        Ok(false)
-    }
-
-    fn rename_chain(&self, table: &str, old_chain: &str, new_chain: &str) -> Result<bool> {
-        self.log("rename_chain", &[table, old_chain, new_chain]);
-        Ok(false)
-    }
-
-    fn delete_chain(&self, table: &str, chain: &str) -> Result<bool> {
-        self.log("delete_chain", &[table, chain]);
-        Ok(false)
-    }
-
-    fn flush_table(&self, table: &str) -> Result<bool> {
-        self.log("flush_table", &[table]);
-        Ok(false)
     }
 }
