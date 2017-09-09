@@ -159,18 +159,14 @@ extern crate derive_builder;
 extern crate error_chain;
 extern crate glob;
 extern crate iptables as ipt;
-extern crate libc;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate shiplift;
 #[macro_use]
 extern crate slog;
-extern crate slog_async;
-extern crate slog_term;
 extern crate time;
 extern crate toml;
-extern crate url;
 
 // declare modules
 pub mod errors;

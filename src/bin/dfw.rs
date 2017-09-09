@@ -23,11 +23,9 @@ extern crate dfw;
 extern crate error_chain;
 extern crate iptables as ipt;
 extern crate libc;
-extern crate serde;
 extern crate shiplift;
 #[macro_use]
 extern crate slog;
-extern crate slog_async;
 extern crate slog_term;
 extern crate time;
 extern crate url;
@@ -542,10 +540,7 @@ fn main() {
     let root_logger = Logger::root(drain, o!());
 
     if let Err(ref e) = run(&signal, &root_logger) {
-        // Trait that holds `display`
-        use error_chain::ChainedError;
-
         error!(root_logger, "Encountered error";
-               o!("error" => format!("{}", e.display())));
+               o!("error" => format!("{}", e)));
     }
 }

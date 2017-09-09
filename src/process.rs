@@ -919,67 +919,67 @@ struct Rule {
 #[allow(dead_code)]
 impl Rule {
     pub fn source(&mut self, value: String) -> &mut Self {
-        let mut new = self;
+        let new = self;
         new.source = Some(value);
         new
     }
 
     pub fn destination(&mut self, value: String) -> &mut Self {
-        let mut new = self;
+        let new = self;
         new.destination = Some(value);
         new
     }
 
     pub fn in_interface(&mut self, value: String) -> &mut Self {
-        let mut new = self;
+        let new = self;
         new.in_interface = Some(value);
         new
     }
 
     pub fn out_interface(&mut self, value: String) -> &mut Self {
-        let mut new = self;
+        let new = self;
         new.out_interface = Some(value);
         new
     }
 
     pub fn not_in_interface(&mut self, value: bool) -> &mut Self {
-        let mut new = self;
+        let new = self;
         new.not_in_interface = value;
         new
     }
 
     pub fn not_out_interface(&mut self, value: bool) -> &mut Self {
-        let mut new = self;
+        let new = self;
         new.not_out_interface = value;
         new
     }
 
     pub fn protocol(&mut self, value: String) -> &mut Self {
-        let mut new = self;
+        let new = self;
         new.protocol = Some(value);
         new
     }
 
     pub fn source_port(&mut self, value: String) -> &mut Self {
-        let mut new = self;
+        let new = self;
         new.source_port = Some(value);
         new
     }
 
     pub fn destination_port(&mut self, value: String) -> &mut Self {
-        let mut new = self;
+        let new = self;
         new.destination_port = Some(value);
         new
     }
 
     pub fn filter(&mut self, value: String) -> &mut Self {
-        let mut new = self;
+        let new = self;
         new.filter = Some(value);
         new
     }
 
     pub fn jump(&mut self, value: String) -> &mut Self {
-        let mut new = self;
+        let new = self;
         new.jump = Some(value);
         new
     }
