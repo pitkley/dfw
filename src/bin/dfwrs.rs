@@ -72,12 +72,10 @@ arg_enum! {
 }
 
 fn load_config(matches: &ArgMatches) -> Result<DFW> {
-    // TODO somehow get rid of this lifetime-workaround
-    let mut contents = String::new();
     let toml: DFW = if matches.is_present("config-file") {
-        load_file(matches.value_of("config-file").unwrap(), &mut contents)?
+        load_file(matches.value_of("config-file").unwrap())?
     } else if matches.is_present("config-path") {
-        load_path(matches.value_of("config-path").unwrap(), &mut contents)?
+        load_path(matches.value_of("config-path").unwrap())?
     } else {
         // This statement should be unreachable, since clap verifies that either config-file or
         // config-path is populated.
@@ -187,7 +185,7 @@ fn spawn_event_monitor(docker_url: Option<String>,
 }
 
 #[cfg(unix)]
-fn run(signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
+fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
     info!(root_logger, "Application starting";
           o!("version" => crate_version!(),
              "started_at" => format!("{}", time::now().rfc3339())));
@@ -333,14 +331,9 @@ fn run(signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
             trace!(root_logger, "Creating process closure according to load mode";
                    o!("load_mode" => "once"));
             Box::new(|| {
-                ProcessDFW::new(&docker,
-                                &toml,
-                                ipt4,
-                                ipt6,
-                                &processing_options,
-                                &root_logger)?
-                        .process()
-                        .map_err(From::from)
+                ProcessDFW::new(&docker, &toml, ipt4, ipt6, &processing_options, root_logger)?
+                    .process()
+                    .map_err(From::from)
             })
         }
         LoadMode::Always => {
@@ -351,14 +344,9 @@ fn run(signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                 info!(root_logger, "Reloaded configuration before processing");
                 debug!(root_logger, "Reloaded config: {:#?}", toml);
 
-                ProcessDFW::new(&docker,
-                                &toml,
-                                ipt4,
-                                ipt6,
-                                &processing_options,
-                                &root_logger)?
-                        .process()
-                        .map_err(From::from)
+                ProcessDFW::new(&docker, &toml, ipt4, ipt6, &processing_options, root_logger)?
+                    .process()
+                    .map_err(From::from)
             })
         }
     };
@@ -374,7 +362,7 @@ fn run(signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
     info!(root_logger, "Start first processing");
     process()?;
 
-    if run_once || (!monitor_events && load_interval <= 0) {
+    if run_once || (!monitor_events && load_interval == 0) {
         // Either run-once is specified or both events are not monitored and rules aren't processed
         // regularly -- process once, then exit.
         info!(root_logger,
@@ -397,15 +385,12 @@ fn run(signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
 
         trace!(root_logger, "Start burst monitoring thread";
                o!("burst_timeout" => burst_timeout));
-        let burst_handle = spawn_burst_monitor(burst_timeout,
-                                               s_trigger,
-                                               r_event,
-                                               r_burst_exit,
-                                               &root_logger);
+        let burst_handle =
+            spawn_burst_monitor(burst_timeout, s_trigger, r_event, r_burst_exit, root_logger);
 
         trace!(root_logger, "Start event monitoring thread";
                o!("docker_url" => &docker_url));
-        let event_handle = spawn_event_monitor(docker_url, s_event, &root_logger);
+        let event_handle = spawn_event_monitor(docker_url, s_event, root_logger);
         let event_pthread_t = event_handle.as_pthread_t();
 
         let terminate_threads: Box<Fn() -> ()> = Box::new(move || {
@@ -512,7 +497,7 @@ fn main() {
     let drain = slog_term::FullFormat::new(decorator).build().fuse();
     let root_logger = Logger::root(drain, o!());
 
-    if let Err(ref e) = run(signal, &root_logger) {
+    if let Err(ref e) = run(&signal, &root_logger) {
         // Trait that holds `display`
         use error_chain::ChainedError;
 

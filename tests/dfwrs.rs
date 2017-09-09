@@ -1,40 +1,31 @@
 #![cfg(feature = "docker-tests")]
 
 extern crate dfwrs;
+extern crate eval;
+#[macro_use]
+extern crate lazy_static;
+extern crate regex;
 extern crate shiplift;
 #[macro_use]
 extern crate slog;
 
+mod common;
+mod logs;
+
+use common::*;
 use dfwrs::*;
 use dfwrs::iptables::IPTablesLogger;
 use dfwrs::types::*;
 use dfwrs::util::load_file;
+use logs::*;
 use shiplift::Docker;
 use slog::{Drain, Fuse, Logger, OwnedKVList, Record};
-use std::fs::File;
-use std::io::BufReader;
-use std::io::prelude::*;
 use std::panic;
 use std::panic::{AssertUnwindSafe, UnwindSafe};
-use std::path::PathBuf;
 use std::process::Command;
 
 static PROCESSING_OPTIONS: ProcessingOptions =
     ProcessingOptions { container_filter: ContainerFilter::Running };
-
-fn load_log(log_path: &str) -> Vec<(String, String)> {
-    let file = BufReader::new(File::open(log_path).unwrap());
-
-    file.lines()
-        .into_iter()
-        .filter(Result::is_ok)
-        .map(Result::unwrap)
-        .map(|e| {
-                 let mut s = e.splitn(2, ' ');
-                 (s.next().unwrap().trim().to_owned(), s.next().unwrap().trim().to_owned())
-             })
-        .collect::<Vec<_>>()
-}
 
 fn logger() -> Logger {
     struct NoopDrain;
@@ -50,14 +41,6 @@ fn logger() -> Logger {
     let drain = Fuse(NoopDrain);
     let logger = Logger::root(drain, o!());
     logger
-}
-
-fn resource(segment: &str) -> Option<String> {
-    let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    p.push("resources/test");
-    p.push(segment);
-
-    p.to_str().map(|s| s.to_owned())
 }
 
 fn with_compose_environment<F: FnOnce() -> ()>(compose_path: &str, project_name: &str, body: F)
@@ -97,11 +80,9 @@ fn with_compose_environment<F: FnOnce() -> ()>(compose_path: &str, project_name:
     }
 }
 
-#[test]
-fn dc_01() {
+fn dc_template(num: &str) {
     // Load toml
-    let mut s = String::new();
-    let toml: DFW = load_file(&resource("docker/01/conf.toml").unwrap(), &mut s).unwrap();
+    let toml: DFW = load_file(&resource(&format!("docker/{}/conf.toml", num)).unwrap()).unwrap();
 
     // Setup docker instance
     let docker = Docker::new();
@@ -124,15 +105,16 @@ fn dc_01() {
     // not `UnwindSafe`.
     let docker = AssertUnwindSafe(docker);
 
-    with_compose_environment(&resource("docker/01/docker-compose.yml").unwrap(),
-                             "dfwrs_test_01",
+    with_compose_environment(&resource(&format!("docker/{}/docker-compose.yml", num)).unwrap(),
+                             &format!("dfwrs_test_{}", num),
                              || {
         let process = ProcessDFW::new(&docker, &toml, &*ipt4, &*ipt6, &PROCESSING_OPTIONS, &logger)
             .unwrap();
 
         // Test if container is available
         let containers = docker.containers();
-        let container = containers.get("dfwrstest01_a_1");
+        let container_name = format!("dfwrstest{}_a_1", num);
+        let container = containers.get(&container_name);
         let inspect = container.inspect();
         assert!(inspect.is_ok());
         let inspect = inspect.unwrap();
@@ -144,13 +126,87 @@ fn dc_01() {
         assert_eq!(result.unwrap(), ());
 
         // Verify logs for iptables (IPv4)
-        let logs4 = ipt4.logs();
-        let expected4 = load_log(&resource("docker/01/expected-iptables-v4-logs.txt").unwrap());
+        let logs4 = ipt4.logs()
+            .iter()
+            .map(|&(ref f, ref c)| {
+                     LogLine {
+                         function: f.to_owned(),
+                         command: c.to_owned(),
+                         regex: false,
+                         eval: None,
+                     }
+                 })
+            .collect::<Vec<_>>();
+        let expected4 =
+            load_log(&resource(&format!("docker/{}/expected-iptables-v4-logs.txt", num)).unwrap());
+
+        // If the logs don't match, include correctly formatted output for comparison.
+        if logs4 != expected4 {
+            println!("IPv4 logs didn't match");
+            println!("----------------------");
+            for line in &logs4 {
+                println!("{}\t{}", line.function, line.command);
+            }
+            println!();
+        }
+
         assert_eq!(logs4, expected4);
 
         // Verify logs for ip6tables (IPv6)
-        let logs6 = ipt6.logs();
-        let expected6 = load_log(&resource("docker/01/expected-iptables-v6-logs.txt").unwrap());
+        let logs6 = ipt6.logs()
+            .iter()
+            .map(|&(ref f, ref c)| {
+                     LogLine {
+                         function: f.to_owned(),
+                         command: c.to_owned(),
+                         regex: false,
+                         eval: None,
+                     }
+                 })
+            .collect::<Vec<_>>();
+        let expected6 =
+            load_log(&resource(&format!("docker/{}/expected-iptables-v6-logs.txt", num)).unwrap());
+
+        // If the logs don't match, include correctly formatted output for comparison.
+        if logs6 != expected6 {
+            println!("IPv6 logs didn't match");
+            println!("----------------------");
+            for line in &logs6 {
+                println!("{}\t{}", line.function, line.command);
+            }
+            println!();
+        }
+
         assert_eq!(logs6, expected6);
     });
+}
+
+#[test]
+fn dc_01() {
+    dc_template("01");
+}
+
+#[test]
+fn dc_02() {
+    dc_template("02");
+}
+
+#[test]
+fn dc_03() {
+    dc_template("03");
+}
+
+#[test]
+fn dc_04() {
+    dc_template("04");
+}
+
+#[test]
+fn dc_05() {
+    dc_template("05");
+}
+
+#[test]
+fn dc_06() {
+    dc_template("06");
 }

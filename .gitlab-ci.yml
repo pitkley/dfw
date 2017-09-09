@@ -1,5 +1,6 @@
 stages:
     - prepare
+    - push
     - build
     - test
     - package
@@ -17,13 +18,27 @@ cache:
     script:
         - JOB_NAME=( $CI_JOB_NAME )
         - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+        - sed -i "0,/FROM /{s/:.*/:${JOB_NAME[3]}/}" Dockerfile.build
         - docker pull "$(grep '^FROM' Dockerfile.build | awk '{ print $2; }' | head -n1)"
         - docker build -t "${CI_REGISTRY_IMAGE}/build:${JOB_NAME[3]}" -f Dockerfile.build .
-        - docker push "${CI_REGISTRY_IMAGE}/build:${JOB_NAME[3]}"
 
 prepare rust image stable: *prepare-rust-image
 prepare rust image beta: *prepare-rust-image
 prepare rust image nightly: *prepare-rust-image
+
+.push-rust-image: &push-rust-image
+    stage: push
+    tags:
+        - docker-available
+        - local
+    script:
+        - JOB_NAME=( $CI_JOB_NAME )
+        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+        - docker push "${CI_REGISTRY_IMAGE}/build:${JOB_NAME[3]}"
+
+push rust image stable: *push-rust-image
+push rust image beta: *push-rust-image
+push rust image nightly: *push-rust-image
 
 rustfmt:
     stage: build
@@ -183,9 +198,13 @@ test static binary:
         - export DOCKER_HOST="http://${DIND_IP_ADDRESS}:2375"
         - echo "$DOCKER_HOST"
     script:
-        - cargo test --all-features -- --nocapture
+        - RUST_TEST_THREADS=1 cargo test --all-features -j1 -- --nocapture
     after_script:
         - docker stop "dind-runner-${CI_JOB_ID}"
+    cache:
+        key: "test on docker"
+        paths:
+            - target/
 
 # API from 1.12.6 and below is not compatible.
 test on docker 1.13.0: *test-docker-tests
@@ -193,7 +212,7 @@ test on docker 1.13.1: *test-docker-tests
 test on docker 17.03.0-ce: *test-docker-tests
 test on docker 17.03.1-ce: *test-docker-tests
 test on docker 17.04.0-ce: *test-docker-tests
-test on docker 17.05.0-ce-rc2: *test-docker-tests
+test on docker 17.05.0-ce: *test-docker-tests
 
 package image for feature-branch:
     stage: package
@@ -208,7 +227,7 @@ package image for feature-branch:
         - master
         - /^develop\/.*$/
     script:
-        - docker build -t "${CI_REGISTRY_IMAGE}/branches:${CI_COMMIT_REF_SLUG}" .
+        - docker build --pull -t "${CI_REGISTRY_IMAGE}/branches:${CI_COMMIT_REF_SLUG}" .
         - docker image rm "${CI_REGISTRY_IMAGE}/branches:${CI_COMMIT_REF_SLUG}"
 
 package and push image for tags:
@@ -222,7 +241,7 @@ package and push image for tags:
         - tags
     script:
         - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
-        - docker build -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}" .
+        - docker build --pull -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}" .
         - docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}"
 
 package and push image on develop patch:
@@ -236,7 +255,7 @@ package and push image on develop patch:
         - develop/patch
     script:
         - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
-        - docker build -t "${CI_REGISTRY_IMAGE}/develop:patch" .
+        - docker build --pull -t "${CI_REGISTRY_IMAGE}/develop:patch" .
         - docker push "${CI_REGISTRY_IMAGE}/develop:patch"
 
 package and push image on develop minor:
@@ -250,7 +269,7 @@ package and push image on develop minor:
         - develop/minor
     script:
         - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
-        - docker build -t "${CI_REGISTRY_IMAGE}/develop:minor" .
+        - docker build --pull -t "${CI_REGISTRY_IMAGE}/develop:minor" .
         - docker push "${CI_REGISTRY_IMAGE}/develop:minor"
 
 package and push image on master:
@@ -264,6 +283,6 @@ package and push image on master:
         - master
     script:
         - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
-        - docker build -t $CI_REGISTRY_IMAGE .
+        - docker build --pull -t $CI_REGISTRY_IMAGE .
         - docker push $CI_REGISTRY_IMAGE
 

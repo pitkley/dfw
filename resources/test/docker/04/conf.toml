@@ -1,0 +1,12 @@
+[container_to_host]
+default_policy = "DROP"
+
+[[container_to_host.rules]]
+network = "dfwrstest04_default"
+action = "REJECT"
+
+[[container_to_host.rules]]
+network = "dfwrstest04_default"
+src_container = "dfwrstest04_a_1"
+filter = "-m state --state RELATED"
+action = "ACCEPT"

@@ -65,7 +65,7 @@ DFWRS has been successfully tested under the following Docker versions:
 
 * `17.04.0-ce`
 
-* `17.05.0-ce-rc2`
+* `17.05.0-ce`
 
 ## Installation
 

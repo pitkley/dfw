@@ -6,8 +6,13 @@ new_chain	nat DFWRS_PREROUTING
 flush_chain	nat DFWRS_PREROUTING
 new_chain	nat DFWRS_POSTROUTING
 flush_chain	nat DFWRS_POSTROUTING
-execute	filter -P INPUT ACCEPT
 append	filter DFWRS_INPUT -m state --state INVALID -j DROP
 append	filter DFWRS_INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+append	filter INPUT -j DFWRS_INPUT
 append	filter DFWRS_FORWARD -m state --state INVALID -j DROP
 append	filter DFWRS_FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
+append	filter FORWARD -j DFWRS_FORWARD
+append	nat PREROUTING -j DFWRS_PREROUTING
+append	nat POSTROUTING -j DFWRS_POSTROUTING
+append	filter DFWRS_FORWARD -i $input=bridge -j REJECT
+append	filter DFWRS_FORWARD -s $src_ip=ip -i $input=bridge -o eni -m state --state RELATED -j ACCEPT

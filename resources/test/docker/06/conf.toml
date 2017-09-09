@@ -1,0 +1,22 @@
+#[defaults]
+#external_network_interfaces = "eni"
+
+[container_dnat]
+[[container_dnat.rules]]
+dst_network = "dfwrstest06_default"
+dst_container = "dfwrstest06_a_1"
+expose_port = "80/tcp"
+
+[[container_dnat.rules]]
+src_network = "dfwrstest06_default"
+src_container = "dfwrstest06_a_1"
+dst_network = "dfwrstest06_default"
+dst_container = "dfwrstest06_b_1"
+expose_port = { host_port = 8080, container_port = 80, family = "tcp" }
+
+[[container_dnat.rules]]
+src_network = "dfwrstest06_default"
+src_container = "dfwrstest06_a_1"
+dst_network = "dfwrstest06_other"
+dst_container = "dfwrstest06_b_1"
+expose_port = { host_port = 8443, container_port = 443, family = "tcp" }

@@ -3,17 +3,11 @@ extern crate dfwrs;
 extern crate maplit;
 extern crate toml;
 
+mod common;
+
+use common::resource;
 use dfwrs::types::*;
 use dfwrs::util::*;
-use std::path::PathBuf;
-
-fn resource(segment: &str) -> Option<String> {
-    let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    p.push("resources/test");
-    p.push(segment);
-
-    p.to_str().map(|s| s.to_owned())
-}
 
 #[test]
 fn parse_conf_file() {
@@ -91,8 +85,7 @@ fn parse_conf_file() {
         container_dnat: Some(container_dnat),
     };
 
-    let mut s = String::new();
-    let actual: DFW = load_file(&resource("conf-file.toml").unwrap(), &mut s).unwrap();
+    let actual: DFW = load_file(&resource("conf-file.toml").unwrap()).unwrap();
 
     assert_eq!(expected, actual);
 }
@@ -173,8 +166,7 @@ fn parse_conf_path() {
         container_dnat: Some(container_dnat),
     };
 
-    let mut s = String::new();
-    let actual: DFW = load_path(&resource("conf_path").unwrap(), &mut s).unwrap();
+    let actual: DFW = load_path(&resource("conf_path").unwrap()).unwrap();
 
     assert_eq!(expected, actual);
 }
@@ -232,7 +224,7 @@ fn parse_expose_port_seq_int() {
 
 #[test]
 fn parse_expose_port_single_string() {
-    for (port, family) in vec![(80, "tcp"), (53, "udp"), (1234, "other")] {
+    for &(port, family) in &[(80, "tcp"), (53, "udp"), (1234, "other")] {
         let fragment = format!(r#"
             network = "network"
             dst_container = "dst_container"
@@ -292,8 +284,8 @@ fn parse_expose_port_seq_string() {
 
 #[test]
 fn parse_expose_port_single_struct() {
-    for port in vec!["{ host_port = 80 }",
-                     r#"{ host_port = 80, family = "tcp" }"#] {
+    for port in &["{ host_port = 80 }",
+         r#"{ host_port = 80, family = "tcp" }"#] {
         let fragment = format!(r#"
             network = "network"
             dst_container = "dst_container"
@@ -355,7 +347,7 @@ fn parse_expose_port_seq_struct() {
                           }],
         external_network_interface: None,
     };
-    let actual: WiderWorldToContainerRule = toml::from_str(&fragment).unwrap();
+    let actual: WiderWorldToContainerRule = toml::from_str(fragment).unwrap();
 
     assert_eq!(expected, actual);
 }

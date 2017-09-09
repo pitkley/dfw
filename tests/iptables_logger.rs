@@ -24,8 +24,7 @@ fn log_all() {
     ipt.list_chains("table").unwrap();
     ipt.new_chain("table", "chain").unwrap();
     ipt.flush_chain("table", "chain").unwrap();
-    ipt.rename_chain("table", "old_chain", "new_chain")
-        .unwrap();
+    ipt.rename_chain("table", "old_chain", "new_chain").unwrap();
     ipt.delete_chain("table", "chain").unwrap();
     ipt.flush_table("table").unwrap();
 
