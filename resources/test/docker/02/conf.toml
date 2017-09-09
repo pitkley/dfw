@@ -2,12 +2,12 @@
 default_policy = "DROP"
 
 [[container_to_container.rules]]
-network = "dfwrstest02_default"
+network = "dfwtest02_default"
 action = "REJECT"
 
 [[container_to_container.rules]]
-network = "dfwrstest02_default"
-src_container = "dfwrstest02_a_1"
-dst_container = "dfwrstest02_b_1"
+network = "dfwtest02_default"
+src_container = "dfwtest02_a_1"
+dst_container = "dfwtest02_b_1"
 filter = "-m state --state RELATED"
 action = "ACCEPT"

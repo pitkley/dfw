@@ -1,6 +1,6 @@
 #![cfg(feature = "docker-tests")]
 
-extern crate dfwrs;
+extern crate dfw;
 extern crate eval;
 #[macro_use]
 extern crate lazy_static;
@@ -13,10 +13,10 @@ mod common;
 mod logs;
 
 use common::*;
-use dfwrs::*;
-use dfwrs::iptables::IPTablesLogger;
-use dfwrs::types::*;
-use dfwrs::util::load_file;
+use dfw::*;
+use dfw::iptables::IPTablesLogger;
+use dfw::types::*;
+use dfw::util::load_file;
 use logs::*;
 use shiplift::Docker;
 use slog::{Drain, Fuse, Logger, OwnedKVList, Record};
@@ -106,14 +106,14 @@ fn dc_template(num: &str) {
     let docker = AssertUnwindSafe(docker);
 
     with_compose_environment(&resource(&format!("docker/{}/docker-compose.yml", num)).unwrap(),
-                             &format!("dfwrs_test_{}", num),
+                             &format!("dfw_test_{}", num),
                              || {
         let process = ProcessDFW::new(&docker, &toml, &*ipt4, &*ipt6, &PROCESSING_OPTIONS, &logger)
             .unwrap();
 
         // Test if container is available
         let containers = docker.containers();
-        let container_name = format!("dfwrstest{}_a_1", num);
+        let container_name = format!("dfwtest{}_a_1", num);
         let container = containers.get(&container_name);
         let inspect = container.inspect();
         assert!(inspect.is_ok());

@@ -1,4 +1,4 @@
-extern crate dfwrs;
+extern crate dfw;
 #[macro_use]
 extern crate maplit;
 extern crate toml;
@@ -6,8 +6,8 @@ extern crate toml;
 mod common;
 
 use common::resource;
-use dfwrs::types::*;
-use dfwrs::util::*;
+use dfw::types::*;
+use dfw::util::*;
 
 #[test]
 fn parse_conf_file() {

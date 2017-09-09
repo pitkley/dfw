@@ -154,7 +154,7 @@ impl IPTables for IPTablesProxy {
 /// [`IPTables`](trait.IPTables.html) implementation which does not interact with the iptables
 /// binary and does not modify the rules active on the host.
 ///
-/// This is currently used when running `dfwrs --dry-run`.
+/// This is currently used when running `dfw --dry-run`.
 pub struct IPTablesDummy;
 
 macro_rules! dummy {

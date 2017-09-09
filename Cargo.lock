@@ -1,5 +1,5 @@
 [root]
-name = "dfwrs"
+name = "dfw"
 version = "0.3.0-pre"
 dependencies = [
  "chan 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",

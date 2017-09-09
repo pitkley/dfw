@@ -6,18 +6,18 @@
 // option. This file may not be copied, modified or distributed
 // except according to those terms.
 
-//! # DFWRS - Docker Firewall Framework in Rust
+//! # DFW - Docker Firewall Framework in Rust
 //!
-//! `dfwrs` is conceptually based on the [Docker Firewall Framework, `dfwfw`][dfwfw-github]. Its
+//! `dfw` is conceptually based on the [Docker Firewall Framework, `dfwfw`][dfwfw-github]. Its
 //! goal is to make firewall administration with Docker simpler, but also more extensive by trying
 //! to replace the Docker built-in firewall handling by direct interaction with iptables.
 //!
 //! This is accomplished by a flexible configuration which defines how the firewall should be built
-//! up. While DFWRS is running, Docker container events will be monitored and the rules rebuilt
+//! up. While DFW is running, Docker container events will be monitored and the rules rebuilt
 //! when necessary.
 //!
 //! See [DFWFW's README][dfwfw-readme] for more insight. Most of what you will read there will be
-//! applicable to DFWRS.
+//! applicable to DFW.
 //!
 //! ## Configuration
 //!
@@ -25,7 +25,7 @@
 //!
 //! * `defaults`
 //!
-//!     This category defines global, default values to be used by DFWRS and the other categories.
+//!     This category defines global, default values to be used by DFW and the other categories.
 //!
 //! * `container_to_container`
 //!
@@ -51,7 +51,7 @@
 //!     This category allows you to define specific rules for destination network address
 //!     translation, even or especially across Docker networks.
 //!
-//! One category which DFWFW covers that is not (yet) implemented in DFWRS is
+//! One category which DFWFW covers that is not (yet) implemented in DFW is
 //! `container_internals`, that is configuring iptables rules within containers.
 //!
 //! See the [examples][examples] *(TODO)*, and the [configuration types][types.rs] for a detailed
@@ -61,7 +61,7 @@
 //!
 //! At least Docker 1.13.0 is required.
 //!
-//! DFWRS has been successfully tested under the following Docker versions:
+//! DFW has been successfully tested under the following Docker versions:
 //!
 //! * `1.13.0`
 //!
@@ -77,17 +77,17 @@
 //!
 //! ## Installation
 //!
-//! While you can use Cargo to install `dfwrs` as a binary, using the Docker image is the preferred
+//! While you can use Cargo to install `dfw` as a binary, using the Docker image is the preferred
 //! way to go, especially if you don't want to install Rust and Cargo on your host:
 //!
 //! ```console
-//! $ docker pull pitkley/dfwrs:0.2
+//! $ docker pull pitkley/dfw:0.2
 //! $ docker run -d \
-//!       --name=dfwrs \
+//!       --name=dfw \
 //!       -v /var/run/docker.sock:/var/run/docker.sock:ro \
 //!       -v /path/to/your/config:/config \
 //!       --net host --cap-add=NET_ADMIN \
-//!       pitkley/dfwrs --config-path /config
+//!       pitkley/dfw --config-path /config
 //! ```
 //!
 //! This will download a lightweight image, coming in at under 6 MB, and subsequently run it using
@@ -115,7 +115,7 @@
 //!
 //! ## License
 //!
-//! DFWRS is licensed under either of
+//! DFW is licensed under either of
 //!
 //! * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
 //!   http://www.apache.org/licenses/LICENSE-2.0)
@@ -127,7 +127,7 @@
 //! ### Contribution
 //!
 //! Unless you explicitly state otherwise, any contribution intentionally submitted
-//! for inclusion in DFWRS by you, as defined in the Apache-2.0 license, shall be
+//! for inclusion in DFW by you, as defined in the Apache-2.0 license, shall be
 //! dual licensed as above, without any additional terms or conditions.
 //!
 //!

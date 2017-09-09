@@ -1,6 +1,6 @@
-extern crate dfwrs;
+extern crate dfw;
 
-use dfwrs::iptables::{IPTables, IPTablesLogger};
+use dfw::iptables::{IPTables, IPTablesLogger};
 
 #[test]
 fn log_all() {

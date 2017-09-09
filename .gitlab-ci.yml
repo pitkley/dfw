@@ -107,7 +107,7 @@ build static binary:
         - local
     script:
         - cross build --target x86_64-unknown-linux-musl --release
-        - cp target/x86_64-unknown-linux-musl/release/dfwrs dfwrs
+        - cp target/x86_64-unknown-linux-musl/release/dfw dfw
     cache:
         key: "static binary"
         paths:
@@ -117,7 +117,7 @@ build static binary:
         paths:
             - Cargo.toml
             - Cargo.lock
-            - dfwrs
+            - dfw
 
 test dynamic binary on stable:
     stage: test

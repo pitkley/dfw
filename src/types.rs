@@ -64,7 +64,7 @@ use std::str::FromStr;
 
 const DEFAULT_PROTOCOL: &'static str = "tcp";
 
-/// `DFW` is the parent type defining the complete configuration used by DFWRS to build up the
+/// `DFW` is the parent type defining the complete configuration used by DFW to build up the
 /// firewall rules.
 ///
 /// Every section is optional.
@@ -87,7 +87,7 @@ pub struct DFW {
     pub container_dnat: Option<ContainerDNAT>,
 }
 
-/// The default configuration section, used by DFWRS for rule processing.
+/// The default configuration section, used by DFW for rule processing.
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct Defaults {
@@ -398,7 +398,7 @@ impl FromStr for ExposePort {
     /// # Example
     ///
     /// ```
-    /// # use dfwrs::types::ExposePort;
+    /// # use dfw::types::ExposePort;
     /// let port: ExposePort = "80".parse().unwrap();
     /// assert_eq!(port.host_port, 80);
     /// assert_eq!(port.container_port, None);
@@ -406,7 +406,7 @@ impl FromStr for ExposePort {
     /// ```
     ///
     /// ```
-    /// # use dfwrs::types::ExposePort;
+    /// # use dfw::types::ExposePort;
     /// let port: ExposePort = "53/udp".parse().unwrap();
     /// assert_eq!(port.host_port, 53);
     /// assert_eq!(port.container_port, None);

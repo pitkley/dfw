@@ -1,6 +1,6 @@
-extern crate dfwrs;
+extern crate dfw;
 
-use dfwrs::iptables::*;
+use dfw::iptables::*;
 
 #[test]
 fn dummy_get_policy() {

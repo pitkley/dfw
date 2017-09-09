@@ -1,5 +1,5 @@
 [package]
-name = "dfwrs"
+name = "dfw"
 version = "0.3.0-pre"
 authors = ["Pit Kleyersburg <pitkley@googlemail.com>"]
 license = "MIT/Apache-2.0"
@@ -30,8 +30,8 @@ maplit = "~0.1.4"
 regex = "~0.2.1"
 
 [[bin]]
-name = "dfwrs"
-path = "src/bin/dfwrs.rs"
+name = "dfw"
+path = "src/bin/dfw.rs"
 doc = false
 
 [features]

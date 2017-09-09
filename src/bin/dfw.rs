@@ -6,7 +6,7 @@
 // option. This file may not be copied, modified or distributed
 // except according to those terms.
 
-//! # DFWRS - binary
+//! # DFW - binary
 
 // Increase the compiler's recursion limit for the `error_chain` crate.
 #![recursion_limit = "1024"]
@@ -17,7 +17,7 @@ extern crate chan;
 extern crate chan_signal;
 #[macro_use]
 extern crate clap;
-extern crate dfwrs;
+extern crate dfw;
 #[macro_use]
 extern crate error_chain;
 extern crate iptables as ipt;
@@ -34,10 +34,10 @@ extern crate url;
 use chan::{Receiver, Sender};
 use chan_signal::Signal;
 use clap::{App, Arg, ArgGroup, ArgMatches};
-use dfwrs::{ContainerFilter, ProcessDFW, ProcessingOptions};
-use dfwrs::iptables::{IPTables, IPTablesDummy, IPTablesProxy};
-use dfwrs::types::DFW;
-use dfwrs::util::*;
+use dfw::{ContainerFilter, ProcessDFW, ProcessingOptions};
+use dfw::iptables::{IPTables, IPTablesDummy, IPTablesProxy};
+use dfw::types::DFW;
+use dfw::util::*;
 use shiplift::Docker;
 use shiplift::builder::{EventFilter, EventFilterType, EventsOptions};
 use slog::{Logger, Drain};
@@ -49,7 +49,7 @@ use std::time::Duration;
 mod errors {
     error_chain! {
         links {
-            Dfwrs(::dfwrs::errors::Error, ::dfwrs::errors::ErrorKind);
+            Dfw(::dfw::errors::Error, ::dfw::errors::ErrorKind);
         }
 
         foreign_links {
@@ -191,7 +191,7 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
              "started_at" => format!("{}", time::now().rfc3339())));
 
     trace!(root_logger, "Parsing command line arguments");
-    let matches = App::new("dfwrs")
+    let matches = App::new("dfw")
         .version(crate_version!())
         .author(crate_authors!())
         .about("Docker Firewall Framework, in Rust")
