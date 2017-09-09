@@ -3,6 +3,19 @@ name = "dfw"
 version = "0.3.0-pre"
 authors = ["Pit Kleyersburg <pitkley@googlemail.com>"]
 license = "MIT/Apache-2.0"
+description = "Docker firewall framework, in Rust"
+homepage = "https://github.com/pitkley/dfw"
+repository = "https://github.com/pitkley/dfw.git"
+
+categories = ["command-line-interface", "command-line-utilities"]
+keywords = ["cli", "docker", "firewall"]
+
+include = [
+    "**/*.rs",
+    "resources/**/*",
+    "Cargo.toml",
+    "LICENSE-*",
+]
 
 [dependencies]
 chan = "~0.1.19"
@@ -40,5 +53,4 @@ iptables-tests = []
 
 [package.metadata.release]
 sign-commit = true
-upload-doc = false
 
