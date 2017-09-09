@@ -6,27 +6,26 @@
 // option. This file may not be copied, modified or distributed
 // except according to those terms.
 
-//! # DFWRS - binary
+//! # DFW - binary
 
 // Increase the compiler's recursion limit for the `error_chain` crate.
 #![recursion_limit = "1024"]
 
 // Import external libraries
+
 #[macro_use]
 extern crate chan;
 extern crate chan_signal;
 #[macro_use]
 extern crate clap;
-extern crate dfwrs;
+extern crate dfw;
 #[macro_use]
 extern crate error_chain;
 extern crate iptables as ipt;
 extern crate libc;
-extern crate serde;
 extern crate shiplift;
 #[macro_use]
 extern crate slog;
-extern crate slog_async;
 extern crate slog_term;
 extern crate time;
 extern crate url;
@@ -34,13 +33,13 @@ extern crate url;
 use chan::{Receiver, Sender};
 use chan_signal::Signal;
 use clap::{App, Arg, ArgGroup, ArgMatches};
-use dfwrs::{ContainerFilter, ProcessDFW, ProcessingOptions};
-use dfwrs::iptables::{IPTables, IPTablesDummy, IPTablesProxy};
-use dfwrs::types::DFW;
-use dfwrs::util::*;
+use dfw::{ContainerFilter, ProcessDFW, ProcessingOptions};
+use dfw::iptables::{IPTables, IPTablesDummy, IPTablesProxy};
+use dfw::types::DFW;
+use dfw::util::*;
 use shiplift::Docker;
 use shiplift::builder::{EventFilter, EventFilterType, EventsOptions};
-use slog::{Logger, Drain};
+use slog::{Drain, Logger};
 use std::ascii::AsciiExt;
 use std::os::unix::thread::JoinHandleExt;
 use std::thread;
@@ -49,7 +48,7 @@ use std::time::Duration;
 mod errors {
     error_chain! {
         links {
-            Dfwrs(::dfwrs::errors::Error, ::dfwrs::errors::ErrorKind);
+            Dfw(::dfw::errors::Error, ::dfw::errors::ErrorKind);
         }
 
         foreign_links {
@@ -86,12 +85,13 @@ fn load_config(matches: &ArgMatches) -> Result<DFW> {
     Ok(toml)
 }
 
-fn spawn_burst_monitor(burst_timeout: u64,
-                       s_trigger: Sender<()>,
-                       r_event: Receiver<()>,
-                       r_exit: Receiver<()>,
-                       logger: &Logger)
-                       -> thread::JoinHandle<()> {
+fn spawn_burst_monitor(
+    burst_timeout: u64,
+    s_trigger: Sender<()>,
+    r_event: Receiver<()>,
+    r_exit: Receiver<()>,
+    logger: &Logger,
+) -> thread::JoinHandle<()> {
     let logger = logger.new(o!("thread" => "burst_monitor"));
 
     #[derive(Debug)]
@@ -144,10 +144,11 @@ fn spawn_burst_monitor(burst_timeout: u64,
     })
 }
 
-fn spawn_event_monitor(docker_url: Option<String>,
-                       s_event: Sender<()>,
-                       logger: &Logger)
-                       -> thread::JoinHandle<()> {
+fn spawn_event_monitor(
+    docker_url: Option<String>,
+    s_event: Sender<()>,
+    logger: &Logger,
+) -> thread::JoinHandle<()> {
     let logger = logger.new(o!("thread" => "event_monitor"));
 
     thread::spawn(move || {
@@ -157,26 +158,24 @@ fn spawn_event_monitor(docker_url: Option<String>,
         };
         loop {
             trace!(logger, "Waiting for events");
-            for event in
-                docker
-                    .events(&EventsOptions::builder()
-                                 .filter(vec![EventFilter::Type(EventFilterType::Container)])
-                                 .build())
-                    .unwrap() {
+            for event in docker
+                .events(&EventsOptions::builder()
+                    .filter(vec![EventFilter::Type(EventFilterType::Container)])
+                    .build())
+                .unwrap()
+            {
                 trace!(logger, "Received event";
                        o!("event" => format!("{:?}", &event)));
                 match event.status {
-                    Some(ref status) => {
-                        match &**status {
-                            "create" | "destroy" | "start" | "restart" | "die" | "stop" => {
-                                trace!(logger, "Trigger channel about event";
+                    Some(ref status) => match &**status {
+                        "create" | "destroy" | "start" | "restart" | "die" | "stop" => {
+                            trace!(logger, "Trigger channel about event";
                                        o!("event" => format!("{:?}", event)));
-                                s_event.send(());
-                                break;
-                            }
-                            _ => continue,
+                            s_event.send(());
+                            break;
                         }
-                    }
+                        _ => continue,
+                    },
                     None => continue,
                 }
             }
@@ -191,78 +190,110 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
              "started_at" => format!("{}", time::now().rfc3339())));
 
     trace!(root_logger, "Parsing command line arguments");
-    let matches = App::new("dfwrs")
+    let matches = App::new("dfw")
         .version(crate_version!())
         .author(crate_authors!())
         .about("Docker Firewall Framework, in Rust")
-        .arg(Arg::with_name("config-file")
-                 .takes_value(true)
-                 .short("c")
-                 .long("config-file")
-                 .value_name("FILE")
-                 .help("Set the configuration file"))
-        .arg(Arg::with_name("config-path")
-                 .takes_value(true)
-                 .long("config-path")
-                 .value_name("PATH")
-                 .help("Set a path with multiple TOML configuration files"))
-        .group(ArgGroup::with_name("config")
-                   .args(&["config-file", "config-path"])
-                   .multiple(false)
-                   .required(true))
-        .arg(Arg::with_name("docker-url")
-                 .takes_value(true)
-                 .short("d")
-                 .long("docker-url")
-                 .value_name("URL")
-                 .help("Set the url to the Docker instance (e.g. unix:///tmp/docker.sock)"))
-        .arg(Arg::with_name("load-interval")
-                 .takes_value(true)
-                 .default_value("0")
-                 .short("i")
-                 .long("load-interval")
-                 .value_name("INTERVAL")
-                 .help("Interval between rule processing runs, in seconds (0 = disabled)"))
-        .arg(Arg::with_name("load-mode")
-                 .takes_value(true)
-                 .short("m")
-                 .long("load-mode")
-                 .possible_values(LoadMode::variants()
-                                      .iter()
-                                      .map(|s| s.to_ascii_lowercase())
-                                      .collect::<Vec<_>>()
-                                      .iter()
-                                      .map(|s| &**s)
-                                      .collect::<Vec<_>>()
-                                      .as_slice())
-                 .default_value("once")
-                 .help("Define if the config-files get loaded once, or before every run"))
-        .arg(Arg::with_name("burst-timeout")
-                 .takes_value(true)
-                 .default_value("500")
-                 .long("burst-timeout")
-                 .value_name("TIMEOUT")
-                 .help("Time to wait after a event was received before processing the rules, in \
-                        milliseconds"))
-        .arg(Arg::with_name("container-filter")
-                 .takes_value(true)
-                 .long("container-filter")
-                 .value_name("FILTER")
-                 .possible_values(&["all", "running"])
-                 .default_value("running")
-                 .help("Filter the containers to be included during processing"))
-        .arg(Arg::with_name("disable-event-monitoring")
-                 .takes_value(false)
-                 .long("disable-event-monitoring")
-                 .help("Disable Docker event monitoring"))
-        .arg(Arg::with_name("run-once")
-                 .takes_value(false)
-                 .long("run-once")
-                 .help("Process rules once, then exit."))
-        .arg(Arg::with_name("dry-run")
-                 .takes_value(false)
-                 .long("dry-run")
-                 .help("Don't touch iptables, just show what would be done"))
+        .arg(
+            Arg::with_name("config-file")
+                .takes_value(true)
+                .short("c")
+                .long("config-file")
+                .value_name("FILE")
+                .help("Set the configuration file"),
+        )
+        .arg(
+            Arg::with_name("config-path")
+                .takes_value(true)
+                .long("config-path")
+                .value_name("PATH")
+                .help("Set a path with multiple TOML configuration files"),
+        )
+        .group(
+            ArgGroup::with_name("config")
+                .args(&["config-file", "config-path"])
+                .multiple(false)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("docker-url")
+                .takes_value(true)
+                .short("d")
+                .long("docker-url")
+                .value_name("URL")
+                .help(
+                    "Set the url to the Docker instance (e.g. unix:///tmp/docker.sock)",
+                ),
+        )
+        .arg(
+            Arg::with_name("load-interval")
+                .takes_value(true)
+                .default_value("0")
+                .short("i")
+                .long("load-interval")
+                .value_name("INTERVAL")
+                .help(
+                    "Interval between rule processing runs, in seconds (0 = disabled)",
+                ),
+        )
+        .arg(
+            Arg::with_name("load-mode")
+                .takes_value(true)
+                .short("m")
+                .long("load-mode")
+                .possible_values(
+                    LoadMode::variants()
+                        .iter()
+                        .map(|s| s.to_ascii_lowercase())
+                        .collect::<Vec<_>>()
+                        .iter()
+                        .map(|s| &**s)
+                        .collect::<Vec<_>>()
+                        .as_slice(),
+                )
+                .default_value("once")
+                .help(
+                    "Define if the config-files get loaded once, or before every run",
+                ),
+        )
+        .arg(
+            Arg::with_name("burst-timeout")
+                .takes_value(true)
+                .default_value("500")
+                .long("burst-timeout")
+                .value_name("TIMEOUT")
+                .help(
+                    "Time to wait after a event was received before processing the rules, in \
+                     milliseconds",
+                ),
+        )
+        .arg(
+            Arg::with_name("container-filter")
+                .takes_value(true)
+                .long("container-filter")
+                .value_name("FILTER")
+                .possible_values(&["all", "running"])
+                .default_value("running")
+                .help("Filter the containers to be included during processing"),
+        )
+        .arg(
+            Arg::with_name("disable-event-monitoring")
+                .takes_value(false)
+                .long("disable-event-monitoring")
+                .help("Disable Docker event monitoring"),
+        )
+        .arg(
+            Arg::with_name("run-once")
+                .takes_value(false)
+                .long("run-once")
+                .help("Process rules once, then exit."),
+        )
+        .arg(
+            Arg::with_name("dry-run")
+                .takes_value(false)
+                .long("dry-run")
+                .help("Don't touch iptables, just show what would be done"),
+        )
         .get_matches();
     debug!(root_logger, "Parsed command line arguments: {:#?}", matches);
 
@@ -302,7 +333,9 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
         Some("running") => ContainerFilter::Running,
         Some(_) | None => bail!("wrong or no container filter specified"),
     };
-    let processing_options = ProcessingOptions { container_filter: container_filter };
+    let processing_options = ProcessingOptions {
+        container_filter: container_filter,
+    };
 
     let monitor_events = !matches.is_present("disable-event-monitoring");
     trace!(root_logger, "Monitoring events: {}", monitor_events;
@@ -321,12 +354,15 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
     debug!(root_logger, "Loaded config: {:#?}", toml);
 
     let (ipt4_dry_run, ipt6_dry_run) = (IPTablesDummy, IPTablesDummy);
-    let (ipt4_ipt, ipt6_ipt) = (IPTablesProxy(ipt::new(false)?), IPTablesProxy(ipt::new(true)?));
+    let (ipt4_ipt, ipt6_ipt) = (
+        IPTablesProxy(ipt::new(false)?),
+        IPTablesProxy(ipt::new(true)?),
+    );
     let ipt4: &IPTables = if dry_run { &ipt4_dry_run } else { &ipt4_ipt };
     let ipt6: &IPTables = if dry_run { &ipt6_dry_run } else { &ipt6_ipt };
 
-    let process: Box<Fn() -> Result<()>> = match value_t!(matches.value_of("load-mode"),
-                                                          LoadMode)? {
+    let process: Box<Fn() -> Result<()>> = match value_t!(matches.value_of("load-mode"), LoadMode)?
+    {
         LoadMode::Once => {
             trace!(root_logger, "Creating process closure according to load mode";
                    o!("load_mode" => "once"));
@@ -350,9 +386,11 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
             })
         }
     };
-    trace!(root_logger,
-           "Load mode: {:?}",
-           matches.value_of("load-mode"));
+    trace!(
+        root_logger,
+        "Load mode: {:?}",
+        matches.value_of("load-mode")
+    );
 
     info!(root_logger, "Application started";
           "version" => crate_version!(),
@@ -428,7 +466,11 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
             }
         });
 
-        (r_trigger, terminate_threads, vec![burst_handle, event_handle])
+        (
+            r_trigger,
+            terminate_threads,
+            vec![burst_handle, event_handle],
+        )
     } else {
         trace!(root_logger, "Creating dummy channel";
                o!("monitor_events" => monitor_events));
@@ -498,10 +540,7 @@ fn main() {
     let root_logger = Logger::root(drain, o!());
 
     if let Err(ref e) = run(&signal, &root_logger) {
-        // Trait that holds `display`
-        use error_chain::ChainedError;
-
         error!(root_logger, "Encountered error";
-               o!("error" => format!("{}", e.display())));
+               o!("error" => format!("{}", e)));
     }
 }

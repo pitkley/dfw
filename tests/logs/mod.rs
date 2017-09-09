@@ -107,51 +107,54 @@ impl FromStr for LogLine {
         let (command, expanded) = expand_command(s[1]);
 
         Ok(LogLine {
-               function: s[0].to_owned(),
-               command: command,
-               regex: expanded,
-               eval: eval,
-           })
+            function: s[0].to_owned(),
+            command: command,
+            regex: expanded,
+            eval: eval,
+        })
     }
 }
 
 fn expand_command(command: &str) -> (String, bool) {
     let mut expanded = false;
-    (command
-         .split(' ')
-         .into_iter()
-         .map(|e| if !RE.is_match(e) && RE.find(e).is_none() {
-                  // Segment of command is not in the form `$group_name=pattern`,
-                  // return as is.
-                  e.to_owned()
-              } else {
-                  let c = RE.captures(e).unwrap();
+    (
+        command
+            .split(' ')
+            .into_iter()
+            .map(|e| if !RE.is_match(e) && RE.find(e).is_none() {
+                // Segment of command is not in the form `$group_name=pattern`,
+                // return as is.
+                e.to_owned()
+            } else {
+                let c = RE.captures(e).unwrap();
 
-                  // Since the regex matched, both the complete match and the
-                  // named groups can't be none, so unwrapping is safe.
-                  let c0 = c.get(0).unwrap();
-                  let (group_name, pattern) = (c.name("group_name").unwrap().as_str(),
-                                               c.name("pattern").unwrap().as_str());
+                // Since the regex matched, both the complete match and the
+                // named groups can't be none, so unwrapping is safe.
+                let c0 = c.get(0).unwrap();
+                let (group_name, pattern) = (
+                    c.name("group_name").unwrap().as_str(),
+                    c.name("pattern").unwrap().as_str(),
+                );
 
-                  // Check if the pattern exists, otherwise leave the segment
-                  // unchanged.
-                  if let Some(pattern) = PATTERNS.get(pattern) {
-                      expanded = true;
-                      // Match could be in the middle of a string, keep the parts before and after.
-                      let (before, after) = (&e[..c0.start()], &e[c0.end()..]);
-                      format!(r"{}(?P<{}>{}){}", before, group_name, pattern, after)
-                  } else {
-                      e.to_owned()
-                  }
-              })
-         .collect::<Vec<_>>()
-         .join(" ")
-         .to_owned(),
-     expanded)
+                // Check if the pattern exists, otherwise leave the segment
+                // unchanged.
+                if let Some(pattern) = PATTERNS.get(pattern) {
+                    expanded = true;
+                    // Match could be in the middle of a string, keep the parts before and after.
+                    let (before, after) = (&e[..c0.start()], &e[c0.end()..]);
+                    format!(r"{}(?P<{}>{}){}", before, group_name, pattern, after)
+                } else {
+                    e.to_owned()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" ")
+            .to_owned(),
+        expanded,
+    )
 }
 
 pub fn load_log(log_path: &str) -> Vec<LogLine> {
-
     let file = BufReader::new(File::open(log_path).unwrap());
     let mut v: Vec<LogLine> = Vec::new();
 

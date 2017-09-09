@@ -1,27 +1,27 @@
 [package]
-name = "dfwrs"
+name = "dfw"
 version = "0.3.0-pre"
 authors = ["Pit Kleyersburg <pitkley@googlemail.com>"]
 license = "MIT/Apache-2.0"
 
 [dependencies]
 chan = "~0.1.19"
-chan-signal = "~0.2.0"
-clap = "~2.23.3"
-derive_builder = { version = "~0.4.2", features = ["private_fields"] }
-error-chain = "~0.10.0"
+chan-signal = "~0.3.1"
+clap = "~2.26.0"
+derive_builder = "~0.5.0"
+error-chain = "~0.11.0"
 glob = "~0.2.11"
 iptables = "~0.2.0"
 libc = "~0.2.21"
 serde = "~1.0.1"
 serde_derive = "~1.0.1"
-shiplift = { git = "https://github.com/softprops/shiplift", rev = "e57f0932741003ded8913de2385d5ce6672e645e" }
+shiplift = "~0.3.2"
 slog = "~2.0.2"
-slog-async = "~2.0.1"
-slog-term = "~2.0.0-4.0"
+slog-async = "~2.1.0"
+slog-term = "~2.2.0"
 time = "~0.1.37"
 toml = "~0.4.0"
-url = "~1.4.0"
+url = "~1.5.1"
 
 [dev-dependencies]
 eval = "~0.4.0"
@@ -30,8 +30,8 @@ maplit = "~0.1.4"
 regex = "~0.2.1"
 
 [[bin]]
-name = "dfwrs"
-path = "src/bin/dfwrs.rs"
+name = "dfw"
+path = "src/bin/dfw.rs"
 doc = false
 
 [features]

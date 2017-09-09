@@ -202,8 +202,10 @@ fn logline_from_string_with_eval() {
 fn logline_from_string_with_expansions() {
     let logline: LogLine = "function\t$name=ip".parse().unwrap();
     assert_eq!(logline.function, "function");
-    assert_eq!(logline.command,
-               r"(?P<name>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})");
+    assert_eq!(
+        logline.command,
+        r"(?P<name>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"
+    );
     assert_eq!(logline.regex, true);
     assert_eq!(logline.eval, None);
 

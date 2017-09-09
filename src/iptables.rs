@@ -154,7 +154,7 @@ impl IPTables for IPTablesProxy {
 /// [`IPTables`](trait.IPTables.html) implementation which does not interact with the iptables
 /// binary and does not modify the rules active on the host.
 ///
-/// This is currently used when running `dfwrs --dry-run`.
+/// This is currently used when running `dfw --dry-run`.
 pub struct IPTablesDummy;
 
 macro_rules! dummy {
@@ -198,10 +198,10 @@ impl IPTables for IPTablesDummy {
 
     fn execute(&self, table: &str, command: &str) -> Result<Output> {
         Ok(Output {
-               status: ExitStatus::from_raw(9),
-               stdout: vec![],
-               stderr: vec![],
-           })
+            status: ExitStatus::from_raw(9),
+            stdout: vec![],
+            stderr: vec![],
+        })
     }
 }
 
@@ -216,7 +216,9 @@ pub struct IPTablesLogger {
 impl IPTablesLogger {
     /// Create a new instance of `IPTablesLogger`
     pub fn new() -> IPTablesLogger {
-        IPTablesLogger { logs: RefCell::new(Vec::new()) }
+        IPTablesLogger {
+            logs: RefCell::new(Vec::new()),
+        }
     }
 
     fn log(&self, function: &str, params: &[&str]) {
@@ -273,9 +275,9 @@ impl IPTables for IPTablesLogger {
     fn execute(&self, table: &str, command: &str) -> Result<Output> {
         self.log("execute", &[table, command]);
         Ok(Output {
-               status: ExitStatus::from_raw(9),
-               stdout: vec![],
-               stderr: vec![],
-           })
+            status: ExitStatus::from_raw(9),
+            stdout: vec![],
+            stderr: vec![],
+        })
     }
 }

@@ -56,7 +56,7 @@
 //! expose_port = { host_port = 8080, container_port = 80, family = "tcp" }
 //! ```
 
-use serde::de::{self, Deserialize, Deserializer, DeserializeSeed};
+use serde::de::{self, Deserialize, DeserializeSeed, Deserializer};
 use std::collections::HashMap as Map;
 use std::fmt;
 use std::marker::PhantomData;
@@ -64,7 +64,7 @@ use std::str::FromStr;
 
 const DEFAULT_PROTOCOL: &'static str = "tcp";
 
-/// `DFW` is the parent type defining the complete configuration used by DFWRS to build up the
+/// `DFW` is the parent type defining the complete configuration used by DFW to build up the
 /// firewall rules.
 ///
 /// Every section is optional.
@@ -87,7 +87,7 @@ pub struct DFW {
     pub container_dnat: Option<ContainerDNAT>,
 }
 
-/// The default configuration section, used by DFWRS for rule processing.
+/// The default configuration section, used by DFW for rule processing.
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct Defaults {
@@ -366,7 +366,7 @@ pub struct ExposePort {
     pub host_port: u16,
 
     /// Port the `host_port` should map to into the container.
-    #[builder(field(public), default="self.default_container_port()?")]
+    #[builder(field(public), default = "self.default_container_port()?")]
     pub container_port: Option<u16>,
 
     /// Family of the exposed port.
@@ -398,7 +398,7 @@ impl FromStr for ExposePort {
     /// # Example
     ///
     /// ```
-    /// # use dfwrs::types::ExposePort;
+    /// # use dfw::types::ExposePort;
     /// let port: ExposePort = "80".parse().unwrap();
     /// assert_eq!(port.host_port, 80);
     /// assert_eq!(port.container_port, None);
@@ -406,7 +406,7 @@ impl FromStr for ExposePort {
     /// ```
     ///
     /// ```
-    /// # use dfwrs::types::ExposePort;
+    /// # use dfw::types::ExposePort;
     /// let port: ExposePort = "53/udp".parse().unwrap();
     /// assert_eq!(port.host_port, 53);
     /// assert_eq!(port.container_port, None);
@@ -415,19 +415,15 @@ impl FromStr for ExposePort {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let split: Vec<&str> = s.split('/').collect();
         Ok(match split.len() {
-               1 => {
-                   ExposePortBuilder::default()
-                       .host_port(split[0].parse().map_err(|e| format!("{}", e))?)
-                       .build()?
-               }
-               2 => {
-                   ExposePortBuilder::default()
-                       .host_port(split[0].parse().map_err(|e| format!("{}", e))?)
-                       .family(split[1].to_owned())
-                       .build()?
-               }
-               _ => return Err(format!("port string has invalid format '{}'", s)),
-           })
+            1 => ExposePortBuilder::default()
+                .host_port(split[0].parse().map_err(|e| format!("{}", e))?)
+                .build()?,
+            2 => ExposePortBuilder::default()
+                .host_port(split[0].parse().map_err(|e| format!("{}", e))?)
+                .family(split[1].to_owned())
+                .build()?,
+            _ => return Err(format!("port string has invalid format '{}'", s)),
+        })
     }
 }
 
@@ -520,7 +516,8 @@ fn default_expose_port_family() -> String {
 struct StringOrStruct<T>(PhantomData<T>);
 
 impl<'de, T> de::Visitor<'de> for StringOrStruct<T>
-    where T: Deserialize<'de> + FromStr<Err = String>
+where
+    T: Deserialize<'de> + FromStr<Err = String>,
 {
     type Value = T;
 
@@ -529,19 +526,22 @@ impl<'de, T> de::Visitor<'de> for StringOrStruct<T>
     }
 
     fn visit_i64<E>(self, value: i64) -> Result<T, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         FromStr::from_str(&value.to_string()).map_err(de::Error::custom)
     }
 
     fn visit_str<E>(self, value: &str) -> Result<T, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         FromStr::from_str(value).map_err(de::Error::custom)
     }
 
     fn visit_map<M>(self, visitor: M) -> Result<T, M::Error>
-        where M: de::MapAccess<'de>
+    where
+        M: de::MapAccess<'de>,
     {
         Deserialize::deserialize(de::value::MapAccessDeserializer::new(visitor))
     }
@@ -550,12 +550,14 @@ impl<'de, T> de::Visitor<'de> for StringOrStruct<T>
 // Thanks to @dtolnay for the support:
 //   https://github.com/serde-rs/serde/issues/901#issuecomment-297070279
 impl<'de, T> DeserializeSeed<'de> for StringOrStruct<T>
-    where T: Deserialize<'de> + FromStr<Err = String>
+where
+    T: Deserialize<'de> + FromStr<Err = String>,
 {
     type Value = T;
 
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-        where D: Deserializer<'de>
+    where
+        D: Deserializer<'de>,
     {
         deserializer.deserialize_any(self)
     }
@@ -563,8 +565,9 @@ impl<'de, T> DeserializeSeed<'de> for StringOrStruct<T>
 
 #[allow(dead_code)]
 fn string_or_struct<'de, T, D>(deserializer: D) -> Result<T, D::Error>
-    where T: Deserialize<'de> + FromStr<Err = String>,
-          D: Deserializer<'de>
+where
+    T: Deserialize<'de> + FromStr<Err = String>,
+    D: Deserializer<'de>,
 {
     deserializer.deserialize_any(StringOrStruct(PhantomData))
 }
@@ -572,17 +575,21 @@ fn string_or_struct<'de, T, D>(deserializer: D) -> Result<T, D::Error>
 struct SingleOrSeqStringOrStruct<T>(PhantomData<T>);
 
 impl<'de, T> de::Visitor<'de> for SingleOrSeqStringOrStruct<T>
-    where T: Deserialize<'de> + FromStr<Err = String>
+where
+    T: Deserialize<'de> + FromStr<Err = String>,
 {
     type Value = Vec<T>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("sequence of integers, strings or maps \
-                             or a single integer, string or map")
+        formatter.write_str(
+            "sequence of integers, strings or maps \
+             or a single integer, string or map",
+        )
     }
 
     fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         FromStr::from_str(&value.to_string())
             .map(|e| vec![e])
@@ -590,7 +597,8 @@ impl<'de, T> de::Visitor<'de> for SingleOrSeqStringOrStruct<T>
     }
 
     fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-        where E: de::Error
+    where
+        E: de::Error,
     {
         FromStr::from_str(value)
             .map(|e| vec![e])
@@ -598,13 +606,15 @@ impl<'de, T> de::Visitor<'de> for SingleOrSeqStringOrStruct<T>
     }
 
     fn visit_map<M>(self, visitor: M) -> Result<Self::Value, M::Error>
-        where M: de::MapAccess<'de>
+    where
+        M: de::MapAccess<'de>,
     {
         Deserialize::deserialize(de::value::MapAccessDeserializer::new(visitor)).map(|e| vec![e])
     }
 
     fn visit_seq<S>(self, mut seq: S) -> Result<Self::Value, S::Error>
-        where S: de::SeqAccess<'de>
+    where
+        S: de::SeqAccess<'de>,
     {
         let mut vec = Vec::new();
         while let Some(element) = seq.next_element_seed(StringOrStruct(PhantomData))? {
@@ -615,14 +625,16 @@ impl<'de, T> de::Visitor<'de> for SingleOrSeqStringOrStruct<T>
 }
 
 fn single_or_seq_string_or_struct<'de, T, D>(deserializer: D) -> Result<Vec<T>, D::Error>
-    where T: Deserialize<'de> + FromStr<Err = String>,
-          D: Deserializer<'de>
+where
+    T: Deserialize<'de> + FromStr<Err = String>,
+    D: Deserializer<'de>,
 {
     deserializer.deserialize_any(SingleOrSeqStringOrStruct(PhantomData))
 }
 
 fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
-    where D: Deserializer<'de>
+where
+    D: Deserializer<'de>,
 {
     struct StringOrSeqString(PhantomData<Vec<String>>);
 
@@ -634,13 +646,15 @@ fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error
         }
 
         fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-            where E: de::Error
+        where
+            E: de::Error,
         {
             Ok(vec![value.to_owned()])
         }
 
         fn visit_seq<S>(self, visitor: S) -> Result<Self::Value, S::Error>
-            where S: de::SeqAccess<'de>
+        where
+            S: de::SeqAccess<'de>,
         {
             Deserialize::deserialize(de::value::SeqAccessDeserializer::new(visitor))
         }
@@ -650,7 +664,8 @@ fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error
 }
 
 fn option_string_or_seq_string<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
-    where D: Deserializer<'de>
+where
+    D: Deserializer<'de>,
 {
     string_or_seq_string(deserializer).map(Some)
 }
