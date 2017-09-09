@@ -152,6 +152,7 @@
 #![deny(missing_docs)]
 
 // Import external libraries
+
 #[macro_use]
 extern crate derive_builder;
 #[macro_use]
@@ -159,9 +160,9 @@ extern crate error_chain;
 extern crate glob;
 extern crate iptables as ipt;
 extern crate libc;
+extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde;
 extern crate shiplift;
 #[macro_use]
 extern crate slog;

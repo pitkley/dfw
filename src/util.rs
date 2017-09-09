@@ -19,7 +19,8 @@ use toml;
 
 /// Load single TOML-file from path and deserialize it into type `T`.
 pub fn load_file<T>(file: &str) -> Result<T>
-    where T: DeserializeOwned
+where
+    T: DeserializeOwned,
 {
     let mut contents = String::new();
     let mut file = BufReader::new(File::open(file)?);
@@ -30,7 +31,8 @@ pub fn load_file<T>(file: &str) -> Result<T>
 /// Load all TOML-files from a path, concatenate their contents and deserialize the result into
 /// type `T`.
 pub fn load_path<T>(path: &str) -> Result<T>
-    where T: DeserializeOwned
+where
+    T: DeserializeOwned,
 {
     let mut contents = String::new();
     for entry in glob(&format!("{}/*.toml", path)).expect("Failed to read glob pattern") {

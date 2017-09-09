@@ -44,8 +44,9 @@ rustfmt:
     stage: build
     tags:
         - docker
-    image: "${CI_REGISTRY_IMAGE}/build:stable"
+    image: "${CI_REGISTRY_IMAGE}/build:nightly"
     script:
+        - cargo install rustfmt-nightly
         - cargo fmt -- --write-mode diff
 
 build dynamic binary on stable:

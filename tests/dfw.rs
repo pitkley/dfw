@@ -24,8 +24,9 @@ use std::panic;
 use std::panic::{AssertUnwindSafe, UnwindSafe};
 use std::process::Command;
 
-static PROCESSING_OPTIONS: ProcessingOptions =
-    ProcessingOptions { container_filter: ContainerFilter::Running };
+static PROCESSING_OPTIONS: ProcessingOptions = ProcessingOptions {
+    container_filter: ContainerFilter::Running,
+};
 
 fn logger() -> Logger {
     struct NoopDrain;
@@ -44,7 +45,8 @@ fn logger() -> Logger {
 }
 
 fn with_compose_environment<F: FnOnce() -> ()>(compose_path: &str, project_name: &str, body: F)
-    where F: UnwindSafe
+where
+    F: UnwindSafe,
 {
     // Create and start environment
     let mut child = Command::new("docker-compose")
@@ -105,80 +107,85 @@ fn dc_template(num: &str) {
     // not `UnwindSafe`.
     let docker = AssertUnwindSafe(docker);
 
-    with_compose_environment(&resource(&format!("docker/{}/docker-compose.yml", num)).unwrap(),
-                             &format!("dfw_test_{}", num),
-                             || {
-        let process = ProcessDFW::new(&docker, &toml, &*ipt4, &*ipt6, &PROCESSING_OPTIONS, &logger)
-            .unwrap();
+    with_compose_environment(
+        &resource(&format!("docker/{}/docker-compose.yml", num)).unwrap(),
+        &format!("dfw_test_{}", num),
+        || {
+            let process =
+                ProcessDFW::new(&docker, &toml, &*ipt4, &*ipt6, &PROCESSING_OPTIONS, &logger)
+                    .unwrap();
 
-        // Test if container is available
-        let containers = docker.containers();
-        let container_name = format!("dfwtest{}_a_1", num);
-        let container = containers.get(&container_name);
-        let inspect = container.inspect();
-        assert!(inspect.is_ok());
-        let inspect = inspect.unwrap();
-        assert_eq!(inspect.Id.is_empty(), false);
+            // Test if container is available
+            let containers = docker.containers();
+            let container_name = format!("dfwtest{}_a_1", num);
+            let container = containers.get(&container_name);
+            let inspect = container.inspect();
+            assert!(inspect.is_ok());
+            let inspect = inspect.unwrap();
+            assert_eq!(inspect.Id.is_empty(), false);
 
-        // Run processing, verify that it succeeded
-        let result = process.process();
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), ());
+            // Run processing, verify that it succeeded
+            let result = process.process();
+            assert!(result.is_ok());
+            assert_eq!(result.unwrap(), ());
 
-        // Verify logs for iptables (IPv4)
-        let logs4 = ipt4.logs()
-            .iter()
-            .map(|&(ref f, ref c)| {
-                     LogLine {
-                         function: f.to_owned(),
-                         command: c.to_owned(),
-                         regex: false,
-                         eval: None,
-                     }
-                 })
-            .collect::<Vec<_>>();
-        let expected4 =
-            load_log(&resource(&format!("docker/{}/expected-iptables-v4-logs.txt", num)).unwrap());
+            // Verify logs for iptables (IPv4)
+            let logs4 = ipt4.logs()
+                .iter()
+                .map(|&(ref f, ref c)| {
+                    LogLine {
+                        function: f.to_owned(),
+                        command: c.to_owned(),
+                        regex: false,
+                        eval: None,
+                    }
+                })
+                .collect::<Vec<_>>();
+            let expected4 = load_log(&resource(
+                &format!("docker/{}/expected-iptables-v4-logs.txt", num),
+            ).unwrap());
 
-        // If the logs don't match, include correctly formatted output for comparison.
-        if logs4 != expected4 {
-            println!("IPv4 logs didn't match");
-            println!("----------------------");
-            for line in &logs4 {
-                println!("{}\t{}", line.function, line.command);
+            // If the logs don't match, include correctly formatted output for comparison.
+            if logs4 != expected4 {
+                println!("IPv4 logs didn't match");
+                println!("----------------------");
+                for line in &logs4 {
+                    println!("{}\t{}", line.function, line.command);
+                }
+                println!();
             }
-            println!();
-        }
 
-        assert_eq!(logs4, expected4);
+            assert_eq!(logs4, expected4);
 
-        // Verify logs for ip6tables (IPv6)
-        let logs6 = ipt6.logs()
-            .iter()
-            .map(|&(ref f, ref c)| {
-                     LogLine {
-                         function: f.to_owned(),
-                         command: c.to_owned(),
-                         regex: false,
-                         eval: None,
-                     }
-                 })
-            .collect::<Vec<_>>();
-        let expected6 =
-            load_log(&resource(&format!("docker/{}/expected-iptables-v6-logs.txt", num)).unwrap());
+            // Verify logs for ip6tables (IPv6)
+            let logs6 = ipt6.logs()
+                .iter()
+                .map(|&(ref f, ref c)| {
+                    LogLine {
+                        function: f.to_owned(),
+                        command: c.to_owned(),
+                        regex: false,
+                        eval: None,
+                    }
+                })
+                .collect::<Vec<_>>();
+            let expected6 = load_log(&resource(
+                &format!("docker/{}/expected-iptables-v6-logs.txt", num),
+            ).unwrap());
 
-        // If the logs don't match, include correctly formatted output for comparison.
-        if logs6 != expected6 {
-            println!("IPv6 logs didn't match");
-            println!("----------------------");
-            for line in &logs6 {
-                println!("{}\t{}", line.function, line.command);
+            // If the logs don't match, include correctly formatted output for comparison.
+            if logs6 != expected6 {
+                println!("IPv6 logs didn't match");
+                println!("----------------------");
+                for line in &logs6 {
+                    println!("{}\t{}", line.function, line.command);
+                }
+                println!();
             }
-            println!();
-        }
 
-        assert_eq!(logs6, expected6);
-    });
+            assert_eq!(logs6, expected6);
+        },
+    );
 }
 
 #[test]

@@ -30,30 +30,31 @@ fn log_all() {
 
     let logs = ipt.logs();
 
-    let expected = vec![("get_policy", "table chain"),
-                        ("set_policy", "table chain policy"),
-                        ("execute", "table command"),
-                        ("exists", "table chain rule"),
-                        ("chain_exists", "table chain"),
-                        ("insert", "table chain rule 0"),
-                        ("insert_unique", "table chain rule 0"),
-                        ("replace", "table chain rule 0"),
-                        ("append", "table chain rule"),
-                        ("append_unique", "table chain rule"),
-                        ("append_replace", "table chain rule"),
-                        ("delete", "table chain rule"),
-                        ("delete_all", "table chain rule"),
-                        ("list", "table chain"),
-                        ("list_table", "table"),
-                        ("list_chains", "table"),
-                        ("new_chain", "table chain"),
-                        ("flush_chain", "table chain"),
-                        ("rename_chain", "table old_chain new_chain"),
-                        ("delete_chain", "table chain"),
-                        ("flush_table", "table")]
-            .into_iter()
-            .map(|(a, b)| (a.to_owned(), b.to_owned()))
-            .collect::<Vec<_>>();
+    let expected = vec![
+        ("get_policy", "table chain"),
+        ("set_policy", "table chain policy"),
+        ("execute", "table command"),
+        ("exists", "table chain rule"),
+        ("chain_exists", "table chain"),
+        ("insert", "table chain rule 0"),
+        ("insert_unique", "table chain rule 0"),
+        ("replace", "table chain rule 0"),
+        ("append", "table chain rule"),
+        ("append_unique", "table chain rule"),
+        ("append_replace", "table chain rule"),
+        ("delete", "table chain rule"),
+        ("delete_all", "table chain rule"),
+        ("list", "table chain"),
+        ("list_table", "table"),
+        ("list_chains", "table"),
+        ("new_chain", "table chain"),
+        ("flush_chain", "table chain"),
+        ("rename_chain", "table old_chain new_chain"),
+        ("delete_chain", "table chain"),
+        ("flush_table", "table"),
+    ].into_iter()
+        .map(|(a, b)| (a.to_owned(), b.to_owned()))
+        .collect::<Vec<_>>();
 
     assert_eq!(logs, expected);
 }
