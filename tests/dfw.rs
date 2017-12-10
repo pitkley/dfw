@@ -141,9 +141,10 @@ fn dc_template(num: &str) {
                     }
                 })
                 .collect::<Vec<_>>();
-            let expected4 = load_log(&resource(
-                &format!("docker/{}/expected-iptables-v4-logs.txt", num),
-            ).unwrap());
+            let expected4 = load_log(&resource(&format!(
+                "docker/{}/expected-iptables-v4-logs.txt",
+                num
+            )).unwrap());
 
             // If the logs don't match, include correctly formatted output for comparison.
             if logs4 != expected4 {
@@ -169,9 +170,10 @@ fn dc_template(num: &str) {
                     }
                 })
                 .collect::<Vec<_>>();
-            let expected6 = load_log(&resource(
-                &format!("docker/{}/expected-iptables-v6-logs.txt", num),
-            ).unwrap());
+            let expected6 = load_log(&resource(&format!(
+                "docker/{}/expected-iptables-v6-logs.txt",
+                num
+            )).unwrap());
 
             // If the logs don't match, include correctly formatted output for comparison.
             if logs6 != expected6 {
