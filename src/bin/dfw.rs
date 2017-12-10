@@ -221,9 +221,7 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                 .short("d")
                 .long("docker-url")
                 .value_name("URL")
-                .help(
-                    "Set the url to the Docker instance (e.g. unix:///tmp/docker.sock)",
-                ),
+                .help("Set the url to the Docker instance (e.g. unix:///tmp/docker.sock)"),
         )
         .arg(
             Arg::with_name("load-interval")
@@ -232,9 +230,7 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                 .short("i")
                 .long("load-interval")
                 .value_name("INTERVAL")
-                .help(
-                    "Interval between rule processing runs, in seconds (0 = disabled)",
-                ),
+                .help("Interval between rule processing runs, in seconds (0 = disabled)"),
         )
         .arg(
             Arg::with_name("load-mode")
@@ -252,9 +248,7 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                         .as_slice(),
                 )
                 .default_value("once")
-                .help(
-                    "Define if the config-files get loaded once, or before every run",
-                ),
+                .help("Define if the config-files get loaded once, or before every run"),
         )
         .arg(
             Arg::with_name("burst-timeout")
