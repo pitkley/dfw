@@ -5,16 +5,10 @@ stages:
     - test
     - package
 
-cache:
-    key: "$CI_JOB_NAME"
-    paths:
-        - target/
-
 .prepare-rust-image: &prepare-rust-image
     stage: prepare
     tags:
         - docker-available
-        - local
     script:
         - JOB_NAME=( $CI_JOB_NAME )
         - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
@@ -30,7 +24,6 @@ prepare rust image nightly: *prepare-rust-image
     stage: push
     tags:
         - docker-available
-        - local
     script:
         - JOB_NAME=( $CI_JOB_NAME )
         - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
@@ -56,10 +49,6 @@ build dynamic binary on stable:
     image: "${CI_REGISTRY_IMAGE}/build:stable"
     script:
         - cargo build --verbose
-    cache:
-        key: "dynamic binary on stable"
-        paths:
-            - target/
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
@@ -73,10 +62,6 @@ build dynamic binary on beta:
     image: "${CI_REGISTRY_IMAGE}/build:beta"
     script:
         - cargo build --verbose
-    cache:
-        key: "dynamic binary on beta"
-        paths:
-            - target/
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
@@ -90,10 +75,6 @@ build dynamic binary on nightly:
     image: "${CI_REGISTRY_IMAGE}/build:nightly"
     script:
         - cargo build --verbose
-    cache:
-        key: "dynamic binary on nightly"
-        paths:
-            - target/
     allow_failure: true
     artifacts:
         name: "$CI_JOB_NAME"
@@ -105,14 +86,9 @@ build static binary:
     stage: build
     tags:
         - rust-cross
-        - local
     script:
         - cross build --target x86_64-unknown-linux-musl --release
         - cp target/x86_64-unknown-linux-musl/release/dfw dfw
-    cache:
-        key: "static binary"
-        paths:
-            - target/
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
@@ -128,10 +104,6 @@ test dynamic binary on stable:
     dependencies: []
     script:
         - cargo test -- --nocapture
-    cache:
-        key: "dynamic binary on stable"
-        paths:
-            - target/
 
 test dynamic binary on beta:
     stage: test
@@ -141,10 +113,6 @@ test dynamic binary on beta:
     dependencies: []
     script:
         - cargo test -- --nocapture
-    cache:
-        key: "dynamic binary on beta"
-        paths:
-            - target/
 
 test dynamic binary on nightly:
     stage: test
@@ -154,24 +122,15 @@ test dynamic binary on nightly:
     dependencies: []
     script:
         - cargo test -- --nocapture
-    cache:
-        key: "dynamic binary on nightly"
-        paths:
-            - target/
     allow_failure: true
 
 test static binary:
     stage: test
     tags:
         - rust-cross
-        - local
     dependencies: []
     script:
         - cross test --target x86_64-unknown-linux-musl -- --nocapture
-    cache:
-        key: "static binary"
-        paths:
-            - target/
 
 .test-docker-tests: &test-docker-tests
     stage: test
@@ -202,10 +161,6 @@ test static binary:
         - RUST_TEST_THREADS=1 cargo test --all-features -j1 -- --nocapture
     after_script:
         - docker stop "dind-runner-${CI_JOB_ID}"
-    cache:
-        key: "test on docker"
-        paths:
-            - target/
 
 # API from 1.12.6 and below is not compatible.
 test on docker 1.13.0: *test-docker-tests
@@ -218,12 +173,15 @@ test on docker 17.05.0-ce: *test-docker-tests
 test on docker 17.06.0-ce: *test-docker-tests
 test on docker 17.06.1-ce: *test-docker-tests
 test on docker 17.07.0-ce: *test-docker-tests
+test on docker 17.09.0-ce: *test-docker-tests
+test on docker 17.09.1-ce: *test-docker-tests
+test on docker 17.10.0-ce: *test-docker-tests
+test on docker 17.11.0-ce: *test-docker-tests
 
 package image for feature-branch:
     stage: package
     tags:
         - docker-available
-        - local
     dependencies:
         - build static binary
     only:
@@ -239,7 +197,6 @@ package and push image for tags:
     stage: package
     tags:
         - docker-available
-        - local
     dependencies:
         - build static binary
     only:
@@ -253,7 +210,6 @@ package and push image on develop patch:
     stage: package
     tags:
         - docker-available
-        - local
     dependencies:
         - build static binary
     only:
@@ -267,7 +223,6 @@ package and push image on develop minor:
     stage: package
     tags:
         - docker-available
-        - local
     dependencies:
         - build static binary
     only:
@@ -281,7 +236,6 @@ package and push image on master:
     stage: package
     tags:
         - docker-available
-        - local
     dependencies:
         - build static binary
     only:
