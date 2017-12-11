@@ -132,13 +132,11 @@ fn dc_template(num: &str) {
             // Verify logs for iptables (IPv4)
             let logs4 = ipt4.logs()
                 .iter()
-                .map(|&(ref f, ref c)| {
-                    LogLine {
-                        function: f.to_owned(),
-                        command: c.to_owned(),
-                        regex: false,
-                        eval: None,
-                    }
+                .map(|&(ref f, ref c)| LogLine {
+                    function: f.to_owned(),
+                    command: c.to_owned(),
+                    regex: false,
+                    eval: None,
                 })
                 .collect::<Vec<_>>();
             let expected4 = load_log(&resource(&format!(
@@ -161,13 +159,11 @@ fn dc_template(num: &str) {
             // Verify logs for ip6tables (IPv6)
             let logs6 = ipt6.logs()
                 .iter()
-                .map(|&(ref f, ref c)| {
-                    LogLine {
-                        function: f.to_owned(),
-                        command: c.to_owned(),
-                        regex: false,
-                        eval: None,
-                    }
+                .map(|&(ref f, ref c)| LogLine {
+                    function: f.to_owned(),
+                    command: c.to_owned(),
+                    regex: false,
+                    eval: None,
                 })
                 .collect::<Vec<_>>();
             let expected6 = load_log(&resource(&format!(
