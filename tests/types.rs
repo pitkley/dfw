@@ -267,8 +267,7 @@ fn parse_expose_port_single_string() {
             dst_container = "dst_container"
             expose_port = "{}/{}"
             "#,
-            port,
-            family
+            port, family
         );
 
         let expected = WiderWorldToContainerRule {
