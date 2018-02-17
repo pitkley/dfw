@@ -117,11 +117,16 @@ macro_rules! proxy {
             (self.0).$name($($param),+).map_err(Into::into)
         }
     };
+    ( $name:ident () -> $ret:ty ) => {
+        fn $name(&self) -> Result<$ret> {
+            (self.0).$name().map_err(Into::into)
+        }
+    };
 }
 
 macro_rules! proxies {
-    ( $( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty );+ $(;)* ) => {
-        $( proxy!( $name ( $( $param : $ty ),+ ) -> $ret ); )+
+    ( $( $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
+        $( proxy!( $name ( $( $param : $ty ),* ) -> $ret ); )+
     };
 }
 
@@ -163,11 +168,16 @@ macro_rules! dummy {
             Ok(Default::default())
         }
     };
+    ( $name:ident () -> $ret:ty ) => {
+        fn $name(&self) -> Result<$ret> {
+            Ok(Default::default())
+        }
+    };
 }
 
 macro_rules! dummies {
-    ( $( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty );+ $(;)* ) => {
-        $( dummy!( $name ( $( $param : $ty ),+ ) -> $ret ); )+
+    ( $( $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
+        $( dummy!( $name ( $( $param : $ty ),* ) -> $ret ); )+
     };
 }
 
@@ -240,11 +250,17 @@ macro_rules! logger {
             Ok(Default::default())
         }
     };
+    ( $name:ident () -> $ret:ty ) => {
+        fn $name(&self) -> Result<$ret> {
+            self.log(stringify!($name), &[]);
+            Ok(Default::default())
+        }
+    };
 }
 
 macro_rules! loggers {
-    ( $( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty );+ $(;)* ) => {
-        $( logger!( $name ( $( $param : $ty ),+ ) -> $ret ); )+
+    ( $( $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
+        $( logger!( $name ( $( $param : $ty ),* ) -> $ret ); )+
     };
 }
 
