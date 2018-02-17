@@ -120,7 +120,7 @@ macro_rules! proxy {
 }
 
 macro_rules! proxies {
-    ( $( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty );+ ) => {
+    ( $( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty );+ $(;)* ) => {
         $( proxy!( $name ( $( $param : $ty ),+ ) -> $ret ); )+
     };
 }
@@ -147,7 +147,7 @@ impl IPTables for IPTablesProxy {
         flush_chain(table: &str, chain: &str) -> bool;
         rename_chain(table: &str, old_chain: &str, new_chain: &str) -> bool;
         delete_chain(table: &str, chain: &str) -> bool;
-        flush_table(table: &str) -> bool
+        flush_table(table: &str) -> bool;
     }
 }
 
@@ -166,7 +166,7 @@ macro_rules! dummy {
 }
 
 macro_rules! dummies {
-    ( $( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty );+ ) => {
+    ( $( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty );+ $(;)* ) => {
         $( dummy!( $name ( $( $param : $ty ),+ ) -> $ret ); )+
     };
 }
@@ -193,7 +193,7 @@ impl IPTables for IPTablesDummy {
         flush_chain(table: &str, chain: &str) -> bool;
         rename_chain(table: &str, old_chain: &str, new_chain: &str) -> bool;
         delete_chain(table: &str, chain: &str) -> bool;
-        flush_table(table: &str) -> bool
+        flush_table(table: &str) -> bool;
     }
 
     fn execute(&self, table: &str, command: &str) -> Result<Output> {
@@ -243,7 +243,7 @@ macro_rules! logger {
 }
 
 macro_rules! loggers {
-    ( $( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty );+ ) => {
+    ( $( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty );+ $(;)* ) => {
         $( logger!( $name ( $( $param : $ty ),+ ) -> $ret ); )+
     };
 }
@@ -269,7 +269,7 @@ impl IPTables for IPTablesLogger {
         flush_chain(table: &str, chain: &str) -> bool;
         rename_chain(table: &str, old_chain: &str, new_chain: &str) -> bool;
         delete_chain(table: &str, chain: &str) -> bool;
-        flush_table(table: &str) -> bool
+        flush_table(table: &str) -> bool;
     }
 
     fn execute(&self, table: &str, command: &str) -> Result<Output> {
