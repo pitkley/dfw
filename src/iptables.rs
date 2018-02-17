@@ -19,16 +19,10 @@ use std::os::unix::process::ExitStatusExt;
 use std::process::{ExitStatus, Output};
 
 macro_rules! proxy {
-    ( $( #[$attr:meta] )* $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty ) => {
+    ( $( #[$attr:meta] )* $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty ) => {
         $( #[$attr] )*
-        fn $name(&self, $( $param: $ty ),+) -> Result<$ret> {
+        fn $name(&self $(, $param: $ty )*) -> Result<$ret> {
             (self.0).$name($($param),+).map_err(Into::into)
-        }
-    };
-    ( $( #[$attr:meta] )* $name:ident () -> $ret:ty ) => {
-        $( #[$attr] )*
-        fn $name(&self) -> Result<$ret> {
-            (self.0).$name().map_err(Into::into)
         }
     };
 }
@@ -41,15 +35,10 @@ macro_rules! proxies {
 }
 
 macro_rules! dummy {
-    ( $( #[$attr:meta] )* $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty ) => {
+    ( $( #[$attr:meta] )* $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty ) => {
         $( #[$attr] )*
-        fn $name(&self, $( $param: $ty ),+) -> Result<$ret> {
-            Ok(Default::default())
-        }
-    };
-    ( $( #[$attr:meta] )* $name:ident () -> $ret:ty ) => {
-        $( #[$attr] )*
-        fn $name(&self) -> Result<$ret> {
+        #[allow(unused_variables)]
+        fn $name(&self $(, $param: $ty )*) -> Result<$ret> {
             Ok(Default::default())
         }
     };
@@ -63,15 +52,9 @@ macro_rules! dummies {
 }
 
 macro_rules! logger {
-    ( $( #[$attr:meta] )* $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty ) => {
-        fn $name(&self, $( $param: $ty ),+) -> Result<$ret> {
-            self.log(stringify!($name), &[ $( &$param.to_string() ),+ ]);
-            Ok(Default::default())
-        }
-    };
-    ( $( #[$attr:meta] )* $name:ident () -> $ret:ty ) => {
-        fn $name(&self) -> Result<$ret> {
-            self.log(stringify!($name), &[]);
+    ( $( #[$attr:meta] )* $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty ) => {
+        fn $name(&self $(, $param: $ty )*) -> Result<$ret> {
+            self.log(stringify!($name), &[ $( &$param.to_string() ),* ]);
             Ok(Default::default())
         }
     };
