@@ -19,12 +19,14 @@ use std::os::unix::process::ExitStatusExt;
 use std::process::{ExitStatus, Output};
 
 macro_rules! proxy {
-    ( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty ) => {
+    ( $( #[$attr:meta] )* $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty ) => {
+        $( #[$attr] )*
         fn $name(&self, $( $param: $ty ),+) -> Result<$ret> {
             (self.0).$name($($param),+).map_err(Into::into)
         }
     };
-    ( $name:ident () -> $ret:ty ) => {
+    ( $( #[$attr:meta] )* $name:ident () -> $ret:ty ) => {
+        $( #[$attr] )*
         fn $name(&self) -> Result<$ret> {
             (self.0).$name().map_err(Into::into)
         }
@@ -32,18 +34,21 @@ macro_rules! proxy {
 }
 
 macro_rules! proxies {
-    ( $( $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
-        $( proxy!( $name ( $( $param : $ty ),* ) -> $ret ); )+
+    ( $( $( #[$attr:meta] )*
+         $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
+        $( proxy!( $( #[$attr] )* $name ( $( $param : $ty ),* ) -> $ret ); )+
     };
 }
 
 macro_rules! dummy {
-    ( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty ) => {
+    ( $( #[$attr:meta] )* $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty ) => {
+        $( #[$attr] )*
         fn $name(&self, $( $param: $ty ),+) -> Result<$ret> {
             Ok(Default::default())
         }
     };
-    ( $name:ident () -> $ret:ty ) => {
+    ( $( #[$attr:meta] )* $name:ident () -> $ret:ty ) => {
+        $( #[$attr] )*
         fn $name(&self) -> Result<$ret> {
             Ok(Default::default())
         }
@@ -51,19 +56,20 @@ macro_rules! dummy {
 }
 
 macro_rules! dummies {
-    ( $( $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
-        $( dummy!( $name ( $( $param : $ty ),* ) -> $ret ); )+
+    ( $( $( #[$attr:meta] )*
+         $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
+        $( dummy!( $( #[$attr] )* $name ( $( $param : $ty ),* ) -> $ret ); )+
     };
 }
 
 macro_rules! logger {
-    ( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty ) => {
+    ( $( #[$attr:meta] )* $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty ) => {
         fn $name(&self, $( $param: $ty ),+) -> Result<$ret> {
             self.log(stringify!($name), &[ $( &$param.to_string() ),+ ]);
             Ok(Default::default())
         }
     };
-    ( $name:ident () -> $ret:ty ) => {
+    ( $( #[$attr:meta] )* $name:ident () -> $ret:ty ) => {
         fn $name(&self) -> Result<$ret> {
             self.log(stringify!($name), &[]);
             Ok(Default::default())
@@ -72,8 +78,9 @@ macro_rules! logger {
 }
 
 macro_rules! loggers {
-    ( $( $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
-        $( logger!( $name ( $( $param : $ty ),* ) -> $ret ); )+
+    ( $( $( #[$attr:meta] )*
+         $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
+        $( logger!( $( #[$attr] )* $name ( $( $param : $ty ),* ) -> $ret ); )+
     };
 }
 
