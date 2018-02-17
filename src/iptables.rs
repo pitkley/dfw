@@ -159,6 +159,10 @@ pub trait IPTables {
     /// Flushes all chains in a table.
     /// Returns `true` if the chains are flushed.
     fn flush_table(&self, table: &str) -> Result<bool>;
+
+    /// Commit the changes queued.
+    /// Only has an effect on some implementations
+    fn commit(&self) -> Result<bool>;
 }
 
 /// Proxying type for the `IPTables` type of the [`rust-iptables`][rust-iptables] crate.
@@ -194,6 +198,10 @@ impl IPTables for IPTablesProxy {
         delete_chain(table: &str, chain: &str) -> bool;
         flush_table(table: &str) -> bool;
     }
+
+    dummies! {
+        commit() -> bool;
+    }
 }
 
 /// [`IPTables`](trait.IPTables.html) implementation which does not interact with the iptables
@@ -225,6 +233,7 @@ impl IPTables for IPTablesDummy {
         rename_chain(table: &str, old_chain: &str, new_chain: &str) -> bool;
         delete_chain(table: &str, chain: &str) -> bool;
         flush_table(table: &str) -> bool;
+        commit() -> bool;
     }
 
     fn execute(&self, table: &str, command: &str) -> Result<Output> {
@@ -286,6 +295,7 @@ impl IPTables for IPTablesLogger {
         rename_chain(table: &str, old_chain: &str, new_chain: &str) -> bool;
         delete_chain(table: &str, chain: &str) -> bool;
         flush_table(table: &str) -> bool;
+        commit() -> bool;
     }
 
     fn execute(&self, table: &str, command: &str) -> Result<Output> {
