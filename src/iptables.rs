@@ -14,6 +14,7 @@
 
 use errors::*;
 use std::cell::RefCell;
+use std::collections::HashMap as Map;
 use std::convert::Into;
 use std::os::unix::process::ExitStatusExt;
 use std::process::{ExitStatus, Output};
@@ -31,6 +32,63 @@ macro_rules! proxies {
     ( $( $( #[$attr:meta] )*
          $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
         $( proxy!( $( #[$attr] )* $name ( $( $param : $ty ),* ) -> $ret ); )+
+    };
+}
+
+// This macro uses some trickery to make the parameters passed to it available in the macro itself
+// without blocking the use of those parameters at the call-site. If we would for example add the
+// `table` and `chain` parameters to the macro pattern itself, those variables would become
+// inaccessible at call-site due to macro-hygiene interpreting the parameters as regular tokens
+// rather than idents.
+//
+// The trickery below uses two techniques:
+//
+// 1. Make all parameters available in a struct.
+//    This allows us to access e.g. `p.table` without any further steps. Additionally, this confirms
+//    at compile-time if the accessed parameter is available or not. Because of this we can not use
+//    the same for the chain, that is `p.chain` only works on functions where the parameter chain
+//    was passed. To work around this we use another trick.
+//
+// 2. Since the chain-parameter in `self.rules` is an `Option`, we predefine `chain_opt` with `None`
+//    and then use automatically generated if-statements to replace it with `Some(chain)`.
+//
+// While this isn't particularly clean, my hope is that both the struct and the static ifs will be
+// optimized away as much as possible, making this not affect runtime -- although this does not make
+// it less ugly. :)
+macro_rules! restore {
+    ( $( #[$attr:meta] )*
+      $name:ident ( $($param:ident : $ty:ty ),* )
+      -> $ret:ty { $fmtstr:expr $(, $fmtid:ident)* } ) => {
+        $( #[$attr] )*
+        fn $name(&self $(, $param: $ty )*) -> Result<$ret> {
+            #[allow(dead_code)]
+            struct Params {
+                $( $param: String ),*
+            }
+            let p = Params { $( $param: $param.to_string() ),* };
+            let mut chain_opt = None;
+            $( if stringify!($param) == "chain" {
+                chain_opt = Some($param.to_owned());
+            });*;
+
+            self.rules
+                .borrow_mut()
+                .entry(p.table)
+                .or_insert_with(|| Map::new())
+                .entry(chain_opt)
+                .or_insert_with(|| Vec::new())
+                .push(format!($fmtstr, $($fmtid),*));
+            Ok(Default::default())
+        }
+    };
+}
+
+macro_rules! restores {
+    ( $( $( #[$attr:meta] )*
+      $name:ident ( $( $param:ident : $ty:ty ),* )
+      -> $ret:ty { $fmtstr:tt $(,)* $($fmtid:ident),* } )+ $(;)* ) => {
+        $( restore!( $( #[$attr] )*
+                     $name ( $( $param : $ty ),* ) -> $ret { $fmtstr $(, $fmtid)* } ); )+
     };
 }
 
@@ -65,6 +123,16 @@ macro_rules! loggers {
          $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
         $( logger!( $( #[$attr] )* $name ( $( $param : $ty ),* ) -> $ret ); )+
     };
+}
+
+/// Enum identifying a IP protocol version. Can be used by `IPTables` implementations to discern
+/// between IPv4 rules and IPv6 rules.
+pub enum IPVersion {
+    /// IP protocol version 4
+    IPv4,
+
+    /// IP protocol version 6
+    IPv6,
 }
 
 /// Compatibility trait to generalize the API used by [`rust-iptables`][rust-iptables].
@@ -191,6 +259,199 @@ impl IPTables for IPTablesProxy {
 
     dummies! {
         commit() -> bool;
+    }
+}
+
+/// [`IPTables`](trait.IPTables.html) implementation which tracks the functions called and maps it
+/// to the text-format used by `iptables-restore`. Upon calling
+/// [`IPTables::commit`](trait.IPTables.html#tymethod.commit) this text is then passed onto the
+/// `iptables-restore` binary with the `--noflush` option enabled. This will have the following
+/// effect:
+///
+/// * Any existing rules which **are not** part of chains created by DFW will not be removed on
+///   commit *(unless initialization rules are specified which state otherwise)*
+/// * Any rules which **are** part of chains created by DFW will be completely recreated
+/// * The recreation of the rules happens atomically thanks to `iptables-restore`. This both cuts
+///   down on the execution time and on the time were vital rules might be missing.
+///
+/// ## Note
+///
+/// A multitude of methods in this implementation are marked as "unsupported". This means that the
+/// call is a no-op and will not execute anything -- but it also won't fail!
+///
+/// (Every method that is marked as unsupported also has a justification as to why it isn't
+/// implemented, although for most the reason is that DFW doesn't require it and thus no effort was
+/// made.)
+pub struct IPTablesRestore {
+    /// Which [`IPVersion`](enum.IPVersion.html) to apply the rules to (i.e. use `iptables-restore`
+    /// or `ip6tables-restore`)
+    pub ip_version: IPVersion,
+
+    /// Rules are mapped: table -> chain -> rules
+    rules: RefCell<Map<String, Map<Option<String>, Vec<String>>>>,
+}
+
+impl IPTablesRestore {
+    /// Create a new instance of `IPTablesLogger`
+    pub fn new(ip_version: IPVersion) -> IPTablesRestore {
+        IPTablesRestore {
+            ip_version: ip_version,
+            rules: RefCell::new(Map::new()),
+        }
+    }
+}
+
+impl IPTables for IPTablesRestore {
+    restores! {
+        set_policy(table: &str, chain: &str, policy: &str) -> bool {
+            ":{} {} [0:0]", chain, policy
+        }
+
+        append(table: &str, chain: &str, rule: &str) -> bool {
+            "-A {} {}", chain, rule
+        }
+
+        delete(table: &str, chain: &str, rule: &str) -> bool {
+            "-D {} {}", chain, rule
+        }
+
+        new_chain(table: &str, chain: &str) -> bool {
+            ":{} - [0:0]", chain
+        }
+
+        flush_chain(table: &str, chain: &str) -> bool {
+            "-F {}", chain
+        }
+
+        flush_table(table: &str) -> bool {
+            "-F"
+        }
+    }
+
+    fn execute(&self, table: &str, command: &str) -> Result<Output> {
+        self.rules
+            .borrow_mut()
+            .entry(table.to_owned())
+            .or_insert_with(|| Map::new())
+            .entry(None)
+            .or_insert_with(|| Vec::new())
+            .push(format!("{}", command));
+        Ok(Output {
+            status: ExitStatus::from_raw(9),
+            stdout: vec![],
+            stderr: vec![],
+        })
+    }
+
+    fn list(&self, table: &str, chain: &str) -> Result<Vec<String>> {
+        Ok(self.rules
+            .borrow()
+            .get(table)
+            .and_then(|v| v.get(&Some(chain.to_owned())))
+            .map_or_else(|| vec![], |v| v.clone()))
+    }
+
+    fn list_table(&self, table: &str) -> Result<Vec<String>> {
+        Ok(self.rules.borrow().get(table).map_or_else(
+            || vec![],
+            |v| {
+                v.iter()
+                    .filter(|&(k, _)| k.is_some())
+                    .map(|(_, v)| v.clone())
+                    .fold(vec![], |mut acc, mut v| {
+                        acc.append(&mut v);
+                        acc
+                    })
+            },
+        ))
+    }
+
+    fn list_chains(&self, table: &str) -> Result<Vec<String>> {
+        Ok(self.rules.borrow().get(table).map_or_else(
+            || vec![],
+            |v| v.keys().into_iter().filter_map(|k| k.clone()).collect(),
+        ))
+    }
+
+    fn commit(&self) -> Result<bool> {
+        unimplemented!()
+    }
+
+    // Every call that is not handled above will be ignored in `IPTablesRestore`. Below every call
+    // has a justification as to why it isn't implemented. (Where most are: DFW doesn't require it,
+    // thus no effort was made.)
+
+    // TODO: check if calls to these should rather fail than return `Ok(Default::default())`
+    // This could lead to silent errors that are hard to track down. E.g. `get_policy` shouldn't
+    // return an empty string but rather an appropriate error (or at least panic!).
+    dummies! {
+        /// **METHOD UNSUPPORTED IN `IPTablesRestore`!**
+        ///
+        /// Inserting at a specific position -- while technically supported by iptables-restore
+        /// because the order of the rules read is honored -- is not required in the context of dfw.
+        /// None of the calls in `ProcessDFW` care about order, since no conflicting rules are
+        /// created.
+        insert(table: &str, chain: &str, rule: &str, position: i32) -> bool;
+
+        /// **METHOD UNSUPPORTED IN `IPTablesRestore`!**
+        ///
+        /// See [`IPTablesRestore::insert`](#method.insert).
+        insert_unique(table: &str, chain: &str, rule: &str, position: i32) -> bool;
+
+        /// **METHOD UNSUPPORTED IN `IPTablesRestore`!**
+        ///
+        /// DFW does not require `append_unique`. Therefore no effort was made to replicate this
+        /// functionality.
+        append_unique(table: &str, chain: &str, rule: &str) -> bool;
+
+        /// **METHOD UNSUPPORTED IN `IPTablesRestore`!**
+        ///
+        /// DFW does not require `append_replace`. Therefore no effort was made to replicate this
+        /// functionality.
+        append_replace(table: &str, chain: &str, rule: &str) -> bool;
+
+        /// **METHOD UNSUPPORTED IN `IPTablesRestore`!**
+        ///
+        /// Getting a policy does not make sense in the context of `iptables-restore` since the only
+        /// policies to get are the ones set by the same caller.
+        get_policy(table: &str, chain: &str) -> String;
+
+        /// **METHOD UNSUPPORTED IN `IPTablesRestore`!**
+        ///
+        /// Checking if a rule exists does not make sense in the context of `iptables-restore` since
+        /// the only rules that could match are the ones appended by the same caller.
+        exists(table: &str, chain: &str, rule: &str) -> bool;
+
+        /// **METHOD UNSUPPORTED IN `IPTablesRestore`!**
+        ///
+        /// Checking if a chain exists does not make sense in the context of `iptables-restore`
+        /// since the only chains that could match are the ones created by the same caller.
+        chain_exists(table: &str, chain: &str) -> bool;
+
+        /// **METHOD UNSUPPORTED IN `IPTablesRestore`!**
+        ///
+        /// Replacing a rule does not make sense in the context of `iptables-restore` since the only
+        /// rules that could be replaced are the ones created by the same caller.
+        replace(table: &str, chain: &str, rule: &str, position: i32) -> bool;
+
+        /// **METHOD UNSUPPORTED IN `IPTablesRestore`!**
+        ///
+        /// `delete_all` is a method supported by `iptables::IPTables` and includes logic to remove
+        /// rules matching the rule string for as long as there are more rules that exist. This
+        /// logic can not be replicated for `iptables-restore`.
+        delete_all(table: &str, chain: &str, rule: &str) -> bool;
+
+        /// **METHOD UNSUPPORTED IN `IPTablesRestore`!**
+        ///
+        /// Renaming a chain does not make sense in the context of `iptables-restore` since the only
+        /// chains that could be renamed are the ones created by the same caller.
+        rename_chain(table: &str, old_chain: &str, new_chain: &str) -> bool;
+
+        /// **METHOD UNSUPPORTED IN `IPTablesRestore`!**
+        ///
+        /// Deleting a chain does not make sense in the context of `iptables-restore` since the only
+        /// chains that could be deleted are the ones created by the same caller.
+        delete_chain(table: &str, chain: &str) -> bool;
     }
 }
 
