@@ -18,6 +18,65 @@ use std::convert::Into;
 use std::os::unix::process::ExitStatusExt;
 use std::process::{ExitStatus, Output};
 
+macro_rules! proxy {
+    ( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty ) => {
+        fn $name(&self, $( $param: $ty ),+) -> Result<$ret> {
+            (self.0).$name($($param),+).map_err(Into::into)
+        }
+    };
+    ( $name:ident () -> $ret:ty ) => {
+        fn $name(&self) -> Result<$ret> {
+            (self.0).$name().map_err(Into::into)
+        }
+    };
+}
+
+macro_rules! proxies {
+    ( $( $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
+        $( proxy!( $name ( $( $param : $ty ),* ) -> $ret ); )+
+    };
+}
+
+macro_rules! dummy {
+    ( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty ) => {
+        fn $name(&self, $( $param: $ty ),+) -> Result<$ret> {
+            Ok(Default::default())
+        }
+    };
+    ( $name:ident () -> $ret:ty ) => {
+        fn $name(&self) -> Result<$ret> {
+            Ok(Default::default())
+        }
+    };
+}
+
+macro_rules! dummies {
+    ( $( $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
+        $( dummy!( $name ( $( $param : $ty ),* ) -> $ret ); )+
+    };
+}
+
+macro_rules! logger {
+    ( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty ) => {
+        fn $name(&self, $( $param: $ty ),+) -> Result<$ret> {
+            self.log(stringify!($name), &[ $( &$param.to_string() ),+ ]);
+            Ok(Default::default())
+        }
+    };
+    ( $name:ident () -> $ret:ty ) => {
+        fn $name(&self) -> Result<$ret> {
+            self.log(stringify!($name), &[]);
+            Ok(Default::default())
+        }
+    };
+}
+
+macro_rules! loggers {
+    ( $( $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
+        $( logger!( $name ( $( $param : $ty ),* ) -> $ret ); )+
+    };
+}
+
 /// Compatibility trait to generalize the API used by [`rust-iptables`][rust-iptables].
 ///
 /// [rust-iptables]: https://crates.io/crates/iptables
@@ -111,25 +170,6 @@ pub trait IPTables {
 /// [rust-iptables]: https://crates.io/crates/iptables
 pub struct IPTablesProxy(pub ::ipt::IPTables);
 
-macro_rules! proxy {
-    ( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty ) => {
-        fn $name(&self, $( $param: $ty ),+) -> Result<$ret> {
-            (self.0).$name($($param),+).map_err(Into::into)
-        }
-    };
-    ( $name:ident () -> $ret:ty ) => {
-        fn $name(&self) -> Result<$ret> {
-            (self.0).$name().map_err(Into::into)
-        }
-    };
-}
-
-macro_rules! proxies {
-    ( $( $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
-        $( proxy!( $name ( $( $param : $ty ),* ) -> $ret ); )+
-    };
-}
-
 impl IPTables for IPTablesProxy {
     proxies! {
         get_policy(table: &str, chain: &str) -> String;
@@ -161,25 +201,6 @@ impl IPTables for IPTablesProxy {
 ///
 /// This is currently used when running `dfw --dry-run`.
 pub struct IPTablesDummy;
-
-macro_rules! dummy {
-    ( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty ) => {
-        fn $name(&self, $( $param: $ty ),+) -> Result<$ret> {
-            Ok(Default::default())
-        }
-    };
-    ( $name:ident () -> $ret:ty ) => {
-        fn $name(&self) -> Result<$ret> {
-            Ok(Default::default())
-        }
-    };
-}
-
-macro_rules! dummies {
-    ( $( $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
-        $( dummy!( $name ( $( $param : $ty ),* ) -> $ret ); )+
-    };
-}
 
 #[allow(unused_variables)]
 impl IPTables for IPTablesDummy {
@@ -241,27 +262,6 @@ impl IPTablesLogger {
     pub fn logs(&self) -> Vec<(String, String)> {
         self.logs.borrow().clone()
     }
-}
-
-macro_rules! logger {
-    ( $name:ident ( $( $param:ident : $ty:ty ),+ ) -> $ret:ty ) => {
-        fn $name(&self, $( $param: $ty ),+) -> Result<$ret> {
-            self.log(stringify!($name), &[ $( &$param.to_string() ),+ ]);
-            Ok(Default::default())
-        }
-    };
-    ( $name:ident () -> $ret:ty ) => {
-        fn $name(&self) -> Result<$ret> {
-            self.log(stringify!($name), &[]);
-            Ok(Default::default())
-        }
-    };
-}
-
-macro_rules! loggers {
-    ( $( $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
-        $( logger!( $name ( $( $param : $ty ),* ) -> $ret ); )+
-    };
 }
 
 impl IPTables for IPTablesLogger {
