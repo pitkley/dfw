@@ -16,8 +16,10 @@ use errors::*;
 use std::cell::RefCell;
 use std::collections::HashMap as Map;
 use std::convert::Into;
+use std::io::Write;
 use std::os::unix::process::ExitStatusExt;
-use std::process::{ExitStatus, Output};
+use std::process::{Command, ExitStatus, Output, Stdio};
+use std::str;
 
 macro_rules! proxy {
     ( $( #[$attr:meta] )* $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty ) => {
@@ -306,9 +308,8 @@ impl IPTables for IPTablesProxy {
 /// implemented, although for most the reason is that DFW doesn't require it and thus no effort was
 /// made.)
 pub struct IPTablesRestore {
-    /// Which [`IPVersion`](enum.IPVersion.html) to apply the rules to (i.e. use `iptables-restore`
-    /// or `ip6tables-restore`)
-    pub ip_version: IPVersion,
+    /// Save command to execute (`iptables-restore` or `ip6tables-restore`).
+    cmd: &'static str,
 
     /// Rules are mapped: table -> chain -> rules
     ///
@@ -329,12 +330,18 @@ pub struct IPTablesRestore {
 
 impl IPTablesRestore {
     /// Create a new instance of `IPTablesLogger`
-    pub fn new(ip_version: IPVersion) -> IPTablesRestore {
-        IPTablesRestore {
-            ip_version: ip_version,
+    pub fn new(ip_version: IPVersion) -> Result<IPTablesRestore> {
+        let cmd = match ip_version {
+            IPVersion::IPv4 => "iptables-restore",
+            IPVersion::IPv6 => "ip6tables-restore",
+        };
+        Command::new(cmd).arg("--version").spawn()?;
+
+        Ok(IPTablesRestore {
+            cmd: cmd,
             rule_map: RefCell::new(Map::new()),
             rules: RefCell::new(Map::new()),
-        }
+        })
     }
 }
 
@@ -411,7 +418,37 @@ impl IPTables for IPTablesRestore {
     }
 
     fn commit(&self) -> Result<bool> {
-        unimplemented!()
+        // Start iptables-restore with `--noflush` option, attach to stdin and stdout
+        let mut c = Command::new(self.cmd)
+            .arg("--noflush")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?;
+
+        // Get process stdin, write format es expected by iptables-restore
+        match c.stdin.as_mut() {
+            Some(ref mut s) => {
+                for (table, rules) in self.rules.borrow().iter() {
+                    write!(s, "*{}", table)?;
+                    write!(s, "{}", rules.join("\n"),)?;
+                }
+                write!(s, "COMMIT")?;
+            }
+            None => Err(format!("cannot get stdin of {}", self.cmd))?,
+        }
+
+        // Check exit status of command
+        let output = c.wait_with_output()?;
+        if output.status.success() {
+            Ok(true)
+        } else {
+            Err(format!(
+                "{} failed: '{}'",
+                self.cmd,
+                str::from_utf8(&output.stderr).unwrap_or("").trim()
+            ))?
+        }
     }
 
     // Every call that is not handled above will be ignored in `IPTablesRestore`.
