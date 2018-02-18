@@ -74,12 +74,16 @@ macro_rules! restore {
             let rule = format!($fmtstr, $($fmtid),*);
             self.rule_map
                 .borrow_mut()
-                .entry(p.table)
+                .entry(p.table.clone())
                 .or_insert_with(|| Map::new())
                 .entry(chain_opt)
                 .or_insert_with(|| Vec::new())
                 .push(rule.clone());
-            self.rules.borrow_mut().push(rule);
+            self.rules
+                .borrow_mut()
+                .entry(p.table)
+                .or_insert_with(|| Vec::new())
+                .push(rule);
             Ok(Default::default())
         }
     };
@@ -320,7 +324,7 @@ pub struct IPTablesRestore {
     ///
     /// `RefCell` is required because the struct cannot be borrowed mutably due to conflicts with
     /// the trait.
-    rules: RefCell<Vec<String>>,
+    rules: RefCell<Map<String, Vec<String>>>,
 }
 
 impl IPTablesRestore {
@@ -329,7 +333,7 @@ impl IPTablesRestore {
         IPTablesRestore {
             ip_version: ip_version,
             rule_map: RefCell::new(Map::new()),
-            rules: RefCell::new(Vec::new()),
+            rules: RefCell::new(Map::new()),
         }
     }
 }
