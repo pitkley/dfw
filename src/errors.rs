@@ -19,4 +19,11 @@ error_chain! {
         IPTError(::ipt::error::IPTError);
         TomlDe(::toml::de::Error);
     }
+
+    errors {
+        TraitMethodUnimplemented(m: String) {
+            description("trait method unimplemented")
+            display("trait method unimplemented: '{}'", m)
+        }
+    }
 }

@@ -92,6 +92,23 @@ macro_rules! restores {
     };
 }
 
+macro_rules! unimplemented_method {
+    ( $( #[$attr:meta] )* $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty ) => {
+        $( #[$attr] )*
+        #[allow(unused_variables)]
+        fn $name(&self $(, $param: $ty )*) -> Result<$ret> {
+            bail!(ErrorKind::TraitMethodUnimplemented(stringify!($name).to_owned()))
+        }
+    };
+}
+
+macro_rules! unimplemented_methods {
+    ( $( $( #[$attr:meta] )*
+         $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
+        $( unimplemented_method!( $( #[$attr] )* $name ( $( $param : $ty ),* ) -> $ret ); )+
+    };
+}
+
 macro_rules! dummy {
     ( $( #[$attr:meta] )* $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty ) => {
         $( #[$attr] )*
@@ -377,14 +394,12 @@ impl IPTables for IPTablesRestore {
         unimplemented!()
     }
 
-    // Every call that is not handled above will be ignored in `IPTablesRestore`. Below every call
-    // has a justification as to why it isn't implemented. (Where most are: DFW doesn't require it,
-    // thus no effort was made.)
-
-    // TODO: check if calls to these should rather fail than return `Ok(Default::default())`
-    // This could lead to silent errors that are hard to track down. E.g. `get_policy` shouldn't
-    // return an empty string but rather an appropriate error (or at least panic!).
-    dummies! {
+    // Every call that is not handled above will be ignored in `IPTablesRestore`.
+    // The following calls are not implemented in `IPTablesRestore` and will return a
+    // `TraitMethodUnimplemented` error. Below every call has a justification as to why it isn't
+    // implemented. (Where most are not applicable to `iptables-restore` or DFW simply doesn't
+    // require it and thus no effort was made at this point.)
+    unimplemented_methods! {
         /// **METHOD UNSUPPORTED IN `IPTablesRestore`!**
         ///
         /// Inserting at a specific position -- while technically supported by iptables-restore
