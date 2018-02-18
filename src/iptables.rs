@@ -307,8 +307,19 @@ pub struct IPTablesRestore {
     pub ip_version: IPVersion,
 
     /// Rules are mapped: table -> chain -> rules
+    ///
+    /// ## Note
+    ///
+    /// `RefCell` is required because the struct cannot be borrowed mutably due to conflicts with
+    /// the trait.
     rule_map: RefCell<Map<String, Map<Option<String>, Vec<String>>>>,
+
     /// List of rules tracking the order they were supplied by `ProcessDFW`
+    ///
+    /// ## Note
+    ///
+    /// `RefCell` is required because the struct cannot be borrowed mutably due to conflicts with
+    /// the trait.
     rules: RefCell<Vec<String>>,
 }
 
@@ -521,6 +532,10 @@ impl IPTables for IPTablesDummy {
 /// executed.
 #[derive(Default)]
 pub struct IPTablesLogger {
+    /// ## Note
+    ///
+    /// `RefCell` is required because the struct cannot be borrowed mutably due to conflicts with
+    /// the trait.
     logs: RefCell<Vec<(String, String)>>,
 }
 
