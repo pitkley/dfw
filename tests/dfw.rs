@@ -142,7 +142,7 @@ fn dc_template(num: &str) {
                 .iter()
                 .map(|&(ref f, ref c)| LogLine {
                     function: f.to_owned(),
-                    command: c.to_owned(),
+                    command: c.clone(),
                     regex: false,
                     eval: None,
                 })
@@ -157,7 +157,7 @@ fn dc_template(num: &str) {
                 println!("IPv4 logs didn't match");
                 println!("----------------------");
                 for line in &logs4 {
-                    println!("{}\t{}", line.function, line.command);
+                    println!("{}\t{:?}", line.function, line.command);
                 }
                 println!();
             }
@@ -169,7 +169,7 @@ fn dc_template(num: &str) {
                 .iter()
                 .map(|&(ref f, ref c)| LogLine {
                     function: f.to_owned(),
-                    command: c.to_owned(),
+                    command: c.clone(),
                     regex: false,
                     eval: None,
                 })
@@ -184,7 +184,7 @@ fn dc_template(num: &str) {
                 println!("IPv6 logs didn't match");
                 println!("----------------------");
                 for line in &logs6 {
-                    println!("{}\t{}", line.function, line.command);
+                    println!("{}\t{:?}", line.function, line.command);
                 }
                 println!();
             }

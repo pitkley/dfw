@@ -577,7 +577,7 @@ pub struct IPTablesLogger {
     ///
     /// `RefCell` is required because the struct cannot be borrowed mutably due to conflicts with
     /// the trait.
-    logs: RefCell<Vec<(String, String)>>,
+    logs: RefCell<Vec<(String, Option<String>)>>,
 }
 
 impl IPTablesLogger {
@@ -589,13 +589,18 @@ impl IPTablesLogger {
     }
 
     fn log(&self, function: &str, params: &[&str]) {
-        self.logs
-            .borrow_mut()
-            .push((function.to_owned(), params.join(" ")));
+        self.logs.borrow_mut().push((
+            function.to_owned(),
+            if params.is_empty() {
+                None
+            } else {
+                Some(params.join(" "))
+            },
+        ));
     }
 
     /// Get the collected logs.
-    pub fn logs(&self) -> Vec<(String, String)> {
+    pub fn logs(&self) -> Vec<(String, Option<String>)> {
         self.logs.borrow().clone()
     }
 }

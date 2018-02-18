@@ -17,3 +17,4 @@ append	nat POSTROUTING -j DFWRS_POSTROUTING
 append	filter DFWRS_FORWARD -i $input=bridge -o $output=bridge -j REJECT	"$input" == "$output"
 append	filter DFWRS_FORWARD -s $src_ip=ip -d $dst_ip=ip -i $input=bridge -o $output=bridge -m state --state RELATED -j ACCEPT	"$input" == "$output"
 append	filter DFWRS_FORWARD -j DROP
+commit

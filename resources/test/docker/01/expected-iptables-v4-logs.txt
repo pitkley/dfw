@@ -18,3 +18,4 @@ append	nat POSTROUTING -j DFWRS_POSTROUTING
 append	filter DFWRS_FORWARD -i docker0 -o eni -j ACCEPT
 append	filter DFWRS_INPUT -i docker0 -j ACCEPT
 append	nat DFWRS_POSTROUTING -o eni -j MASQUERADE
+commit
