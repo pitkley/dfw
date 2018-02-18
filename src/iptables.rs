@@ -49,8 +49,8 @@ macro_rules! proxies {
 //    the same for the chain, that is `p.chain` only works on functions where the parameter chain
 //    was passed. To work around this we use another trick.
 //
-// 2. Since the chain-parameter in `self.rules` is an `Option`, we predefine `chain_opt` with `None`
-//    and then use automatically generated if-statements to replace it with `Some(chain)`.
+// 2. Since the chain-parameter in `self.rule_map` is an `Option`, we predefine `chain_opt` with
+//    `None` and then use automatically generated if-statements to replace it with `Some(chain)`.
 //
 // While this isn't particularly clean, my hope is that both the struct and the static ifs will be
 // optimized away as much as possible, making this not affect runtime -- although this does not make
@@ -71,13 +71,15 @@ macro_rules! restore {
                 chain_opt = Some($param.to_owned());
             });*;
 
-            self.rules
+            let rule = format!($fmtstr, $($fmtid),*);
+            self.rule_map
                 .borrow_mut()
                 .entry(p.table)
                 .or_insert_with(|| Map::new())
                 .entry(chain_opt)
                 .or_insert_with(|| Vec::new())
-                .push(format!($fmtstr, $($fmtid),*));
+                .push(rule.clone());
+            self.rules.borrow_mut().push(rule);
             Ok(Default::default())
         }
     };
@@ -305,7 +307,9 @@ pub struct IPTablesRestore {
     pub ip_version: IPVersion,
 
     /// Rules are mapped: table -> chain -> rules
-    rules: RefCell<Map<String, Map<Option<String>, Vec<String>>>>,
+    rule_map: RefCell<Map<String, Map<Option<String>, Vec<String>>>>,
+    /// List of rules tracking the order they were supplied by `ProcessDFW`
+    rules: RefCell<Vec<String>>,
 }
 
 impl IPTablesRestore {
@@ -313,7 +317,8 @@ impl IPTablesRestore {
     pub fn new(ip_version: IPVersion) -> IPTablesRestore {
         IPTablesRestore {
             ip_version: ip_version,
-            rules: RefCell::new(Map::new()),
+            rule_map: RefCell::new(Map::new()),
+            rules: RefCell::new(Vec::new()),
         }
     }
 }
@@ -346,7 +351,7 @@ impl IPTables for IPTablesRestore {
     }
 
     fn execute(&self, table: &str, command: &str) -> Result<Output> {
-        self.rules
+        self.rule_map
             .borrow_mut()
             .entry(table.to_owned())
             .or_insert_with(|| Map::new())
@@ -361,7 +366,7 @@ impl IPTables for IPTablesRestore {
     }
 
     fn list(&self, table: &str, chain: &str) -> Result<Vec<String>> {
-        Ok(self.rules
+        Ok(self.rule_map
             .borrow()
             .get(table)
             .and_then(|v| v.get(&Some(chain.to_owned())))
@@ -369,7 +374,7 @@ impl IPTables for IPTablesRestore {
     }
 
     fn list_table(&self, table: &str) -> Result<Vec<String>> {
-        Ok(self.rules.borrow().get(table).map_or_else(
+        Ok(self.rule_map.borrow().get(table).map_or_else(
             || vec![],
             |v| {
                 v.iter()
@@ -384,7 +389,7 @@ impl IPTables for IPTablesRestore {
     }
 
     fn list_chains(&self, table: &str) -> Result<Vec<String>> {
-        Ok(self.rules.borrow().get(table).map_or_else(
+        Ok(self.rule_map.borrow().get(table).map_or_else(
             || vec![],
             |v| v.keys().into_iter().filter_map(|k| k.clone()).collect(),
         ))
