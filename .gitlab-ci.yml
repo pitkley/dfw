@@ -199,8 +199,8 @@ package and push image for feature-branch:
         - master
         - /^develop\/.*$/
     script:
+        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
         - docker build --pull -t "${CI_REGISTRY_IMAGE}/branches:${CI_COMMIT_REF_SLUG}" .
-        - docker image rm "${CI_REGISTRY_IMAGE}/branches:${CI_COMMIT_REF_SLUG}"
         - docker push "${CI_REGISTRY_IMAGE}/branches:${CI_COMMIT_REF_SLUG}"
 
 package and push image for tags:
