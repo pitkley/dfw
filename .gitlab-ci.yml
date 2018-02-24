@@ -108,6 +108,7 @@ build for docker tests:
         - docker-available
     script:
         - cargo build --verbose
+        - cargo build --verbose --tests
     cache:
         key: "docker-tests"
         paths:
