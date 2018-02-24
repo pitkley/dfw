@@ -53,7 +53,7 @@ build dynamic binary on stable:
     script:
         - cargo build --verbose
     cache:
-        key: "dynamic stable"
+        key: "dynamic-stable"
         paths:
         - target/
         - cargo/
@@ -72,7 +72,7 @@ build dynamic binary on beta:
     script:
         - cargo build --verbose
     cache:
-        key: "dynamic beta"
+        key: "dynamic-beta"
         paths:
         - target/
         - cargo/
@@ -92,7 +92,7 @@ build dynamic binary on nightly:
         - cargo build --verbose
     allow_failure: true
     cache:
-        key: "dynamic nightly"
+        key: "dynamic-nightly"
         paths:
         - target/
         - cargo/
@@ -131,7 +131,7 @@ build for docker tests:
     script:
         - cargo build --verbose
     cache:
-        key: "docker tests"
+        key: "docker-tests"
         paths:
         - target/
         - cargo/
@@ -144,7 +144,7 @@ test dynamic binary on stable:
     image: "${CI_REGISTRY_IMAGE}/build:stable"
     dependencies: [] # don't download artifacts from previous jobs
     cache:
-        key: "dynamic stable"
+        key: "dynamic-stable"
         paths:
         - target/
         - cargo/
@@ -159,7 +159,7 @@ test dynamic binary on beta:
     image: "${CI_REGISTRY_IMAGE}/build:beta"
     dependencies: [] # don't download artifacts from previous jobs
     cache:
-        key: "dynamic beta"
+        key: "dynamic-beta"
         paths:
         - target/
         - cargo/
@@ -174,7 +174,7 @@ test dynamic binary on nightly:
     image: "${CI_REGISTRY_IMAGE}/build:nightly"
     dependencies: [] # don't download artifacts from previous jobs
     cache:
-        key: "dynamic nightly"
+        key: "dynamic-nightly"
         paths:
         - target/
         - cargo/
@@ -207,7 +207,7 @@ test static binary:
         - /^develop\/.*$/
     dependencies: [] # don't download artifacts from previous jobs
     cache:
-        key: "docker tests"
+        key: "docker-tests"
         paths:
         - target/
         - cargo/
