@@ -5,6 +5,9 @@ stages:
     - test
     - package
 
+variables:
+    CARGO_HOME: $CI_PROJECT_DIR/cargo
+
 .prepare-rust-image: &prepare-rust-image
     stage: prepare
     tags:
@@ -49,6 +52,12 @@ build dynamic binary on stable:
     image: "${CI_REGISTRY_IMAGE}/build:stable"
     script:
         - cargo build --verbose
+    cache:
+        key: "dynamic stable"
+        paths:
+        - target/
+        - cargo/
+        policy: push
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
@@ -62,6 +71,12 @@ build dynamic binary on beta:
     image: "${CI_REGISTRY_IMAGE}/build:beta"
     script:
         - cargo build --verbose
+    cache:
+        key: "dynamic beta"
+        paths:
+        - target/
+        - cargo/
+        policy: push
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
@@ -76,6 +91,12 @@ build dynamic binary on nightly:
     script:
         - cargo build --verbose
     allow_failure: true
+    cache:
+        key: "dynamic nightly"
+        paths:
+        - target/
+        - cargo/
+        policy: push
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
@@ -89,6 +110,12 @@ build static binary:
     script:
         - cross build --target x86_64-unknown-linux-musl --release
         - cp target/x86_64-unknown-linux-musl/release/dfw dfw
+    cache:
+        key: "static"
+        paths:
+        - target/
+        - cargo/
+        policy: push
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
@@ -101,7 +128,13 @@ test dynamic binary on stable:
     tags:
         - docker
     image: "${CI_REGISTRY_IMAGE}/build:stable"
-    dependencies: []
+    dependencies: [] # don't download artifacts from previous jobs
+    cache:
+        key: "dynamic stable"
+        paths:
+        - target/
+        - cargo/
+        policy: pull
     script:
         - cargo test -- --nocapture
 
@@ -110,7 +143,13 @@ test dynamic binary on beta:
     tags:
         - docker
     image: "${CI_REGISTRY_IMAGE}/build:beta"
-    dependencies: []
+    dependencies: [] # don't download artifacts from previous jobs
+    cache:
+        key: "dynamic beta"
+        paths:
+        - target/
+        - cargo/
+        policy: pull
     script:
         - cargo test -- --nocapture
 
@@ -119,7 +158,13 @@ test dynamic binary on nightly:
     tags:
         - docker
     image: "${CI_REGISTRY_IMAGE}/build:nightly"
-    dependencies: []
+    dependencies: [] # don't download artifacts from previous jobs
+    cache:
+        key: "dynamic nightly"
+        paths:
+        - target/
+        - cargo/
+        policy: pull
     script:
         - cargo test -- --nocapture
     allow_failure: true
@@ -128,7 +173,13 @@ test static binary:
     stage: test
     tags:
         - rust-cross
-    dependencies: []
+    dependencies: [] # don't download artifacts from previous jobs
+    cache:
+        key: "static"
+        paths:
+        - target/
+        - cargo/
+        policy: pull
     script:
         - cross test --target x86_64-unknown-linux-musl -- --nocapture
 
@@ -140,7 +191,7 @@ test static binary:
     only:
         - master
         - /^develop\/.*$/
-    dependencies: []
+    dependencies: [] # don't download artifacts from previous jobs
     before_script:
         # Extract docker version
         - JOB_NAME=( $CI_JOB_NAME )
