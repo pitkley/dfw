@@ -335,7 +335,6 @@ impl IPTablesRestore {
             IPVersion::IPv4 => "iptables-restore",
             IPVersion::IPv6 => "ip6tables-restore",
         };
-        Command::new(cmd).arg("--version").spawn()?;
 
         Ok(IPTablesRestore {
             cmd: cmd,
