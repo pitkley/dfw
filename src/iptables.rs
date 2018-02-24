@@ -343,6 +343,19 @@ impl IPTablesRestore {
             rules: RefCell::new(Map::new()),
         })
     }
+
+    /// Write the rules in iptables-restore format to a given writer.
+    ///
+    /// (Used internally by [`commit()`](#method.commit) and in tests to verify correct output.)
+    fn write_rules<W: Write>(&self, w: &mut W) -> Result<()> {
+        for (table, rules) in self.rules.borrow().iter() {
+            writeln!(w, "*{}", table)?;
+            writeln!(w, "{}", rules.join("\n"),)?;
+        }
+        writeln!(w, "COMMIT")?;
+
+        Ok(())
+    }
 }
 
 impl IPTables for IPTablesRestore {
@@ -428,13 +441,7 @@ impl IPTables for IPTablesRestore {
 
         // Get process stdin, write format es expected by iptables-restore
         match c.stdin.as_mut() {
-            Some(ref mut s) => {
-                for (table, rules) in self.rules.borrow().iter() {
-                    write!(s, "*{}", table)?;
-                    write!(s, "{}", rules.join("\n"),)?;
-                }
-                write!(s, "COMMIT")?;
-            }
+            Some(ref mut s) => self.write_rules(s)?,
             None => Err(format!("cannot get stdin of {}", self.cmd))?,
         }
 
@@ -524,6 +531,71 @@ impl IPTables for IPTablesRestore {
         /// Deleting a chain does not make sense in the context of `iptables-restore` since the only
         /// chains that could be deleted are the ones created by the same caller.
         delete_chain(table: &str, chain: &str) -> bool;
+    }
+}
+
+#[cfg(test)]
+mod tests_iptablesrestore {
+    use std::io::BufWriter;
+    use std::str;
+    use super::{IPTables, IPTablesRestore, IPVersion};
+
+    fn get_rules(ipt: &IPTablesRestore) -> Vec<String> {
+        // Create a writer for around a vector
+        let mut w = BufWriter::new(Vec::new());
+        // Write the rules into the writer (and hence into the vector)
+        ipt.write_rules(&mut w).unwrap();
+        // Retrieve the vector from the writer
+        let v = w.into_inner().unwrap();
+        // Transform the `Vec<u8>` into `&str` (this can happen unsafely because the input provided
+        // comes from DFW and is UTF8)
+        let s = unsafe { str::from_utf8_unchecked(&v) };
+
+        // Trim whitespace, split on newlines, make owned and collect into `Vec<String>`
+        s.trim().split("\n").map(|e| e.to_owned()).collect()
+    }
+
+    macro_rules! test {
+        ( $name:ident ( $ipt:ident ) $block:block -> [ $( $val:expr ),* ] ) => {
+            #[test]
+            fn $name() {
+                let $ipt = IPTablesRestore::new(IPVersion::IPv4).unwrap();
+
+                let _ = $block;
+
+                let actual = get_rules(&$ipt);
+                let expected = vec![
+                    $( $val ),* ,
+                    "COMMIT",
+                ].into_iter()
+                    .map(|e| e.to_owned())
+                    .collect::<Vec<_>>();
+
+                assert_eq!(actual, expected);
+            }
+        }
+    }
+
+    macro_rules! tests {
+        ( $( $name:ident ( $ipt:ident ) $block:block -> [ $( $val:expr ),* $(,)* ] $(;)* )* ) => {
+            $( test!( $name ( $ipt ) $block -> [ $( $val ),* ] ); )*
+        }
+    }
+
+    tests! {
+        restore_set_policy(ipt) {
+            ipt.set_policy("nat", "TEST_CHAIN", "DROP")
+        } -> [
+            "*nat",
+            ":TEST_CHAIN DROP [0:0]",
+        ]
+
+        restore_append(ipt) {
+            ipt.append("filter", "TEST_CHAIN", "-s 10.0.0.1 -j ACCEPT")
+        } -> [
+            "*filter",
+            "-A TEST_CHAIN -s 10.0.0.1 -j ACCEPT",
+        ]
     }
 }
 
