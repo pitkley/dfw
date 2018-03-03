@@ -1,6 +1,4 @@
 stages:
-    - prepare
-    - push
     - build
     - test docker
     - package
@@ -8,64 +6,23 @@ stages:
 variables:
     CARGO_HOME: $CI_PROJECT_DIR/cargo
 
-.prepare-rust-image: &prepare-rust-image
-    stage: prepare
-    tags:
-        - docker-available
-    script:
-        - JOB_NAME=( $CI_JOB_NAME )
-        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
-        - sed -i "0,/FROM /{s/:.*/:${JOB_NAME[3]}/}" Dockerfile.build
-        - docker pull "$(grep '^FROM' Dockerfile.build | awk '{ print $2; }' | head -n1)"
-        - docker build -t "${CI_REGISTRY_IMAGE}/build:${JOB_NAME[3]}" -f Dockerfile.build .
-
-prepare rust image stable: *prepare-rust-image
-prepare rust image beta: *prepare-rust-image
-prepare rust image nightly: *prepare-rust-image
-
-.push-rust-image: &push-rust-image
-    stage: push
-    tags:
-        - docker-available
-    script:
-        - JOB_NAME=( $CI_JOB_NAME )
-        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
-        - docker push "${CI_REGISTRY_IMAGE}/build:${JOB_NAME[3]}"
-
-push rust image stable: *push-rust-image
-push rust image beta: *push-rust-image
-push rust image nightly: *push-rust-image
-
 rustfmt:
     stage: build
     tags:
         - docker
-    image: "${CI_REGISTRY_IMAGE}/build:nightly"
+    image: rustlang/rust:nightly
     script:
-        - cargo install rustfmt-nightly
+        - rustup component add rustfmt-preview
         - cargo fmt -- --write-mode diff
 
 build and test dynamic binary on stable:
     stage: build
     tags:
         - docker
-    image: "${CI_REGISTRY_IMAGE}/build:stable"
+    image: rust:latest
     script:
         - cargo build --verbose
         - cargo test -- --nocapture
-    artifacts:
-        name: "$CI_JOB_NAME"
-        paths:
-            - Cargo.toml
-            - Cargo.lock
-
-build and test dynamic binary on beta:
-    stage: build
-    tags:
-        - docker
-    image: "${CI_REGISTRY_IMAGE}/build:beta"
-    script:
-        - cargo build --verbose
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
@@ -76,7 +33,7 @@ build dynamic binary on nightly:
     stage: build
     tags:
         - docker
-    image: "${CI_REGISTRY_IMAGE}/build:nightly"
+    image: rustlang/rust:nightly
     script:
         - cargo build --verbose
     allow_failure: true
