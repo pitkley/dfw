@@ -4,7 +4,7 @@ set -e
 exec 2>&1
 
 # Update README
-cargo readme --no-indent-headings --no-title -o README.md >/dev/null
+cargo readme --no-license --no-indent-headings --no-title -o README.md >/dev/null
 
 # Did the contents of README.md change?
 if git diff --quiet --diff-filter=M HEAD -- README.md; then
