@@ -191,6 +191,10 @@ test on docker 18.02.0-ce:
     <<: *test-docker-tests
     services:
         - "docker:18.02.0-ce-dind"
+test on docker 18.03.0-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:18.03.0-ce-dind"
     only:
         - /.*/
 

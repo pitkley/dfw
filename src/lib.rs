@@ -95,6 +95,8 @@
 //!
 //! * `18.02.0-ce`
 //!
+//! * `18.03.0-ce`
+//!
 //! ## Installation
 //!
 //! While you can use Cargo to install `dfw` as a binary, using the Docker image is the preferred
