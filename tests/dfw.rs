@@ -21,10 +21,10 @@ mod common;
 mod logs;
 
 use common::*;
-use dfw::*;
 use dfw::iptables::IPTablesLogger;
 use dfw::types::*;
 use dfw::util::load_file;
+use dfw::*;
 use logs::*;
 use shiplift::Docker;
 use slog::{Drain, Fuse, Logger, OwnedKVList, Record};
