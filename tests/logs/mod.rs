@@ -15,8 +15,8 @@ use std::io::prelude::*;
 use std::str::FromStr;
 
 lazy_static! {
-    static ref RE: Regex = Regex::new(r"(^\$\{?|\$\{)(?P<group_name>\w+)=(?P<pattern>\w+)(\}?$|\})")
-                               .unwrap();
+    static ref RE: Regex =
+        Regex::new(r"(^\$\{?|\$\{)(?P<group_name>\w+)=(?P<pattern>\w+)(\}?$|\})").unwrap();
     static ref PATTERNS: Map<&'static str, &'static str> = {
         let mut m = Map::new();
         m.insert("ip", r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}");
