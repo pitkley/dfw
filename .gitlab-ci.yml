@@ -231,8 +231,9 @@ package and push image for tags:
 
 package and push image on develop patch:
     stage: package
-    tags:
-        - docker-available
+    image: docker:latest
+    services:
+        - docker:dind
     dependencies:
         - build static binary
     only:
