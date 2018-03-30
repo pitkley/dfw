@@ -40,6 +40,7 @@ use dfw::{ContainerFilter, ProcessDFW, ProcessingOptions};
 use shiplift::Docker;
 use shiplift::builder::{EventFilter, EventFilterType, EventsOptions};
 use slog::{Drain, Logger};
+#[allow(unused_imports, deprecated)]
 use std::ascii::AsciiExt;
 use std::os::unix::thread::JoinHandleExt;
 use std::thread;
@@ -355,9 +356,7 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
         Some("running") => ContainerFilter::Running,
         Some(_) | None => bail!("wrong or no container filter specified"),
     };
-    let processing_options = ProcessingOptions {
-        container_filter: container_filter,
-    };
+    let processing_options = ProcessingOptions { container_filter };
 
     let monitor_events = !matches.is_present("disable-event-monitoring");
     trace!(root_logger, "Monitoring events: {}", monitor_events;
