@@ -16,6 +16,7 @@ use errors::*;
 use std::cell::RefCell;
 use std::collections::HashMap as Map;
 use std::convert::Into;
+use std::io::BufWriter;
 use std::io::Write;
 use std::os::unix::process::ExitStatusExt;
 use std::process::{Command, ExitStatus, Output, Stdio};
@@ -343,6 +344,22 @@ impl IPTablesRestore {
         })
     }
 
+    /// Retrieve the current text that would be passed to `iptables-restore` as a vector of lines.
+    pub fn get_rules(&self) -> Vec<String> {
+        // Create a writer for around a vector
+        let mut w = BufWriter::new(Vec::new());
+        // Write the rules into the writer (and hence into the vector)
+        self.write_rules(&mut w).unwrap();
+        // Retrieve the vector from the writer
+        let v = w.into_inner().unwrap();
+        // Transform the `Vec<u8>` into `&str` (this can happen unsafely because the input provided
+        // comes from DFW and is UTF8)
+        let s = unsafe { str::from_utf8_unchecked(&v) };
+
+        // Trim whitespace, split on newlines, make owned and collect into `Vec<String>`
+        s.trim().split("\n").map(|e| e.to_owned()).collect()
+    }
+
     /// Write the rules in iptables-restore format to a given writer.
     ///
     /// (Used internally by [`commit()`](#method.commit) and in tests to verify correct output.)
@@ -535,24 +552,7 @@ impl IPTables for IPTablesRestore {
 
 #[cfg(test)]
 mod tests_iptablesrestore {
-    use std::io::BufWriter;
-    use std::str;
     use super::{IPTables, IPTablesRestore, IPVersion};
-
-    fn get_rules(ipt: &IPTablesRestore) -> Vec<String> {
-        // Create a writer for around a vector
-        let mut w = BufWriter::new(Vec::new());
-        // Write the rules into the writer (and hence into the vector)
-        ipt.write_rules(&mut w).unwrap();
-        // Retrieve the vector from the writer
-        let v = w.into_inner().unwrap();
-        // Transform the `Vec<u8>` into `&str` (this can happen unsafely because the input provided
-        // comes from DFW and is UTF8)
-        let s = unsafe { str::from_utf8_unchecked(&v) };
-
-        // Trim whitespace, split on newlines, make owned and collect into `Vec<String>`
-        s.trim().split("\n").map(|e| e.to_owned()).collect()
-    }
 
     macro_rules! test {
         ( $name:ident ( $ipt:ident ) $block:block -> [ $( $val:expr ),* ] ) => {
@@ -562,7 +562,7 @@ mod tests_iptablesrestore {
 
                 let _ = $block;
 
-                let actual = get_rules(&$ipt);
+                let actual = $ipt.get_rules();
                 let expected = vec![
                     $( $val ),* ,
                     "COMMIT",
