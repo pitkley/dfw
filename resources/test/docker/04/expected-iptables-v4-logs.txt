@@ -20,3 +20,4 @@ append	filter DFWRS_INPUT -i $input=bridge -j DROP
 append	filter DFWRS_INPUT -i $input=bridge -j DROP
 append	filter DFWRS_INPUT -i $input=bridge -j DROP
 append	filter DFWRS_INPUT -i $input=bridge -j DROP
+commit

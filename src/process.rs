@@ -230,6 +230,8 @@ impl<'a> ProcessDFW<'a> {
             // TODO: verify what is needed for ipt6
         }
 
+        self.ipt4.commit()?;
+        // TODO: self.ipt6.commit()?;
         Ok(())
     }
 

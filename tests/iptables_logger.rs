@@ -61,7 +61,7 @@ fn log_all() {
         ("delete_chain", "table chain"),
         ("flush_table", "table"),
     ].into_iter()
-        .map(|(a, b)| (a.to_owned(), b.to_owned()))
+        .map(|(a, b)| (a.to_owned(), Some(b.to_owned())))
         .collect::<Vec<_>>();
 
     assert_eq!(logs, expected);
