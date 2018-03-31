@@ -15,6 +15,7 @@
 -	-A DFWRS_INPUT -i $input=bridge -j DROP
 -	-A DFWRS_INPUT -i $input=bridge -j DROP
 -	-A DFWRS_INPUT -i $input=bridge -j DROP
+-	COMMIT
 -	*nat
 -	:DFWRS_PREROUTING - [0:0]
 -	-F DFWRS_PREROUTING

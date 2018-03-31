@@ -368,8 +368,8 @@ impl IPTablesRestore {
         for (table, rules) in self.rules.borrow().iter() {
             writeln!(w, "*{}", table)?;
             writeln!(w, "{}", rules.join("\n"),)?;
+            writeln!(w, "COMMIT")?;
         }
-        writeln!(w, "COMMIT")?;
 
         Ok(())
     }
