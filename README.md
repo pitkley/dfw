@@ -67,6 +67,28 @@ DFW has been successfully tested under the following Docker versions:
 
 * `17.05.0-ce`
 
+* `17.06.0-ce`
+
+* `17.06.1-ce`
+
+* `17.07.0-ce`
+
+* `17.09.0-ce`
+
+* `17.09.1-ce`
+
+* `17.10.0-ce`
+
+* `17.11.0-ce`
+
+* `17.12.0-ce`
+
+* `18.01.0-ce`
+
+* `18.02.0-ce`
+
+* `18.03.0-ce`
+
 ## Installation
 
 While you can use Cargo to install `dfw` as a binary, using the Docker image is the preferred

@@ -1,4 +1,4 @@
-// Copyright 2017 Pit Kleyersburg <pitkley@googlemail.com>
+// Copyright 2017, 2018 Pit Kleyersburg <pitkley@googlemail.com>
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -74,6 +74,28 @@
 //! * `17.04.0-ce`
 //!
 //! * `17.05.0-ce`
+//!
+//! * `17.06.0-ce`
+//!
+//! * `17.06.1-ce`
+//!
+//! * `17.07.0-ce`
+//!
+//! * `17.09.0-ce`
+//!
+//! * `17.09.1-ce`
+//!
+//! * `17.10.0-ce`
+//!
+//! * `17.11.0-ce`
+//!
+//! * `17.12.0-ce`
+//!
+//! * `18.01.0-ce`
+//!
+//! * `18.02.0-ce`
+//!
+//! * `18.03.0-ce`
 //!
 //! ## Installation
 //!

@@ -1,3 +1,11 @@
+// Copyright 2017, 2018 Pit Kleyersburg <pitkley@googlemail.com>
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified or distributed
+// except according to those terms.
+
 use eval;
 use regex::Regex;
 use std::collections::HashMap as Map;
@@ -7,8 +15,8 @@ use std::io::prelude::*;
 use std::str::FromStr;
 
 lazy_static! {
-    static ref RE: Regex = Regex::new(r"(^\$\{?|\$\{)(?P<group_name>\w+)=(?P<pattern>\w+)(\}?$|\})")
-                               .unwrap();
+    static ref RE: Regex =
+        Regex::new(r"(^\$\{?|\$\{)(?P<group_name>\w+)=(?P<pattern>\w+)(\}?$|\})").unwrap();
     static ref PATTERNS: Map<&'static str, &'static str> = {
         let mut m = Map::new();
         m.insert("ip", r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}");
@@ -121,30 +129,33 @@ fn expand_command(command: &str) -> (String, bool) {
         command
             .split(' ')
             .into_iter()
-            .map(|e| if !RE.is_match(e) && RE.find(e).is_none() {
-                // Segment of command is not in the form `$group_name=pattern`,
-                // return as is.
-                e.to_owned()
-            } else {
-                let c = RE.captures(e).unwrap();
-
-                // Since the regex matched, both the complete match and the
-                // named groups can't be none, so unwrapping is safe.
-                let c0 = c.get(0).unwrap();
-                let (group_name, pattern) = (
-                    c.name("group_name").unwrap().as_str(),
-                    c.name("pattern").unwrap().as_str(),
-                );
-
-                // Check if the pattern exists, otherwise leave the segment
-                // unchanged.
-                if let Some(pattern) = PATTERNS.get(pattern) {
-                    expanded = true;
-                    // Match could be in the middle of a string, keep the parts before and after.
-                    let (before, after) = (&e[..c0.start()], &e[c0.end()..]);
-                    format!(r"{}(?P<{}>{}){}", before, group_name, pattern, after)
-                } else {
+            .map(|e| {
+                if !RE.is_match(e) && RE.find(e).is_none() {
+                    // Segment of command is not in the form `$group_name=pattern`,
+                    // return as is.
                     e.to_owned()
+                } else {
+                    let c = RE.captures(e).unwrap();
+
+                    // Since the regex matched, both the complete match and the
+                    // named groups can't be none, so unwrapping is safe.
+                    let c0 = c.get(0).unwrap();
+                    let (group_name, pattern) = (
+                        c.name("group_name").unwrap().as_str(),
+                        c.name("pattern").unwrap().as_str(),
+                    );
+
+                    // Check if the pattern exists, otherwise leave the segment
+                    // unchanged.
+                    if let Some(pattern) = PATTERNS.get(pattern) {
+                        expanded = true;
+                        // Match could be in the middle of a string, keep the parts before and
+                        // after.
+                        let (before, after) = (&e[..c0.start()], &e[c0.end()..]);
+                        format!(r"{}(?P<{}>{}){}", before, group_name, pattern, after)
+                    } else {
+                        e.to_owned()
+                    }
                 }
             })
             .collect::<Vec<_>>()

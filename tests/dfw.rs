@@ -1,3 +1,11 @@
+// Copyright 2017, 2018 Pit Kleyersburg <pitkley@googlemail.com>
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified or distributed
+// except according to those terms.
+
 #![cfg(feature = "docker-tests")]
 
 extern crate dfw;
@@ -13,10 +21,10 @@ mod common;
 mod logs;
 
 use common::*;
-use dfw::*;
 use dfw::iptables::IPTablesLogger;
 use dfw::types::*;
 use dfw::util::load_file;
+use dfw::*;
 use logs::*;
 use shiplift::Docker;
 use slog::{Drain, Fuse, Logger, OwnedKVList, Record};
@@ -132,18 +140,17 @@ fn dc_template(num: &str) {
             // Verify logs for iptables (IPv4)
             let logs4 = ipt4.logs()
                 .iter()
-                .map(|&(ref f, ref c)| {
-                    LogLine {
-                        function: f.to_owned(),
-                        command: c.to_owned(),
-                        regex: false,
-                        eval: None,
-                    }
+                .map(|&(ref f, ref c)| LogLine {
+                    function: f.to_owned(),
+                    command: c.to_owned(),
+                    regex: false,
+                    eval: None,
                 })
                 .collect::<Vec<_>>();
-            let expected4 = load_log(&resource(
-                &format!("docker/{}/expected-iptables-v4-logs.txt", num),
-            ).unwrap());
+            let expected4 = load_log(&resource(&format!(
+                "docker/{}/expected-iptables-v4-logs.txt",
+                num
+            )).unwrap());
 
             // If the logs don't match, include correctly formatted output for comparison.
             if logs4 != expected4 {
@@ -160,18 +167,17 @@ fn dc_template(num: &str) {
             // Verify logs for ip6tables (IPv6)
             let logs6 = ipt6.logs()
                 .iter()
-                .map(|&(ref f, ref c)| {
-                    LogLine {
-                        function: f.to_owned(),
-                        command: c.to_owned(),
-                        regex: false,
-                        eval: None,
-                    }
+                .map(|&(ref f, ref c)| LogLine {
+                    function: f.to_owned(),
+                    command: c.to_owned(),
+                    regex: false,
+                    eval: None,
                 })
                 .collect::<Vec<_>>();
-            let expected6 = load_log(&resource(
-                &format!("docker/{}/expected-iptables-v6-logs.txt", num),
-            ).unwrap());
+            let expected6 = load_log(&resource(&format!(
+                "docker/{}/expected-iptables-v6-logs.txt",
+                num
+            )).unwrap());
 
             // If the logs don't match, include correctly formatted output for comparison.
             if logs6 != expected6 {

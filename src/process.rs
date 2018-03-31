@@ -1,4 +1,4 @@
-// Copyright 2017 Pit Kleyersburg <pitkley@googlemail.com>
+// Copyright 2017, 2018 Pit Kleyersburg <pitkley@googlemail.com>
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -12,8 +12,8 @@ use errors::*;
 use iptables::*;
 use shiplift::Docker;
 use shiplift::builder::{ContainerFilter as ContainerFilterShiplift, ContainerListOptions};
-use shiplift::rep::{NetworkContainerDetails, NetworkDetails};
 use shiplift::rep::Container;
+use shiplift::rep::{NetworkContainerDetails, NetworkDetails};
 use slog::Logger;
 use std::collections::HashMap as Map;
 use time;

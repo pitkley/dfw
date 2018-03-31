@@ -1,4 +1,4 @@
-// Copyright 2017 Pit Kleyersburg <pitkley@googlemail.com>
+// Copyright 2017, 2018 Pit Kleyersburg <pitkley@googlemail.com>
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -33,10 +33,10 @@ extern crate url;
 use chan::{Receiver, Sender};
 use chan_signal::Signal;
 use clap::{App, Arg, ArgGroup, ArgMatches};
-use dfw::{ContainerFilter, ProcessDFW, ProcessingOptions};
 use dfw::iptables::{IPTables, IPTablesDummy, IPTablesProxy};
 use dfw::types::DFW;
 use dfw::util::*;
+use dfw::{ContainerFilter, ProcessDFW, ProcessingOptions};
 use shiplift::Docker;
 use shiplift::builder::{EventFilter, EventFilterType, EventsOptions};
 use slog::{Drain, Logger};
@@ -221,9 +221,7 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                 .short("d")
                 .long("docker-url")
                 .value_name("URL")
-                .help(
-                    "Set the url to the Docker instance (e.g. unix:///tmp/docker.sock)",
-                ),
+                .help("Set the url to the Docker instance (e.g. unix:///tmp/docker.sock)"),
         )
         .arg(
             Arg::with_name("load-interval")
@@ -232,9 +230,7 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                 .short("i")
                 .long("load-interval")
                 .value_name("INTERVAL")
-                .help(
-                    "Interval between rule processing runs, in seconds (0 = disabled)",
-                ),
+                .help("Interval between rule processing runs, in seconds (0 = disabled)"),
         )
         .arg(
             Arg::with_name("load-mode")
@@ -252,9 +248,7 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                         .as_slice(),
                 )
                 .default_value("once")
-                .help(
-                    "Define if the config-files get loaded once, or before every run",
-                ),
+                .help("Define if the config-files get loaded once, or before every run"),
         )
         .arg(
             Arg::with_name("burst-timeout")
