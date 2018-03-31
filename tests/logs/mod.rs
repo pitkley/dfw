@@ -172,7 +172,7 @@ fn expand_command(command: &str) -> (Option<String>, bool) {
     )
 }
 
-pub fn load_log(log_path: &str) -> Vec<LogLine> {
+pub fn load_loglines(log_path: &str) -> Vec<LogLine> {
     let file = BufReader::new(File::open(log_path).unwrap());
     let mut v: Vec<LogLine> = Vec::new();
 
