@@ -11,6 +11,7 @@
 -	-A FORWARD -j DFWRS_FORWARD
 -	-A DFWRS_FORWARD -i $input=bridge -j REJECT
 -	-A DFWRS_FORWARD -s $src_ip=ip -i $input=bridge -o eni -m state --state RELATED -j ACCEPT
+-	COMMIT
 -	*nat
 -	:DFWRS_PREROUTING - [0:0]
 -	-F DFWRS_PREROUTING

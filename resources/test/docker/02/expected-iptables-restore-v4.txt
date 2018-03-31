@@ -12,6 +12,7 @@
 -	-A DFWRS_FORWARD -i $input=bridge -o $output=bridge -j REJECT	"$input" == "$output"
 -	-A DFWRS_FORWARD -s $src_ip=ip -d $dst_ip=ip -i $input=bridge -o $output=bridge -m state --state RELATED -j ACCEPT	"$input" == "$output"
 -	-A DFWRS_FORWARD -j DROP
+-	COMMIT
 -	*nat
 -	:DFWRS_PREROUTING - [0:0]
 -	-F DFWRS_PREROUTING
