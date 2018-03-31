@@ -896,6 +896,8 @@ struct Rule {
 
     pub filter: Option<String>,
     pub jump: Option<String>,
+
+    pub comment: Option<String>,
 }
 
 #[allow(dead_code)]
@@ -993,6 +995,15 @@ impl Rule {
         new
     }
 
+    pub fn comment<S: ?Sized>(&mut self, value: &S) -> &mut Self
+    where
+        S: AsRef<str>,
+    {
+        let new = self;
+        new.comment = Some(value.as_ref().into());
+        new
+    }
+
     pub fn build(&self) -> Result<String> {
         let mut args: Vec<String> = Vec::new();
 
@@ -1057,6 +1068,13 @@ impl Rule {
             args.push(jump.to_owned());
         } else {
             bail!("`jump` must be initialized");
+        }
+
+        if let Some(ref comment) = self.comment {
+            args.push("-m".to_owned());
+            args.push("comment".to_owned());
+            args.push("--comment".to_owned());
+            args.push(format!("\"{}\"", comment));
         }
 
         Ok(args.join(" "))
