@@ -14,6 +14,7 @@
 
 use errors::*;
 use std::cell::RefCell;
+use std::collections::BTreeMap;
 use std::collections::HashMap as Map;
 use std::convert::Into;
 use std::io::BufWriter;
@@ -326,7 +327,7 @@ pub struct IPTablesRestore {
     ///
     /// `RefCell` is required because the struct cannot be borrowed mutably due to conflicts with
     /// the trait.
-    rules: RefCell<Map<String, Vec<String>>>,
+    rules: RefCell<BTreeMap<String, Vec<String>>>,
 }
 
 impl IPTablesRestore {
@@ -340,7 +341,7 @@ impl IPTablesRestore {
         Ok(IPTablesRestore {
             cmd: cmd,
             rule_map: RefCell::new(Map::new()),
-            rules: RefCell::new(Map::new()),
+            rules: RefCell::new(BTreeMap::new()),
         })
     }
 
