@@ -20,7 +20,7 @@ include = [
 [dependencies]
 chan = "~0.1.19"
 chan-signal = "~0.3.1"
-clap = "~2.26.0"
+clap = "~2.31.2"
 derive_builder = "~0.5.0"
 error-chain = "~0.11.0"
 glob = "~0.2.11"
@@ -29,17 +29,17 @@ libc = "~0.2.21"
 serde = "~1.0.1"
 serde_derive = "~1.0.1"
 shiplift = "~0.3.2"
-slog = "~2.0.2"
-slog-async = "~2.1.0"
-slog-term = "~2.2.0"
+slog = "~2.2.3"
+slog-async = "~2.2.0"
+slog-term = "~2.3.0"
 time = "~0.1.37"
 toml = "~0.4.0"
-url = "~1.5.1"
+url = "~1.7.0"
 
 [dev-dependencies]
 eval = "~0.4.0"
-lazy_static = "~0.2.8"
-maplit = "~0.1.4"
+lazy_static = "~1.0.0"
+maplit = "~1.0.1"
 regex = "~0.2.1"
 
 [[bin]]
