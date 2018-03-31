@@ -331,7 +331,7 @@ pub struct IPTablesRestore {
 }
 
 impl IPTablesRestore {
-    /// Create a new instance of `IPTablesLogger`
+    /// Create a new instance of `IPTablesRestore`
     pub fn new(ip_version: IPVersion) -> Result<IPTablesRestore> {
         let cmd = match ip_version {
             IPVersion::IPv4 => "iptables-restore",
