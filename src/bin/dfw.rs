@@ -20,7 +20,7 @@ extern crate chan_signal;
 extern crate clap;
 extern crate dfw;
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
 extern crate iptables as ipt;
 extern crate libc;
 extern crate shiplift;
@@ -47,18 +47,9 @@ use std::thread;
 use std::time::Duration;
 
 mod errors {
-    error_chain! {
-        links {
-            Dfw(::dfw::errors::Error, ::dfw::errors::ErrorKind);
-        }
+    use failure::Error;
 
-        foreign_links {
-            ClapError(::clap::Error);
-            Docker(::shiplift::errors::Error);
-            IPTError(::ipt::error::IPTError);
-            UrlParseError(::url::ParseError);
-        }
-    }
+    pub type Result<E> = ::std::result::Result<E, Error>;
 }
 
 use errors::*;

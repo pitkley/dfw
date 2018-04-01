@@ -10,6 +10,7 @@
 
 extern crate dfw;
 extern crate eval;
+extern crate failure;
 #[macro_use]
 extern crate lazy_static;
 extern crate regex;
@@ -21,11 +22,11 @@ mod common;
 mod logs;
 
 use common::*;
-use dfw::errors::Error;
 use dfw::iptables::{IPTables, IPTablesLogger, IPTablesRestore, IPVersion};
 use dfw::types::*;
 use dfw::util::load_file;
 use dfw::*;
+use failure::Error;
 use logs::*;
 use shiplift::Docker;
 use slog::{Drain, Fuse, Logger, OwnedKVList, Record};

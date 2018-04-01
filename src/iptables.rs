@@ -107,7 +107,9 @@ macro_rules! unimplemented_method {
         $( #[$attr] )*
         #[allow(unused_variables)]
         fn $name(&self $(, $param: $ty )*) -> Result<$ret> {
-            bail!(ErrorKind::TraitMethodUnimplemented(stringify!($name).to_owned()))
+            bail!(DFWError::TraitMethodUnimplemented {
+                method: stringify!($name).to_owned(),
+            });
         }
     };
 }
@@ -459,7 +461,7 @@ impl IPTables for IPTablesRestore {
         // Get process stdin, write format es expected by iptables-restore
         match c.stdin.as_mut() {
             Some(ref mut s) => self.write_rules(s)?,
-            None => Err(format!("cannot get stdin of {}", self.cmd))?,
+            None => Err(format_err!("cannot get stdin of {}", self.cmd))?,
         }
 
         // Check exit status of command
@@ -467,7 +469,7 @@ impl IPTables for IPTablesRestore {
         if output.status.success() {
             Ok(true)
         } else {
-            Err(format!(
+            Err(format_err!(
                 "{} failed: '{}'",
                 self.cmd,
                 str::from_utf8(&output.stderr).unwrap_or("").trim()

@@ -178,7 +178,7 @@
 #[macro_use]
 extern crate derive_builder;
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
 extern crate glob;
 extern crate iptables as ipt;
 extern crate serde;
