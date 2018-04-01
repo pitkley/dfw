@@ -6,24 +6,18 @@
 // option. This file may not be copied, modified or distributed
 // except according to those terms.
 
-//! Errors, using [`error-chain`][error-chain].
+//! Errors, using [`failure`][failure].
 //!
-//! [error-chain]: https://crates.io/crates/error-chain
+//! [failure]: https://crates.io/crates/failure
 
 #![allow(missing_docs)]
 
-error_chain! {
-    foreign_links {
-        Docker(::shiplift::errors::Error);
-        Io(::std::io::Error);
-        IPTError(::ipt::error::IPTError);
-        TomlDe(::toml::de::Error);
-    }
+use failure::Error;
 
-    errors {
-        TraitMethodUnimplemented(m: String) {
-            description("trait method unimplemented")
-            display("trait method unimplemented: '{}'", m)
-        }
-    }
+#[derive(Debug, Fail)]
+pub enum DFWError {
+    #[fail(display = "trait method unimplemented: {}", method)]
+    TraitMethodUnimplemented { method: String },
 }
+
+pub type Result<E> = ::std::result::Result<E, Error>;

@@ -59,7 +59,8 @@ impl<'a> ProcessDFW<'a> {
         debug!(logger, "Got list of containers";
                o!("containers" => format!("{:#?}", containers)));
 
-        let container_map = get_container_map(&containers)?.ok_or_else(|| "no containers found")?;
+        let container_map =
+            get_container_map(&containers)?.ok_or_else(|| format_err!("no containers found"))?;
         trace!(logger, "Got map of containers";
                o!("container_map" => format!("{:#?}", container_map)));
 
@@ -67,7 +68,8 @@ impl<'a> ProcessDFW<'a> {
         debug!(logger, "Got list of networks";
                o!("networks" => format!("{:#?}", networks)));
 
-        let network_map = get_network_map(&networks)?.ok_or_else(|| "no networks found")?;
+        let network_map =
+            get_network_map(&networks)?.ok_or_else(|| format_err!("no networks found"))?;
         trace!(logger, "Got map of networks";
                o!("container_map" => format!("{:#?}", container_map)));
 
@@ -167,7 +169,7 @@ impl<'a> ProcessDFW<'a> {
                     if let Some(bridge_name) = bridge_network
                         .Options
                         .as_ref()
-                        .ok_or("error")?
+                        .ok_or_else(|| format_err!("couldn't get container options"))?
                         .get("com.docker.network.bridge.name")
                     {
                         info!(self.logger, "Add ACCEPT rules for Docker bridge";
@@ -347,7 +349,7 @@ impl<'a> ProcessDFW<'a> {
                         .IPv4Address
                         .split('/')
                         .next()
-                        .ok_or_else(|| Error::from("IPv4 address is empty"))?);
+                        .ok_or_else(|| format_err!("IPv4 address is empty"))?);
             }
 
             if let Some(ref dst_container) = rule.dst_container {
@@ -373,7 +375,7 @@ impl<'a> ProcessDFW<'a> {
                     .IPv4Address
                     .split('/')
                     .next()
-                    .ok_or_else(|| Error::from("IPv4 address is empty"))?);
+                    .ok_or_else(|| format_err!("IPv4 address is empty"))?);
             }
 
             if let Some(ref filter) = rule.filter {
@@ -477,7 +479,7 @@ impl<'a> ProcessDFW<'a> {
                                 .IPv4Address
                                 .split('/')
                                 .next()
-                                .ok_or_else(|| Error::from("IPv4 address is empty"))?);
+                                .ok_or_else(|| format_err!("IPv4 address is empty"))?);
                         }
                     }
                 }
@@ -587,7 +589,7 @@ impl<'a> ProcessDFW<'a> {
                         .IPv4Address
                         .split('/')
                         .next()
-                        .ok_or_else(|| Error::from("IPv4 address is empty"))?);
+                        .ok_or_else(|| format_err!("IPv4 address is empty"))?);
                 }
             }
 
@@ -666,7 +668,7 @@ impl<'a> ProcessDFW<'a> {
                         .IPv4Address
                         .split('/')
                         .next()
-                        .ok_or_else(|| Error::from("IPv4 address is empty"))?);
+                        .ok_or_else(|| format_err!("IPv4 address is empty"))?);
 
                     let destination_port = match expose_port.container_port {
                         Some(destination_port) => destination_port.to_string(),
@@ -680,7 +682,7 @@ impl<'a> ProcessDFW<'a> {
                             .IPv4Address
                             .split('/')
                             .next()
-                            .ok_or_else(|| Error::from("IPv4 address is empty"))?,
+                            .ok_or_else(|| format_err!("IPv4 address is empty"))?,
                         destination_port
                     ));
                 } else {
@@ -795,7 +797,7 @@ impl<'a> ProcessDFW<'a> {
                                     .IPv4Address
                                     .split('/')
                                     .next()
-                                    .ok_or_else(|| Error::from("IPv4 address is empty"))?);
+                                    .ok_or_else(|| format_err!("IPv4 address is empty"))?);
                             }
                         }
                     }
@@ -836,7 +838,7 @@ impl<'a> ProcessDFW<'a> {
                         .IPv4Address
                         .split('/')
                         .next()
-                        .ok_or_else(|| Error::from("IPv4 address is empty",))?,
+                        .ok_or_else(|| format_err!("IPv4 address is empty"))?,
                     destination_port
                 ));
 
