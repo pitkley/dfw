@@ -54,3 +54,8 @@ iptables-tests = []
 [package.metadata.release]
 sign-commit = true
 
+[profile.release]
+lto = true
+codegen-units = 1
+incremental = false
+
