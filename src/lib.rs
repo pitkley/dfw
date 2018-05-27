@@ -54,8 +54,8 @@
 //! One category which DFWFW covers that is not (yet) implemented in DFW is
 //! `container_internals`, that is configuring iptables rules within containers.
 //!
-//! See the [examples][examples] *(TODO)*, and the [configuration types][types.rs] for a detailed
-//! description of every configuration section.
+//! See the [configuration types][types.rs] for a detailed description of every configuration
+//! section.
 //!
 //! ## Supported Docker versions
 //!
@@ -97,13 +97,19 @@
 //!
 //! * `18.03.0-ce`
 //!
+//! * `18.03.1-ce`
+//!
+//! * `18.04.0-ce`
+//!
+//! * `18.05.0-ce`
+//!
 //! ## Installation
 //!
 //! While you can use Cargo to install `dfw` as a binary, using the Docker image is the preferred
 //! way to go, especially if you don't want to install Rust and Cargo on your host:
 //!
 //! ```console
-//! $ docker pull pitkley/dfw:0.2
+//! $ docker pull pitkley/dfw
 //! $ docker run -d \
 //!       --name=dfw \
 //!       -v /var/run/docker.sock:/var/run/docker.sock:ro \
