@@ -1,6 +1,6 @@
 [package]
 name = "dfw"
-version = "0.4.0"
+version = "0.4.1-alpha.0"
 authors = ["Pit Kleyersburg <pitkley@googlemail.com>"]
 license = "MIT/Apache-2.0"
 description = "Docker firewall framework, in Rust"
