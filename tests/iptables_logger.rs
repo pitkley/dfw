@@ -1,3 +1,11 @@
+// Copyright 2017, 2018 Pit Kleyersburg <pitkley@googlemail.com>
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified or distributed
+// except according to those terms.
+
 extern crate dfw;
 
 use dfw::iptables::{IPTables, IPTablesLogger};
@@ -53,7 +61,7 @@ fn log_all() {
         ("delete_chain", "table chain"),
         ("flush_table", "table"),
     ].into_iter()
-        .map(|(a, b)| (a.to_owned(), b.to_owned()))
+        .map(|(a, b)| (a.to_owned(), Some(b.to_owned())))
         .collect::<Vec<_>>();
 
     assert_eq!(logs, expected);

@@ -1,14 +1,22 @@
+// Copyright 2017, 2018 Pit Kleyersburg <pitkley@googlemail.com>
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified or distributed
+// except according to those terms.
+
 use eval;
 use regex::Regex;
 use std::collections::HashMap as Map;
 use std::fs::File;
-use std::io::BufReader;
 use std::io::prelude::*;
+use std::io::BufReader;
 use std::str::FromStr;
 
 lazy_static! {
-    static ref RE: Regex = Regex::new(r"(^\$\{?|\$\{)(?P<group_name>\w+)=(?P<pattern>\w+)(\}?$|\})")
-                               .unwrap();
+    static ref RE: Regex =
+        Regex::new(r"(^\$\{?|\$\{)(?P<group_name>\w+)=(?P<pattern>\w+)(\}?$|\})").unwrap();
     static ref PATTERNS: Map<&'static str, &'static str> = {
         let mut m = Map::new();
         m.insert("ip", r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}");
@@ -21,7 +29,7 @@ lazy_static! {
 pub struct LogLine {
     pub function: String,
     pub regex: bool,
-    pub command: String,
+    pub command: Option<String>,
     pub eval: Option<String>,
 }
 
@@ -39,17 +47,17 @@ impl PartialEq for LogLine {
             }
 
             // Handle regex
-            let re = Regex::new(&self.command).unwrap();
+            let re = Regex::new(&self.command.as_ref().unwrap()).unwrap();
 
             // Verify we have a match
-            if !re.is_match(&other.command) {
+            if !re.is_match(&other.command.as_ref().unwrap()) {
                 return false;
             }
 
             // Check if we have to have constraints to evaluate
             if let Some(ref eval) = self.eval {
                 // Get capture groups
-                let captures = re.captures(&other.command).unwrap();
+                let captures = re.captures(&other.command.as_ref().unwrap()).unwrap();
 
                 // Try to expand the capture groups used in the eval-string
                 let mut expansion = String::new();
@@ -94,17 +102,22 @@ impl FromStr for LogLine {
         let s = s.split('\t').collect::<Vec<_>>();
 
         // String has to be either:
+        //     function
+        // or
         //     function<TAB>command
         // or
         //     function<TAB>command<TAB>eval
+
+        // The command might contain pattern-expansions in the form `$group_name=pattern`.
+        let (command, expanded) = match s.len() {
+            1 => (None, false),
+            _ => expand_command(s[1]),
+        };
         let eval = match s.len() {
-            2 => None,
+            1 | 2 => None,
             3 => Some(s[2].to_owned()),
             _ => return Err("string split incorrectly".to_owned()),
         };
-
-        // The command might contain pattern-expansions in the form `$group_name=pattern`.
-        let (command, expanded) = expand_command(s[1]);
 
         Ok(LogLine {
             function: s[0].to_owned(),
@@ -115,46 +128,51 @@ impl FromStr for LogLine {
     }
 }
 
-fn expand_command(command: &str) -> (String, bool) {
+fn expand_command(command: &str) -> (Option<String>, bool) {
     let mut expanded = false;
     (
-        command
-            .split(' ')
-            .into_iter()
-            .map(|e| if !RE.is_match(e) && RE.find(e).is_none() {
-                // Segment of command is not in the form `$group_name=pattern`,
-                // return as is.
-                e.to_owned()
-            } else {
-                let c = RE.captures(e).unwrap();
+        Some(
+            command
+                .split(' ')
+                .into_iter()
+                .map(|e| {
+                    if !RE.is_match(e) && RE.find(e).is_none() {
+                        // Segment of command is not in the form `$group_name=pattern`,
+                        // return as is.
+                        e.to_owned()
+                    } else {
+                        let c = RE.captures(e).unwrap();
 
-                // Since the regex matched, both the complete match and the
-                // named groups can't be none, so unwrapping is safe.
-                let c0 = c.get(0).unwrap();
-                let (group_name, pattern) = (
-                    c.name("group_name").unwrap().as_str(),
-                    c.name("pattern").unwrap().as_str(),
-                );
+                        // Since the regex matched, both the complete match and the
+                        // named groups can't be none, so unwrapping is safe.
+                        let c0 = c.get(0).unwrap();
+                        let (group_name, pattern) = (
+                            c.name("group_name").unwrap().as_str(),
+                            c.name("pattern").unwrap().as_str(),
+                        );
 
-                // Check if the pattern exists, otherwise leave the segment
-                // unchanged.
-                if let Some(pattern) = PATTERNS.get(pattern) {
-                    expanded = true;
-                    // Match could be in the middle of a string, keep the parts before and after.
-                    let (before, after) = (&e[..c0.start()], &e[c0.end()..]);
-                    format!(r"{}(?P<{}>{}){}", before, group_name, pattern, after)
-                } else {
-                    e.to_owned()
-                }
-            })
-            .collect::<Vec<_>>()
-            .join(" ")
-            .to_owned(),
+                        // Check if the pattern exists, otherwise leave the segment
+                        // unchanged.
+                        if let Some(pattern) = PATTERNS.get(pattern) {
+                            expanded = true;
+                            // Match could be in the middle of a string, keep the parts before and
+                            // after.
+                            let (before, after) = (&e[..c0.start()], &e[c0.end()..]);
+                            format!(r"{}(?P<{}>{}){}", before, group_name, pattern, after)
+                        } else {
+                            e.to_owned()
+                        }
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(" ")
+                .to_owned(),
+        ),
         expanded,
     )
 }
 
-pub fn load_log(log_path: &str) -> Vec<LogLine> {
+pub fn load_loglines(log_path: &str) -> Vec<LogLine> {
     let file = BufReader::new(File::open(log_path).unwrap());
     let mut v: Vec<LogLine> = Vec::new();
 

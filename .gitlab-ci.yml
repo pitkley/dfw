@@ -1,82 +1,62 @@
+image: rustlang/rust:nightly
+
+variables:
+    DOCKER_DRIVER: overlay2
+    CARGO_HOME: "$CI_PROJECT_DIR/cargo"
+    CROSS_BUILD_IMAGE: "${CI_REGISTRY_IMAGE}/hack/cross:latest"
+    TESTER_BUILD_IMAGE: "${CI_REGISTRY_IMAGE}/hack/tester:latest"
+
 stages:
     - prepare
-    - push
     - build
-    - test
+    - test docker
     - package
 
-cache:
-    key: "$CI_JOB_NAME"
-    paths:
-        - target/
-
-.prepare-rust-image: &prepare-rust-image
+.build and push hack image: &build-and-push-hack-image
     stage: prepare
-    tags:
-        - docker-available
-        - local
+    image: docker:latest
+    services:
+        - docker:dind
     script:
-        - JOB_NAME=( $CI_JOB_NAME )
-        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
-        - sed -i "0,/FROM /{s/:.*/:${JOB_NAME[3]}/}" Dockerfile.build
-        - docker pull "$(grep '^FROM' Dockerfile.build | awk '{ print $2; }' | head -n1)"
-        - docker build -t "${CI_REGISTRY_IMAGE}/build:${JOB_NAME[3]}" -f Dockerfile.build .
+        # I hate this eval as much as the next guy, but I didn't come up with
+        # another way that wouldn't result in duplication for the
+        # `*_BUILD_IMAGE` variables.
+        - export BUILD_IMAGE=$(eval "echo \"$BUILD_IMAGE\"")
+        - docker login -u gitlab-ci-token -p "$CI_JOB_TOKEN" "$CI_REGISTRY"
+        - 'docker pull "${BUILD_IMAGE}" || :'
+        - >
+          docker build
+          --pull
+          --cache-from "${BUILD_IMAGE}"
+          -t "${BUILD_IMAGE}"
+          "hack/docker/${BUILD_DIR}/"
+        - docker push "${BUILD_IMAGE}"
 
-prepare rust image stable: *prepare-rust-image
-prepare rust image beta: *prepare-rust-image
-prepare rust image nightly: *prepare-rust-image
+build and push cross image:
+    <<: *build-and-push-hack-image
+    variables:
+        BUILD_IMAGE: "$CROSS_BUILD_IMAGE"
+        BUILD_DIR: "cross"
 
-.push-rust-image: &push-rust-image
-    stage: push
-    tags:
-        - docker-available
-        - local
-    script:
-        - JOB_NAME=( $CI_JOB_NAME )
-        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
-        - docker push "${CI_REGISTRY_IMAGE}/build:${JOB_NAME[3]}"
-
-push rust image stable: *push-rust-image
-push rust image beta: *push-rust-image
-push rust image nightly: *push-rust-image
+build and push tester image:
+    <<: *build-and-push-hack-image
+    variables:
+        BUILD_IMAGE: "$TESTER_BUILD_IMAGE"
+        BUILD_DIR: "tester"
 
 rustfmt:
     stage: build
-    tags:
-        - docker
-    image: "${CI_REGISTRY_IMAGE}/build:nightly"
+    image: rustlang/rust:nightly
     script:
-        - cargo install rustfmt-nightly
-        - cargo fmt -- --write-mode diff
+        - rustup component add rustfmt-preview
+        - cargo fmt --all -- --check
 
-build dynamic binary on stable:
+build and test dynamic binary on stable:
     stage: build
-    tags:
-        - docker
-    image: "${CI_REGISTRY_IMAGE}/build:stable"
+    image: rust:latest
     script:
         - cargo build --verbose
-    cache:
-        key: "dynamic binary on stable"
-        paths:
-            - target/
-    artifacts:
-        name: "$CI_JOB_NAME"
-        paths:
-            - Cargo.toml
-            - Cargo.lock
-
-build dynamic binary on beta:
-    stage: build
-    tags:
-        - docker
-    image: "${CI_REGISTRY_IMAGE}/build:beta"
-    script:
-        - cargo build --verbose
-    cache:
-        key: "dynamic binary on beta"
-        paths:
-            - target/
+        - cargo test -- --nocapture
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
@@ -85,15 +65,9 @@ build dynamic binary on beta:
 
 build dynamic binary on nightly:
     stage: build
-    tags:
-        - docker
-    image: "${CI_REGISTRY_IMAGE}/build:nightly"
+    image: rustlang/rust:nightly
     script:
         - cargo build --verbose
-    cache:
-        key: "dynamic binary on nightly"
-        paths:
-            - target/
     allow_failure: true
     artifacts:
         name: "$CI_JOB_NAME"
@@ -103,145 +77,162 @@ build dynamic binary on nightly:
 
 build static binary:
     stage: build
-    tags:
-        - rust-cross
-        - local
+    image: "${CROSS_BUILD_IMAGE}"
     script:
-        - cross build --target x86_64-unknown-linux-musl --release
+        - cargo build --target x86_64-unknown-linux-musl --release
+        - cargo test --target x86_64-unknown-linux-musl -- --nocapture
+        - cp target/x86_64-unknown-linux-musl/release/dfw dfw-unstripped
         - cp target/x86_64-unknown-linux-musl/release/dfw dfw
-    cache:
-        key: "static binary"
-        paths:
-            - target/
+        - strip dfw
     artifacts:
         name: "$CI_JOB_NAME"
         paths:
             - Cargo.toml
             - Cargo.lock
+            - dfw-unstripped
             - dfw
 
-test dynamic binary on stable:
-    stage: test
-    tags:
-        - docker
-    image: "${CI_REGISTRY_IMAGE}/build:stable"
-    dependencies: []
+build for docker tests:
+    stage: build
+    image: rust:latest
     script:
-        - cargo test -- --nocapture
+        - cargo build --verbose
+        - cargo build --verbose --tests
     cache:
-        key: "dynamic binary on stable"
+        key: "docker-tests"
         paths:
-            - target/
-
-test dynamic binary on beta:
-    stage: test
-    tags:
-        - docker
-    image: "${CI_REGISTRY_IMAGE}/build:beta"
-    dependencies: []
-    script:
-        - cargo test -- --nocapture
-    cache:
-        key: "dynamic binary on beta"
-        paths:
-            - target/
-
-test dynamic binary on nightly:
-    stage: test
-    tags:
-        - docker
-    image: "${CI_REGISTRY_IMAGE}/build:nightly"
-    dependencies: []
-    script:
-        - cargo test -- --nocapture
-    cache:
-        key: "dynamic binary on nightly"
-        paths:
-            - target/
-    allow_failure: true
-
-test static binary:
-    stage: test
-    tags:
-        - rust-cross
-        - local
-    dependencies: []
-    script:
-        - cross test --target x86_64-unknown-linux-musl -- --nocapture
-    cache:
-        key: "static binary"
-        paths:
-            - target/
+        - target/
+        - cargo/
+        policy: push
 
 .test-docker-tests: &test-docker-tests
-    stage: test
-    tags:
-        - rust
-        - docker-available
-    dependencies: []
-    before_script:
-        # Extract docker version
-        - JOB_NAME=( $CI_JOB_NAME )
-        - echo "$JOB_NAME"
-        - DIND_VERSION="${JOB_NAME[3]}"
-        - echo "$DIND_VERSION"
-        # Start dind-container
-        - >
-            docker run
-            --rm -d --name "dind-runner-${CI_JOB_ID}" --privileged
-            "docker:$DIND_VERSION-dind" --iptables=false
-        # Get dind-container IP
-        - DIND_IP_ADDRESS="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "dind-runner-${CI_JOB_ID}")"
-        - echo "$DIND_IP_ADDRESS"
-        # Wait for dind-container to be ready
-        - >
-            until docker -H "tcp://${DIND_IP_ADDRESS}:2375" info >/dev/null 2>&1; do sleep 1; done
-        - export DOCKER_HOST="http://${DIND_IP_ADDRESS}:2375"
-        - echo "$DOCKER_HOST"
-    script:
-        - RUST_TEST_THREADS=1 cargo test --all-features -j1 -- --nocapture
-    after_script:
-        - docker stop "dind-runner-${CI_JOB_ID}"
+    stage: test docker
+    image: "$TESTER_BUILD_IMAGE"
+    services:
+        - "docker:dind"
+    only:
+        - master
+        - /^develop\/.*$/
+    dependencies: [] # don't download artifacts from previous jobs
     cache:
-        key: "test on docker"
+        key: "docker-tests"
         paths:
-            - target/
+        - target/
+        - cargo/
+        policy: pull
+    script:
+        # Shiplift apparently doesn't work with a tcp docker host
+        - export DOCKER_HOST="${DOCKER_HOST/tcp:/http:}"
+        - RUST_TEST_THREADS=1 cargo test --all-features -j1 -- --nocapture
 
 # API from 1.12.6 and below is not compatible.
-test on docker 1.13.0: *test-docker-tests
-test on docker 1.13.1: *test-docker-tests
-test on docker 17.03.0-ce: *test-docker-tests
-test on docker 17.03.1-ce: *test-docker-tests
-test on docker 17.03.2-ce: *test-docker-tests
-test on docker 17.04.0-ce: *test-docker-tests
-test on docker 17.05.0-ce: *test-docker-tests
-test on docker 17.06.0-ce: *test-docker-tests
-test on docker 17.06.1-ce: *test-docker-tests
-test on docker 17.07.0-ce: *test-docker-tests
+test on docker 1.13.0:
+    <<: *test-docker-tests
+    services:
+        - "docker:1.13.0-dind"
+test on docker 1.13.1:
+    <<: *test-docker-tests
+    services:
+        - "docker:1.13.1-dind"
+test on docker 17.03.0-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:17.03.0-ce-dind"
+test on docker 17.03.1-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:17.03.1-ce-dind"
+test on docker 17.03.2-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:17.03.2-ce-dind"
+test on docker 17.04.0-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:17.04.0-ce-dind"
+test on docker 17.05.0-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:17.05.0-ce-dind"
+test on docker 17.06.0-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:17.06.0-ce-dind"
+test on docker 17.06.1-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:17.06.1-ce-dind"
+test on docker 17.07.0-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:17.07.0-ce-dind"
+test on docker 17.09.0-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:17.09.0-ce-dind"
+test on docker 17.09.1-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:17.09.1-ce-dind"
+test on docker 17.10.0-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:17.10.0-ce-dind"
+test on docker 17.11.0-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:17.11.0-ce-dind"
+test on docker 17.12.0-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:17.12.0-ce-dind"
+test on docker 18.01.0-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:18.01.0-ce-dind"
+test on docker 18.02.0-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:18.02.0-ce-dind"
+test on docker 18.03.0-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:18.03.0-ce-dind"
+test on docker 18.03.1-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:18.03.1-ce-dind"
+test on docker 18.04.0-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:18.04.0-ce-dind"
+test on docker 18.05.0-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:18.04.0-ce-dind"
+    only:
+        - /.*/
 
-package image for feature-branch:
+package and push image for feature-branch:
     stage: package
-    tags:
-        - docker-available
-        - local
-    dependencies:
-        - build static binary
+    image: docker:latest
+    services:
+        - docker:dind
     only:
         - branches
     except:
         - master
         - /^develop\/.*$/
     script:
+        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
         - docker build --pull -t "${CI_REGISTRY_IMAGE}/branches:${CI_COMMIT_REF_SLUG}" .
-        - docker image rm "${CI_REGISTRY_IMAGE}/branches:${CI_COMMIT_REF_SLUG}"
+        - docker push "${CI_REGISTRY_IMAGE}/branches:${CI_COMMIT_REF_SLUG}"
 
 package and push image for tags:
     stage: package
-    tags:
-        - docker-available
-        - local
-    dependencies:
-        - build static binary
+    image: docker:latest
+    services:
+        - docker:dind
     only:
         - tags
     script:
@@ -251,11 +242,9 @@ package and push image for tags:
 
 package and push image on develop patch:
     stage: package
-    tags:
-        - docker-available
-        - local
-    dependencies:
-        - build static binary
+    image: docker:latest
+    services:
+        - docker:dind
     only:
         - develop/patch
     script:
@@ -265,11 +254,9 @@ package and push image on develop patch:
 
 package and push image on develop minor:
     stage: package
-    tags:
-        - docker-available
-        - local
-    dependencies:
-        - build static binary
+    image: docker:latest
+    services:
+        - docker:dind
     only:
         - develop/minor
     script:
@@ -279,11 +266,9 @@ package and push image on develop minor:
 
 package and push image on master:
     stage: package
-    tags:
-        - docker-available
-        - local
-    dependencies:
-        - build static binary
+    image: docker:latest
+    services:
+        - docker:dind
     only:
         - master
     script:
@@ -291,3 +276,16 @@ package and push image on master:
         - docker build --pull -t $CI_REGISTRY_IMAGE .
         - docker push $CI_REGISTRY_IMAGE
 
+# -----------------------------------------------------------------------------
+
+.global_functions: &global_functions |
+    if command -v docker; then
+        if ! docker info &>/dev/null; then
+            if [ -z "$DOCKER_HOST" -a "$KUBERNETES_PORT" ]; then
+                export DOCKER_HOST='tcp://localhost:2375'
+            fi
+        fi
+    fi
+
+before_script:
+    - *global_functions

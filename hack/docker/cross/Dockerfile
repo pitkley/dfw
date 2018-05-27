@@ -1,5 +1,4 @@
-# Stage 0: builder image
-FROM rust:latest as builder
+FROM rust:latest
 
 ENV CROSS_MUSL_COMMIT="850fbd1024800a88d679a2891a03662dcec276f5"
 
@@ -15,22 +14,3 @@ ENV CC_x86_64_unknown_linux_musl=musl-gcc \
     OPENSSL_DIR=/openssl \
     OPENSSL_INCLUDE_DIR=/openssl/include \
     OPENSSL_LIB_DIR=/openssl/lib
-
-RUN mkdir /app
-WORKDIR /app
-
-COPY . /app
-
-RUN set -ex; \
-    cargo build --target x86_64-unknown-linux-musl --release; \
-    cargo test --target x86_64-unknown-linux-musl -- --nocapture; \
-    strip target/x86_64-unknown-linux-musl/release/dfw;
-
-# Stage 1: final image
-FROM alpine
-
-RUN apk add --no-cache iptables ip6tables
-
-COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/dfw /dfw
-ENTRYPOINT ["/dfw"]
-

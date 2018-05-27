@@ -1,0 +1,24 @@
+# Below you'll find an example configuration, showing you and explaining most
+# (if not all) possible configurations you might need. If you are unsure about
+# any of the explanations, be sure to also check out the documentation on the
+# internal types that are configured through this TOML file:
+#
+#   https://docs.rs/dfw/*/dfw/types/index.html
+#
+# Each of the sections in this file matches to a struct under the same name,
+# and every struct field contains some documentation that might help you out.
+
+[container_to_host]
+# The container_to_host table lets you configure if you want your containers to
+# be able to communicate with the Docker host itself or not. Again, we expect a
+# default policy:
+default_policy = "ACCEPT"
+
+[[container_to_host.rules]]
+# And as with container_to_container and container_to_wider_world before, you
+# can specify additional rules. You are required to provide the `network` and
+# `action` keys, and are allowed to also specify the `src_container` and an
+# additional `filter`, as with the other types of rules, too.
+network = "internal_network"
+action = "REJECT"
+

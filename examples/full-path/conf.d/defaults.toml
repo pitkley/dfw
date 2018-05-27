@@ -1,0 +1,16 @@
+# Below you'll find an example configuration, showing you and explaining most
+# (if not all) possible configurations you might need. If you are unsure about
+# any of the explanations, be sure to also check out the documentation on the
+# internal types that are configured through this TOML file:
+#
+#   https://docs.rs/dfw/*/dfw/types/index.html
+#
+# Each of the sections in this file matches to a struct under the same name,
+# and every struct field contains some documentation that might help you out.
+
+[defaults]
+# Define the external network interface(s) that the Docker networks should be
+# able to communicate with. (You can also skip this key, or specify it as a
+# list of strings if you have multiple interfaces.)
+external_network_interfaces = "eth0"
+

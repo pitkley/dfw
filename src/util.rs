@@ -1,4 +1,4 @@
-// Copyright 2017 Pit Kleyersburg <pitkley@googlemail.com>
+// Copyright 2017, 2018 Pit Kleyersburg <pitkley@googlemail.com>
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -13,8 +13,8 @@ use errors::*;
 use glob::glob;
 use serde::de::DeserializeOwned;
 use std::fs::File;
-use std::io::BufReader;
 use std::io::prelude::*;
+use std::io::BufReader;
 use toml;
 
 /// Load single TOML-file from path and deserialize it into type `T`.

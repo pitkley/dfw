@@ -1,4 +1,4 @@
-// Copyright 2017 Pit Kleyersburg <pitkley@googlemail.com>
+// Copyright 2017, 2018 Pit Kleyersburg <pitkley@googlemail.com>
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -54,8 +54,8 @@
 //! One category which DFWFW covers that is not (yet) implemented in DFW is
 //! `container_internals`, that is configuring iptables rules within containers.
 //!
-//! See the [examples][examples] *(TODO)*, and the [configuration types][types.rs] for a detailed
-//! description of every configuration section.
+//! See the [examples][examples] and [configuration types][types.rs] for a detailed description of
+//! every configuration section.
 //!
 //! ## Supported Docker versions
 //!
@@ -75,13 +75,41 @@
 //!
 //! * `17.05.0-ce`
 //!
+//! * `17.06.0-ce`
+//!
+//! * `17.06.1-ce`
+//!
+//! * `17.07.0-ce`
+//!
+//! * `17.09.0-ce`
+//!
+//! * `17.09.1-ce`
+//!
+//! * `17.10.0-ce`
+//!
+//! * `17.11.0-ce`
+//!
+//! * `17.12.0-ce`
+//!
+//! * `18.01.0-ce`
+//!
+//! * `18.02.0-ce`
+//!
+//! * `18.03.0-ce`
+//!
+//! * `18.03.1-ce`
+//!
+//! * `18.04.0-ce`
+//!
+//! * `18.05.0-ce`
+//!
 //! ## Installation
 //!
 //! While you can use Cargo to install `dfw` as a binary, using the Docker image is the preferred
 //! way to go, especially if you don't want to install Rust and Cargo on your host:
 //!
 //! ```console
-//! $ docker pull pitkley/dfw:0.2
+//! $ docker pull pitkley/dfw
 //! $ docker run -d \
 //!       --name=dfw \
 //!       -v /var/run/docker.sock:/var/run/docker.sock:ro \
@@ -145,6 +173,7 @@
 //!
 //! [moby-issue-32686]: https://github.com/moby/moby/issues/32686
 //!
+//! [examples]: https://github.com/pitkley/dfw/tree/master/examples
 //! [types.rs]: types/index.html
 
 // Increase the compiler's recursion limit for the `error_chain` crate.
@@ -156,7 +185,7 @@
 #[macro_use]
 extern crate derive_builder;
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
 extern crate glob;
 extern crate iptables as ipt;
 extern crate serde;

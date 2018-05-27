@@ -4,7 +4,7 @@ set -e
 exec 2>&1
 
 # Update README
-cargo readme --no-indent-headings --no-title -o README.md >/dev/null
+cargo readme --no-license --no-indent-headings --no-title -o README.md >/dev/null
 
 # Did the contents of README.md change?
 if git diff --quiet --diff-filter=M HEAD -- README.md; then
@@ -19,10 +19,10 @@ else
 fi
 
 # Check if code is formatted
-cargo fmt -- --write-mode=diff
+cargo fmt --all -- --check
 
 # Check code
-cargo check --all-features
+cargo check --all --all-features
 # Check if all tests compile, but don't run them
 cargo test --all-features --no-run
 # Run non-guarded tests
