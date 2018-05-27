@@ -37,8 +37,8 @@ use dfw::iptables::{IPTables, IPTablesDummy, IPTablesProxy, IPTablesRestore, IPV
 use dfw::types::DFW;
 use dfw::util::*;
 use dfw::{ContainerFilter, ProcessDFW, ProcessingOptions};
-use shiplift::Docker;
 use shiplift::builder::{EventFilter, EventFilterType, EventsOptions};
+use shiplift::Docker;
 use slog::{Drain, Logger};
 #[allow(unused_imports, deprecated)]
 use std::ascii::AsciiExt;

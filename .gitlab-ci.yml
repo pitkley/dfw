@@ -46,10 +46,10 @@ build and push tester image:
 
 rustfmt:
     stage: build
-    image: rust:latest
+    image: rustlang/rust:nightly
     script:
         - rustup component add rustfmt-preview
-        - cargo fmt -- --write-mode=diff
+        - cargo fmt --all -- --check
 
 build and test dynamic binary on stable:
     stage: build
@@ -198,6 +198,18 @@ test on docker 18.03.0-ce:
     <<: *test-docker-tests
     services:
         - "docker:18.03.0-ce-dind"
+test on docker 18.03.1-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:18.03.1-ce-dind"
+test on docker 18.04.0-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:18.04.0-ce-dind"
+test on docker 18.05.0-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:18.04.0-ce-dind"
     only:
         - /.*/
 
@@ -206,8 +218,6 @@ package and push image for feature-branch:
     image: docker:latest
     services:
         - docker:dind
-    dependencies:
-        - build static binary
     only:
         - branches
     except:
@@ -223,8 +233,6 @@ package and push image for tags:
     image: docker:latest
     services:
         - docker:dind
-    dependencies:
-        - build static binary
     only:
         - tags
     script:
@@ -237,8 +245,6 @@ package and push image on develop patch:
     image: docker:latest
     services:
         - docker:dind
-    dependencies:
-        - build static binary
     only:
         - develop/patch
     script:
@@ -251,8 +257,6 @@ package and push image on develop minor:
     image: docker:latest
     services:
         - docker:dind
-    dependencies:
-        - build static binary
     only:
         - develop/minor
     script:
@@ -265,8 +269,6 @@ package and push image on master:
     image: docker:latest
     services:
         - docker:dind
-    dependencies:
-        - build static binary
     only:
         - master
     script:

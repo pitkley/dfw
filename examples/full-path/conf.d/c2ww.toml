@@ -1,0 +1,42 @@
+# Below you'll find an example configuration, showing you and explaining most
+# (if not all) possible configurations you might need. If you are unsure about
+# any of the explanations, be sure to also check out the documentation on the
+# internal types that are configured through this TOML file:
+#
+#   https://docs.rs/dfw/*/dfw/types/index.html
+#
+# Each of the sections in this file matches to a struct under the same name,
+# and every struct field contains some documentation that might help you out.
+
+[container_to_wider_world]
+# The container_to_wider_world table defines if and how containers should be
+# able to communicate with the wider world, i.e. communications across the
+# iptables `OUTPUT` chain. (Communications with the host are handled
+# separately, see the next section.) This table expects a default policy, i.e.
+# if you want to allow or block traffic to the wider world by default. If your
+# containers should be able to reach the internet, you'll probably want to set
+# this to ACCEPT.
+default_policy = "ACCEPT"
+
+[[container_to_wider_world.rules]]
+# The container_to_wider_world rules work very similar to the
+# container_to_container ones, except for one major change: there is no
+# destination container, but rather the external network interface the source
+# network/container should be able to communicate with. So if you want to e.g.
+# block a specific Docker network from accessing resources on `eth0`, you can
+# do this:
+network = "internal_network"
+action = "REJECT"
+external_network_interface = "eth0"
+
+[[container_to_wider_world.rules]]
+# If you don't define the `external_network_interface`, DFW will by default use
+# the (first) external network interface you have defined in the "defaults"
+# section of this config, in this case `eth0`. This means that the following
+# rule is identical to the one above:
+network = "internal_network"
+action = "REJECT"
+
+# Note: you are also free to specify the `src_container` and `filter` fields
+# here. Their behaviour is identical to what was shown for the C2C rules.
+

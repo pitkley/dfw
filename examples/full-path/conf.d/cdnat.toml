@@ -1,0 +1,34 @@
+# Below you'll find an example configuration, showing you and explaining most
+# (if not all) possible configurations you might need. If you are unsure about
+# any of the explanations, be sure to also check out the documentation on the
+# internal types that are configured through this TOML file:
+#
+#   https://docs.rs/dfw/*/dfw/types/index.html
+#
+# Each of the sections in this file matches to a struct under the same name,
+# and every struct field contains some documentation that might help you out.
+
+[container_dnat]
+# Finally, the actual last section and one you might only need in very special
+# cases, is container_dnat. This section allows you to prohibit or allow
+# communication between containers that DO NOT share a Docker network. (There
+# is no default policy.)
+
+[[container_dnat.rules]]
+# You can use this section to for example allow any container to access some
+# central container, like a log-collection target. (This rule shows all
+# required fields.)
+dst_network = "log_network"
+dst_container = "logstash"
+expose_port = 5044
+
+[[container_dnat.rules]]
+# Alternatively you can specify that one specific container can access another
+# specific container, across networks. (This rule shows all fields, including
+# optional ones.)
+src_network = "network_a"
+src_container = "container_a"
+dst_network = "network_b"
+dst_container = "container_b"
+expose_port = "50000/udp"
+

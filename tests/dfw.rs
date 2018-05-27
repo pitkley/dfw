@@ -238,7 +238,8 @@ fn test_iptables_restore(num: &str) {
 
     dc_template(num, ipt4, ipt6, |ref ipt4, ref ipt6| {
         // Verify logs for iptables (IPv4)
-        let logs4 = ipt4.0
+        let logs4 = ipt4
+            .0
             .get_rules()
             .iter()
             .map(|c| LogLine {
@@ -256,7 +257,8 @@ fn test_iptables_restore(num: &str) {
         compare_loglines(&logs4, &expected4);
 
         // Verify logs for ip6tables (IPv6)
-        let logs6 = ipt6.0
+        let logs6 = ipt6
+            .0
             .get_rules()
             .iter()
             .map(|c| LogLine {
@@ -286,7 +288,8 @@ fn test_iptables_logger(num: &str) {
 
     dc_template(num, ipt4, ipt6, |ref ipt4, ref ipt6| {
         // Verify logs for iptables (IPv4)
-        let logs4 = ipt4.logs()
+        let logs4 = ipt4
+            .logs()
             .iter()
             .map(|&(ref f, ref c)| LogLine {
                 function: f.to_owned(),
@@ -303,7 +306,8 @@ fn test_iptables_logger(num: &str) {
         compare_loglines(&logs4, &expected4);
 
         // Verify logs for ip6tables (IPv6)
-        let logs6 = ipt6.logs()
+        let logs6 = ipt6
+            .logs()
             .iter()
             .map(|&(ref f, ref c)| LogLine {
                 function: f.to_owned(),
