@@ -218,8 +218,6 @@ package and push image for feature-branch:
     image: docker:latest
     services:
         - docker:dind
-    dependencies:
-        - build static binary
     only:
         - branches
     except:
@@ -235,8 +233,6 @@ package and push image for tags:
     image: docker:latest
     services:
         - docker:dind
-    dependencies:
-        - build static binary
     only:
         - tags
     script:
@@ -249,8 +245,6 @@ package and push image on develop patch:
     image: docker:latest
     services:
         - docker:dind
-    dependencies:
-        - build static binary
     only:
         - develop/patch
     script:
@@ -263,8 +257,6 @@ package and push image on develop minor:
     image: docker:latest
     services:
         - docker:dind
-    dependencies:
-        - build static binary
     only:
         - develop/minor
     script:
@@ -277,8 +269,6 @@ package and push image on master:
     image: docker:latest
     services:
         - docker:dind
-    dependencies:
-        - build static binary
     only:
         - master
     script:
