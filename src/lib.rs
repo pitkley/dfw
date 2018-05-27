@@ -54,8 +54,8 @@
 //! One category which DFWFW covers that is not (yet) implemented in DFW is
 //! `container_internals`, that is configuring iptables rules within containers.
 //!
-//! See the [configuration types][types.rs] for a detailed description of every configuration
-//! section.
+//! See the [examples][examples] and [configuration types][types.rs] for a detailed description of
+//! every configuration section.
 //!
 //! ## Supported Docker versions
 //!
@@ -173,6 +173,7 @@
 //!
 //! [moby-issue-32686]: https://github.com/moby/moby/issues/32686
 //!
+//! [examples]: https://github.com/pitkley/dfw/tree/master/examples
 //! [types.rs]: types/index.html
 
 // Increase the compiler's recursion limit for the `error_chain` crate.

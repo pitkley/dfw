@@ -46,8 +46,8 @@ The general configuration happens across six categories:
 One category which DFWFW covers that is not (yet) implemented in DFW is
 `container_internals`, that is configuring iptables rules within containers.
 
-See the [configuration types][types.rs] for a detailed description of every configuration
-section.
+See the [examples][examples] and [configuration types][types.rs] for a detailed description of
+every configuration section.
 
 ## Supported Docker versions
 
@@ -165,4 +165,5 @@ dual licensed as above, without any additional terms or conditions.
 
 [moby-issue-32686]: https://github.com/moby/moby/issues/32686
 
+[examples]: https://github.com/pitkley/dfw/tree/master/examples
 [types.rs]: types/index.html

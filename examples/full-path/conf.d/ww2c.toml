@@ -1,0 +1,67 @@
+# Below you'll find an example configuration, showing you and explaining most
+# (if not all) possible configurations you might need. If you are unsure about
+# any of the explanations, be sure to also check out the documentation on the
+# internal types that are configured through this TOML file:
+#
+#   https://docs.rs/dfw/*/dfw/types/index.html
+#
+# Each of the sections in this file matches to a struct under the same name,
+# and every struct field contains some documentation that might help you out.
+
+[wider_world_to_container]
+# The last section you'll probably need -- and this is maybe the most important
+# one -- is wider_world_to_container. This allows you to specify what resources
+# the wider world should be able to access from your Docker containers, i.e.
+# allowing connections to the ports and thus services running in your Docker
+# containers. This section does NOT allow you to specify a default policy, it
+# is expected that you manually allow all services you require.
+
+[[wider_world_to_container.rules]]
+# To configure access to some resource from the wider world, you'll need to
+# specify the Docker network and container that should be accessible.
+# Furthermore you need to specify the port that the service in the container
+# listens to, as well as the port that should be used to publish this service
+# on the host.
+network = "reverseproxy_network"
+dst_container = "my_reverseproxy"
+expose_port = { host_port = 80, container_port = 80, family = "tcp" }
+
+# Specifying the port like this is relatively long-winded, especially if the
+# host and container port are identical. To work around this, you have multiple
+# other methods of doing the same thing (from least verbose to most verbose):
+#
+#   expose_port = 80
+#   expose_port = "80/tcp"
+#   expose_port = { host_port = 80 }
+#   expose_port = { host_port = 80, family = "tcp" }
+#   expose_port = { host_port = 80, container_port = 80 }
+#   expose_port = { host_port = 80, container_port = 80, family = "tcp" }
+#
+# All of these are identical, where the `family` is by default assumed to be
+# TCP, and the container port is assumed to be identical to the host port.
+
+[[wider_world_to_container.rules]]
+# Sometimes, you might also want to allow access to multiple ports from a
+# single container. This is also possible:
+network = "reverseproxy_network"
+dst_container = "my_reverseproxy"
+expose_port = [80, 443]
+
+# If the container ports are different from the host ports, you can still
+# define multiple at once:
+#
+#   expose_port = [
+#       { host_port = 80, container_port = 8080 },
+#       { host_port = 443, container_port = 80443 },
+#   ]
+
+[[wider_world_to_container.rules]]
+# A final thing: the WW2C rules require the external network interface to be
+# specified, for which the host-port will be forwarded to the container. By
+# default this is again the primary (i.e. the first) external network interface
+# as specified in the "defaults" section, but you can override this here:
+network = "reverseproxy_network"
+dst_container = "my_reverseproxy"
+expose_port = [80, 443]
+external_network_interface = "tun0"
+
