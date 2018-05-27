@@ -420,7 +420,8 @@ impl IPTables for IPTablesRestore {
     }
 
     fn list(&self, table: &str, chain: &str) -> Result<Vec<String>> {
-        Ok(self.rule_map
+        Ok(self
+            .rule_map
             .borrow()
             .get(table)
             .and_then(|v| v.get(&Some(chain.to_owned())))

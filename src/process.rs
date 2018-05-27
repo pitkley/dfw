@@ -10,10 +10,10 @@
 
 use errors::*;
 use iptables::*;
-use shiplift::Docker;
 use shiplift::builder::{ContainerFilter as ContainerFilterShiplift, ContainerListOptions};
 use shiplift::rep::Container;
 use shiplift::rep::{NetworkContainerDetails, NetworkDetails};
+use shiplift::Docker;
 use slog::Logger;
 use std::collections::HashMap as Map;
 use time;
@@ -73,7 +73,8 @@ impl<'a> ProcessDFW<'a> {
         trace!(logger, "Got map of networks";
                o!("container_map" => format!("{:#?}", container_map)));
 
-        let external_network_interfaces = dfw.defaults
+        let external_network_interfaces = dfw
+            .defaults
             .as_ref()
             .and_then(|d| d.external_network_interfaces.as_ref())
             .cloned();

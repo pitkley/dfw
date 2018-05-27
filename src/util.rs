@@ -13,8 +13,8 @@ use errors::*;
 use glob::glob;
 use serde::de::DeserializeOwned;
 use std::fs::File;
-use std::io::BufReader;
 use std::io::prelude::*;
+use std::io::BufReader;
 use toml;
 
 /// Load single TOML-file from path and deserialize it into type `T`.

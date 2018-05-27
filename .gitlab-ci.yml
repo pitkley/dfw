@@ -46,10 +46,10 @@ build and push tester image:
 
 rustfmt:
     stage: build
-    image: rust:latest
+    image: rustlang/rust:nightly
     script:
         - rustup component add rustfmt-preview
-        - cargo fmt -- --write-mode=diff
+        - cargo fmt --all -- --check
 
 build and test dynamic binary on stable:
     stage: build

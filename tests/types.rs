@@ -32,71 +32,57 @@ fn parse_conf_file() {
     };
     let container_to_container = ContainerToContainer {
         default_policy: "DROP".to_owned(),
-        rules: Some(vec![
-            ContainerToContainerRule {
-                network: "network".to_owned(),
-                src_container: Some("src_container".to_owned()),
-                dst_container: Some("dst_container".to_owned()),
-                filter: Some("FILTER".to_owned()),
-                action: "ACCEPT".to_owned(),
-            },
-        ]),
+        rules: Some(vec![ContainerToContainerRule {
+            network: "network".to_owned(),
+            src_container: Some("src_container".to_owned()),
+            dst_container: Some("dst_container".to_owned()),
+            filter: Some("FILTER".to_owned()),
+            action: "ACCEPT".to_owned(),
+        }]),
     };
     let container_to_wider_world = ContainerToWiderWorld {
         default_policy: "ACCEPT".to_owned(),
-        rules: Some(vec![
-            ContainerToWiderWorldRule {
-                network: Some("network".to_owned()),
-                src_container: Some("src_container".to_owned()),
-                filter: Some("FILTER".to_owned()),
-                action: "ACCEPT".to_owned(),
-                external_network_interface: Some("eni".to_owned()),
-            },
-        ]),
+        rules: Some(vec![ContainerToWiderWorldRule {
+            network: Some("network".to_owned()),
+            src_container: Some("src_container".to_owned()),
+            filter: Some("FILTER".to_owned()),
+            action: "ACCEPT".to_owned(),
+            external_network_interface: Some("eni".to_owned()),
+        }]),
     };
     let container_to_host = ContainerToHost {
         default_policy: "ACCEPT".to_owned(),
-        rules: Some(vec![
-            ContainerToHostRule {
-                network: "network".to_owned(),
-                src_container: Some("src_container".to_owned()),
-                filter: Some("FILTER".to_owned()),
-                action: "ACCEPT".to_owned(),
-            },
-        ]),
+        rules: Some(vec![ContainerToHostRule {
+            network: "network".to_owned(),
+            src_container: Some("src_container".to_owned()),
+            filter: Some("FILTER".to_owned()),
+            action: "ACCEPT".to_owned(),
+        }]),
     };
     let wider_world_to_container = WiderWorldToContainer {
-        rules: Some(vec![
-            WiderWorldToContainerRule {
-                network: "network".to_owned(),
-                dst_container: "dst_container".to_owned(),
-                expose_port: vec![
-                    ExposePort {
-                        host_port: 80,
-                        container_port: None,
-                        family: "tcp".to_owned(),
-                    },
-                ],
-                external_network_interface: Some("eni".to_owned()),
-            },
-        ]),
+        rules: Some(vec![WiderWorldToContainerRule {
+            network: "network".to_owned(),
+            dst_container: "dst_container".to_owned(),
+            expose_port: vec![ExposePort {
+                host_port: 80,
+                container_port: None,
+                family: "tcp".to_owned(),
+            }],
+            external_network_interface: Some("eni".to_owned()),
+        }]),
     };
     let container_dnat = ContainerDNAT {
-        rules: Some(vec![
-            ContainerDNATRule {
-                src_network: Some("src_network".to_owned()),
-                src_container: Some("src_container".to_owned()),
-                dst_network: "dst_network".to_owned(),
-                dst_container: "dst_container".to_owned(),
-                expose_port: vec![
-                    ExposePort {
-                        host_port: 80,
-                        container_port: None,
-                        family: "tcp".to_owned(),
-                    },
-                ],
-            },
-        ]),
+        rules: Some(vec![ContainerDNATRule {
+            src_network: Some("src_network".to_owned()),
+            src_container: Some("src_container".to_owned()),
+            dst_network: "dst_network".to_owned(),
+            dst_container: "dst_container".to_owned(),
+            expose_port: vec![ExposePort {
+                host_port: 80,
+                container_port: None,
+                family: "tcp".to_owned(),
+            }],
+        }]),
     };
 
     let expected: DFW = DFW {
@@ -129,71 +115,57 @@ fn parse_conf_path() {
     };
     let container_to_container = ContainerToContainer {
         default_policy: "DROP".to_owned(),
-        rules: Some(vec![
-            ContainerToContainerRule {
-                network: "network".to_owned(),
-                src_container: Some("src_container".to_owned()),
-                dst_container: Some("dst_container".to_owned()),
-                filter: Some("FILTER".to_owned()),
-                action: "ACCEPT".to_owned(),
-            },
-        ]),
+        rules: Some(vec![ContainerToContainerRule {
+            network: "network".to_owned(),
+            src_container: Some("src_container".to_owned()),
+            dst_container: Some("dst_container".to_owned()),
+            filter: Some("FILTER".to_owned()),
+            action: "ACCEPT".to_owned(),
+        }]),
     };
     let container_to_wider_world = ContainerToWiderWorld {
         default_policy: "ACCEPT".to_owned(),
-        rules: Some(vec![
-            ContainerToWiderWorldRule {
-                network: Some("network".to_owned()),
-                src_container: Some("src_container".to_owned()),
-                filter: Some("FILTER".to_owned()),
-                action: "ACCEPT".to_owned(),
-                external_network_interface: Some("eni".to_owned()),
-            },
-        ]),
+        rules: Some(vec![ContainerToWiderWorldRule {
+            network: Some("network".to_owned()),
+            src_container: Some("src_container".to_owned()),
+            filter: Some("FILTER".to_owned()),
+            action: "ACCEPT".to_owned(),
+            external_network_interface: Some("eni".to_owned()),
+        }]),
     };
     let container_to_host = ContainerToHost {
         default_policy: "ACCEPT".to_owned(),
-        rules: Some(vec![
-            ContainerToHostRule {
-                network: "network".to_owned(),
-                src_container: Some("src_container".to_owned()),
-                filter: Some("FILTER".to_owned()),
-                action: "ACCEPT".to_owned(),
-            },
-        ]),
+        rules: Some(vec![ContainerToHostRule {
+            network: "network".to_owned(),
+            src_container: Some("src_container".to_owned()),
+            filter: Some("FILTER".to_owned()),
+            action: "ACCEPT".to_owned(),
+        }]),
     };
     let wider_world_to_container = WiderWorldToContainer {
-        rules: Some(vec![
-            WiderWorldToContainerRule {
-                network: "network".to_owned(),
-                dst_container: "dst_container".to_owned(),
-                expose_port: vec![
-                    ExposePort {
-                        host_port: 80,
-                        container_port: None,
-                        family: "tcp".to_owned(),
-                    },
-                ],
-                external_network_interface: Some("eni".to_owned()),
-            },
-        ]),
+        rules: Some(vec![WiderWorldToContainerRule {
+            network: "network".to_owned(),
+            dst_container: "dst_container".to_owned(),
+            expose_port: vec![ExposePort {
+                host_port: 80,
+                container_port: None,
+                family: "tcp".to_owned(),
+            }],
+            external_network_interface: Some("eni".to_owned()),
+        }]),
     };
     let container_dnat = ContainerDNAT {
-        rules: Some(vec![
-            ContainerDNATRule {
-                src_network: Some("src_network".to_owned()),
-                src_container: Some("src_container".to_owned()),
-                dst_network: "dst_network".to_owned(),
-                dst_container: "dst_container".to_owned(),
-                expose_port: vec![
-                    ExposePort {
-                        host_port: 80,
-                        container_port: None,
-                        family: "tcp".to_owned(),
-                    },
-                ],
-            },
-        ]),
+        rules: Some(vec![ContainerDNATRule {
+            src_network: Some("src_network".to_owned()),
+            src_container: Some("src_container".to_owned()),
+            dst_network: "dst_network".to_owned(),
+            dst_container: "dst_container".to_owned(),
+            expose_port: vec![ExposePort {
+                host_port: 80,
+                container_port: None,
+                family: "tcp".to_owned(),
+            }],
+        }]),
     };
 
     let expected: DFW = DFW {
@@ -222,13 +194,11 @@ fn parse_expose_port_single_int() {
     let expected = WiderWorldToContainerRule {
         network: "network".to_owned(),
         dst_container: "dst_container".to_owned(),
-        expose_port: vec![
-            ExposePort {
-                host_port: 80,
-                container_port: None,
-                family: "tcp".to_owned(),
-            },
-        ],
+        expose_port: vec![ExposePort {
+            host_port: 80,
+            container_port: None,
+            family: "tcp".to_owned(),
+        }],
         external_network_interface: None,
     };
     let actual: WiderWorldToContainerRule = toml::from_str(fragment).unwrap();
@@ -281,13 +251,11 @@ fn parse_expose_port_single_string() {
         let expected = WiderWorldToContainerRule {
             network: "network".to_owned(),
             dst_container: "dst_container".to_owned(),
-            expose_port: vec![
-                ExposePort {
-                    host_port: port.to_owned(),
-                    container_port: None,
-                    family: family.to_owned(),
-                },
-            ],
+            expose_port: vec![ExposePort {
+                host_port: port.to_owned(),
+                container_port: None,
+                family: family.to_owned(),
+            }],
             external_network_interface: None,
         };
         let actual: WiderWorldToContainerRule = toml::from_str(&fragment).unwrap();
@@ -349,13 +317,11 @@ fn parse_expose_port_single_struct() {
         let expected = WiderWorldToContainerRule {
             network: "network".to_owned(),
             dst_container: "dst_container".to_owned(),
-            expose_port: vec![
-                ExposePort {
-                    host_port: 80,
-                    container_port: None,
-                    family: "tcp".to_owned(),
-                },
-            ],
+            expose_port: vec![ExposePort {
+                host_port: 80,
+                container_port: None,
+                family: "tcp".to_owned(),
+            }],
             external_network_interface: None,
         };
         let actual: WiderWorldToContainerRule = toml::from_str(&fragment).unwrap();

@@ -19,10 +19,10 @@ else
 fi
 
 # Check if code is formatted
-cargo fmt -- --write-mode=diff
+cargo fmt --all -- --check
 
 # Check code
-cargo check --all-features
+cargo check --all --all-features
 # Check if all tests compile, but don't run them
 cargo test --all-features --no-run
 # Run non-guarded tests
