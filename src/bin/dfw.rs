@@ -160,9 +160,11 @@ fn spawn_event_monitor(
         loop {
             trace!(logger, "Waiting for events");
             for event in docker
-                .events(&EventsOptions::builder()
-                    .filter(vec![EventFilter::Type(EventFilterType::Container)])
-                    .build())
+                .events(
+                    &EventsOptions::builder()
+                        .filter(vec![EventFilter::Type(EventFilterType::Container)])
+                        .build(),
+                )
                 .unwrap()
             {
                 trace!(logger, "Received event";
