@@ -346,11 +346,13 @@ impl<'a> ProcessDFW<'a> {
                 ipt_rule
                     .in_interface(&bridge_name)
                     .out_interface(&bridge_name)
-                    .source(src_network
-                        .IPv4Address
-                        .split('/')
-                        .next()
-                        .ok_or_else(|| format_err!("IPv4 address is empty"))?);
+                    .source(
+                        src_network
+                            .IPv4Address
+                            .split('/')
+                            .next()
+                            .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+                    );
             }
 
             if let Some(ref dst_container) = rule.dst_container {
@@ -372,11 +374,13 @@ impl<'a> ProcessDFW<'a> {
                        o!("network_name" => &network.Name,
                           "bridge_name" => &bridge_name));
 
-                ipt_rule.out_interface(&bridge_name).destination(dst_network
-                    .IPv4Address
-                    .split('/')
-                    .next()
-                    .ok_or_else(|| format_err!("IPv4 address is empty"))?);
+                ipt_rule.out_interface(&bridge_name).destination(
+                    dst_network
+                        .IPv4Address
+                        .split('/')
+                        .next()
+                        .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+                );
             }
 
             if let Some(ref filter) = rule.filter {
@@ -476,11 +480,13 @@ impl<'a> ProcessDFW<'a> {
                                    o!("network_name" => &network.Name,
                                       "bridge_name" => &bridge_name));
 
-                            ipt_rule.in_interface(&bridge_name).source(src_network
-                                .IPv4Address
-                                .split('/')
-                                .next()
-                                .ok_or_else(|| format_err!("IPv4 address is empty"))?);
+                            ipt_rule.in_interface(&bridge_name).source(
+                                src_network
+                                    .IPv4Address
+                                    .split('/')
+                                    .next()
+                                    .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+                            );
                         }
                     }
                 }
@@ -586,11 +592,13 @@ impl<'a> ProcessDFW<'a> {
                     trace!(self.logger, "Got source network";
                            o!("network_name" => &network.Name,
                               "src_network" => format!("{:?}", src_network)));
-                    ipt_rule.source(src_network
-                        .IPv4Address
-                        .split('/')
-                        .next()
-                        .ok_or_else(|| format_err!("IPv4 address is empty"))?);
+                    ipt_rule.source(
+                        src_network
+                            .IPv4Address
+                            .split('/')
+                            .next()
+                            .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+                    );
                 }
             }
 
@@ -665,11 +673,13 @@ impl<'a> ProcessDFW<'a> {
                            o!("network_name" => &network.Name,
                               "dst_network" => format!("{:?}", dst_network)));
 
-                    ipt_forward_rule.destination(dst_network
-                        .IPv4Address
-                        .split('/')
-                        .next()
-                        .ok_or_else(|| format_err!("IPv4 address is empty"))?);
+                    ipt_forward_rule.destination(
+                        dst_network
+                            .IPv4Address
+                            .split('/')
+                            .next()
+                            .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+                    );
 
                     let destination_port = match expose_port.container_port {
                         Some(destination_port) => destination_port.to_string(),
@@ -794,11 +804,13 @@ impl<'a> ProcessDFW<'a> {
                                        o!("network_name" => &network.Name,
                                           "bridge_name" => &bridge_name));
 
-                                ipt_rule.in_interface(&bridge_name).source(src_network
-                                    .IPv4Address
-                                    .split('/')
-                                    .next()
-                                    .ok_or_else(|| format_err!("IPv4 address is empty"))?);
+                                ipt_rule.in_interface(&bridge_name).source(
+                                    src_network
+                                        .IPv4Address
+                                        .split('/')
+                                        .next()
+                                        .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+                                );
                             }
                         }
                     }

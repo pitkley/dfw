@@ -8,6 +8,7 @@ variables:
 
 stages:
     - prepare
+    - preconditions
     - build
     - test docker
     - package
@@ -45,7 +46,7 @@ build and push tester image:
         BUILD_DIR: "tester"
 
 rustfmt:
-    stage: build
+    stage: preconditions
     image: rustlang/rust:nightly
     script:
         - rustup component add rustfmt-preview
