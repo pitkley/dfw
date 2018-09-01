@@ -197,7 +197,7 @@ fn dc_template<F: FnOnce(&I, &I) -> (), I: IPTables>(
 
     with_compose_environment(
         &resource(&format!("docker/{}/docker-compose.yml", num)).unwrap(),
-        &format!("dfw_test_{}", num),
+        &format!("dfwtest{}", num),
         || {
             // TODO: only start environment once, then test both IPTablesLogger and IPTablesRestore
             let process =
