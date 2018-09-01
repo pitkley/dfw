@@ -15,7 +15,6 @@
 use errors::*;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
-use std::collections::HashMap as Map;
 use std::convert::Into;
 use std::io::BufWriter;
 use std::io::Write;
@@ -53,8 +52,8 @@ macro_rules! proxies {
 //    the same for the chain, that is `p.chain` only works on functions where the parameter chain
 //    was passed. To work around this we use another trick.
 //
-// 2. Since the chain-parameter in `self.rule_map` is an `Option`, we predefine `chain_opt` with
-//    `None` and then use automatically generated if-statements to replace it with `Some(chain)`.
+// 2. We generate static if conditions using `stringify` to identify whether we have the `chain`
+//    parameter available, and if so, we set the default policy "-" if unset.
 //
 // While this isn't particularly clean, my hope is that both the struct and the static ifs will be
 // optimized away as much as possible, making this not affect runtime -- although this does not make
@@ -70,24 +69,28 @@ macro_rules! restore {
                 $( $param: String ),*
             }
             let p = Params { $( $param: $param.to_string() ),* };
+
+            // Format the rule
+            let rule = format!($fmtstr, $($fmtid),*);
+
+            // Get mutable references to the policies and rules
+            let mut rules = self.rules.borrow_mut();
+            let (ref mut policies, ref mut rules) = rules
+                .entry(p.table.clone())
+                .or_insert_with(|| (BTreeMap::new(), Vec::new()));
+
+            // Identify if we have a chain specified
             let mut chain_opt = None;
             $( if stringify!($param) == "chain" {
                 chain_opt = Some($param.to_owned());
+                // Set the default policy, if unset
+                policies
+                    .entry($param.to_owned())
+                    .or_insert_with(|| "-".to_owned());
             });*;
+            // Push the rule (with the associated optional chain)
+            rules.push((chain_opt, rule.clone()));
 
-            let rule = format!($fmtstr, $($fmtid),*);
-            self.rule_map
-                .borrow_mut()
-                .entry(p.table.clone())
-                .or_insert_with(|| Map::new())
-                .entry(chain_opt)
-                .or_insert_with(|| Vec::new())
-                .push(rule.clone());
-            self.rules
-                .borrow_mut()
-                .entry(p.table)
-                .or_insert_with(|| Vec::new())
-                .push(rule);
             Ok(Default::default())
         }
     };
@@ -282,22 +285,27 @@ impl IPTables for ::ipt::IPTables {
     }
 }
 
+type Table = String;
+type Chain = String;
+type Policy = String;
+type Rule = String;
+
 /// [`IPTables`](trait.IPTables.html) implementation which tracks the functions called and maps it
 /// to the text-format used by `iptables-restore`. Upon calling
 /// [`IPTables::commit`](trait.IPTables.html#tymethod.commit) this text is then passed onto the
-/// `iptables-restore` binary with the `--noflush` option enabled. This will have the following
-/// effect:
+/// `iptables-restore`. This will have the following effect:
 ///
-/// * Any existing rules which **are not** part of chains created by DFW will not be removed on
-///   commit *(unless initialization rules are specified which state otherwise)*
-/// * Any rules which **are** part of chains created by DFW will be completely recreated
+/// * Any existing rules which *are not* part of chains created by DFW *will be* removed on commit!
+///   This means this backend will control all tables in their entirety!
+/// * Any rules which **are** part of chains created by DFW will be completely recreated.
 /// * The recreation of the rules happens atomically thanks to `iptables-restore`. This both cuts
-///   down on the execution time and on the time were vital rules might be missing.
+///   down on the execution time and on the time where vital rules might be missing.
 ///
 /// ## Note
 ///
 /// A multitude of methods in this implementation are marked as "unsupported". This means that the
-/// call is a no-op and will not execute anything -- but it also won't fail!
+/// call will fail with
+/// [`DFWError::TraitMethodUnimplemented`](../errors/enum.DFWError.html#variant.TraitMethodUnimplemented).
 ///
 /// (Every method that is marked as unsupported also has a justification as to why it isn't
 /// implemented, although for most the reason is that DFW doesn't require it and thus no effort was
@@ -306,25 +314,28 @@ pub struct IPTablesRestore {
     /// Save command to execute (`iptables-restore` or `ip6tables-restore`).
     cmd: &'static str,
 
-    /// Rules are mapped: table -> chain -> rules
+    /// Rules are mapped: table -> ((chain -> policy), rules).
     ///
     /// ## Note
     ///
     /// `RefCell` is required because the struct cannot be borrowed mutably due to conflicts with
-    /// the trait.
-    rule_map: RefCell<Map<String, Map<Option<String>, Vec<String>>>>,
-
-    /// List of rules tracking the order they were supplied by `ProcessDFW`
-    ///
-    /// ## Note
-    ///
-    /// `RefCell` is required because the struct cannot be borrowed mutably due to conflicts with
-    /// the trait.
-    rules: RefCell<BTreeMap<String, Vec<String>>>,
+    /// the trait. `BTreeMap`s are used to make sure that the order of tables and chains are
+    /// respected, mainly because the test-suite requires deterministic ordering.
+    rules: RefCell<BTreeMap<Table, (BTreeMap<Chain, Policy>, Vec<(Option<Chain>, Rule)>)>>,
 }
 
 impl IPTablesRestore {
     /// Create a new instance of `IPTablesRestore`
+    ///
+    /// ## Note
+    ///
+    /// This backend *will* recreate all tables it touches -- usually `nat` and `filter` -- which
+    /// means any other rules in those tables that are created externally will be overwritten.
+    ///
+    /// If you require custom rules, you can specify them in the
+    /// [`types::Initialization`][types-Initialization] type.
+    ///
+    /// [types-Initialization]: ../types/struct.Initialization.html
     pub fn new(ip_version: IPVersion) -> Result<IPTablesRestore> {
         let cmd = match ip_version {
             IPVersion::IPv4 => "iptables-restore",
@@ -333,7 +344,6 @@ impl IPTablesRestore {
 
         Ok(IPTablesRestore {
             cmd: cmd,
-            rule_map: RefCell::new(Map::new()),
             rules: RefCell::new(BTreeMap::new()),
         })
     }
@@ -358,9 +368,14 @@ impl IPTablesRestore {
     ///
     /// (Used internally by [`commit()`](#method.commit) and in tests to verify correct output.)
     fn write_rules<W: Write>(&self, w: &mut W) -> Result<()> {
-        for (table, rules) in self.rules.borrow().iter() {
+        for (table, (policies, rules)) in self.rules.borrow().iter() {
             writeln!(w, "*{}", table)?;
-            writeln!(w, "{}", rules.join("\n"),)?;
+            for (chain, policy) in policies {
+                writeln!(w, ":{} {} [0:0]", chain, policy)?;
+            }
+            for (_, rule) in rules {
+                writeln!(w, "{}", rule)?;
+            }
             writeln!(w, "COMMIT")?;
         }
 
@@ -370,20 +385,12 @@ impl IPTablesRestore {
 
 impl IPTables for IPTablesRestore {
     restores! {
-        set_policy(table: &str, chain: &str, policy: &str) -> bool {
-            ":{} {} [0:0]", chain, policy
-        }
-
         append(table: &str, chain: &str, rule: &str) -> bool {
             "-A {} {}", chain, rule
         }
 
         delete(table: &str, chain: &str, rule: &str) -> bool {
             "-D {} {}", chain, rule
-        }
-
-        new_chain(table: &str, chain: &str) -> bool {
-            ":{} - [0:0]", chain
         }
 
         flush_chain(table: &str, chain: &str) -> bool {
@@ -395,14 +402,24 @@ impl IPTables for IPTablesRestore {
         }
     }
 
-    fn execute(&self, table: &str, command: &str) -> Result<Output> {
-        self.rule_map
+    fn set_policy(&self, table: &str, chain: &str, policy: &str) -> Result<bool> {
+        self.rules
             .borrow_mut()
             .entry(table.to_owned())
-            .or_insert_with(|| Map::new())
-            .entry(None)
-            .or_insert_with(|| Vec::new())
-            .push(format!("{}", command));
+            .or_insert_with(|| (BTreeMap::new(), Vec::new()))
+            .0
+            .insert(chain.to_owned(), policy.to_owned());
+
+        Ok(true)
+    }
+
+    fn execute(&self, table: &str, command: &str) -> Result<Output> {
+        self.rules
+            .borrow_mut()
+            .entry(table.to_owned())
+            .or_insert_with(|| (BTreeMap::new(), Vec::new()))
+            .1
+            .push((None, format!("{}", command)));
         Ok(Output {
             status: ExitStatus::from_raw(9),
             stdout: vec![],
@@ -412,52 +429,64 @@ impl IPTables for IPTablesRestore {
 
     fn list(&self, table: &str, chain: &str) -> Result<Vec<String>> {
         Ok(self
-            .rule_map
+            .rules
             .borrow()
             .get(table)
-            .and_then(|v| v.get(&Some(chain.to_owned())))
-            .map_or_else(|| vec![], |v| v.clone()))
+            .map(|(_, rules)| {
+                rules
+                    .iter()
+                    .filter(|(chain_opt, _)| match chain_opt {
+                        Some(value) if chain == value => true,
+                        _ => false,
+                    }).map(|(_, rule)| rule.to_owned())
+                    .collect()
+            }).unwrap_or_else(|| vec![]))
     }
 
     fn list_table(&self, table: &str) -> Result<Vec<String>> {
-        Ok(self.rule_map.borrow().get(table).map_or_else(
-            || vec![],
-            |v| {
-                v.iter()
-                    .filter(|&(k, _)| k.is_some())
-                    .map(|(_, v)| v.clone())
-                    .fold(vec![], |mut acc, mut v| {
-                        acc.append(&mut v);
-                        acc
-                    })
-            },
-        ))
+        Ok(self
+            .rules
+            .borrow()
+            .get(table)
+            .map(|(_, rules)| rules.iter().map(|(_, rule)| rule.to_owned()).collect())
+            .unwrap_or_else(|| vec![]))
     }
 
     fn list_chains(&self, table: &str) -> Result<Vec<String>> {
-        Ok(self.rule_map.borrow().get(table).map_or_else(
-            || vec![],
-            |v| v.keys().into_iter().filter_map(|k| k.clone()).collect(),
-        ))
+        Ok(self
+            .rules
+            .borrow()
+            .get(table)
+            .map(|(policies, _)| policies.values().map(|value| value.to_owned()).collect())
+            .unwrap_or_else(|| vec![]))
+    }
+
+    fn new_chain(&self, table: &str, chain: &str) -> Result<bool> {
+        // The iptables-restore file format creates a new chain through entries like this:
+        //
+        //   :CHAIN - [0:0]
+        //
+        // This is the same entry that also dictates the default policy of the chain, which in by
+        // default is "-". So we can simply refer to `set_policy` and provide the string "-".
+        self.set_policy(table, chain, "-")
     }
 
     fn commit(&self) -> Result<bool> {
-        // Start iptables-restore with `--noflush` option, attach to stdin and stdout
-        let mut c = Command::new(self.cmd)
-            .arg("--noflush")
+        // Start iptables-restore, attach to stdin and stdout
+        let mut process = Command::new(self.cmd)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?;
 
-        // Get process stdin, write format es expected by iptables-restore
-        match c.stdin.as_mut() {
+        // Get process stdin, write format as expected by iptables-restore
+        match process.stdin.as_mut() {
             Some(ref mut s) => self.write_rules(s)?,
             None => Err(format_err!("cannot get stdin of {}", self.cmd))?,
         }
 
         // Check exit status of command
-        let output = c.wait_with_output()?;
+        let output = process.wait_with_output()?;
         if output.status.success() {
             Ok(true)
         } else {
@@ -588,6 +617,7 @@ mod tests_iptablesrestore {
             ipt.append("filter", "TEST_CHAIN", "-s 10.0.0.1 -j ACCEPT")
         } -> [
             "*filter",
+            ":TEST_CHAIN - [0:0]",
             "-A TEST_CHAIN -s 10.0.0.1 -j ACCEPT",
         ]
     }
