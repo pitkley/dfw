@@ -33,7 +33,7 @@ extern crate url;
 use chan::{Receiver, Sender};
 use chan_signal::Signal;
 use clap::{App, Arg, ArgGroup, ArgMatches};
-use dfw::iptables::{IPTables, IPTablesDummy, IPTablesProxy, IPTablesRestore, IPVersion};
+use dfw::iptables::{IPTables, IPTablesDummy, IPTablesRestore, IPVersion};
 use dfw::types::DFW;
 use dfw::util::*;
 use dfw::{ContainerFilter, ProcessDFW, ProcessingOptions};
@@ -357,10 +357,7 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
         (Box::new(IPTablesDummy), Box::new(IPTablesDummy))
     } else {
         match iptables_backend {
-            IPTablesBackend::IPTables => (
-                Box::new(IPTablesProxy(ipt::new(false)?)),
-                Box::new(IPTablesProxy(ipt::new(true)?)),
-            ),
+            IPTablesBackend::IPTables => (Box::new(ipt::new(false)?), Box::new(ipt::new(true)?)),
             IPTablesBackend::IPTablesRestore => (
                 Box::new(IPTablesRestore::new(IPVersion::IPv4)?),
                 Box::new(IPTablesRestore::new(IPVersion::IPv6)?),
