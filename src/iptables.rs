@@ -485,6 +485,9 @@ impl IPTables for IPTablesRestore {
             None => Err(format_err!("cannot get stdin of {}", self.cmd))?,
         }
 
+        // Reset internal state
+        self.rules.replace(BTreeMap::new());
+
         // Check exit status of command
         let output = process.wait_with_output()?;
         if output.status.success() {
