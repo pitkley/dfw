@@ -27,7 +27,7 @@ macro_rules! proxy {
     ( $( #[$attr:meta] )* $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty ) => {
         $( #[$attr] )*
         fn $name(&self $(, $param: $ty )*) -> Result<$ret> {
-            (self.0).$name($($param),+).map_err(Into::into)
+            self.$name($($param),+).map_err(Into::into)
         }
     };
 }
@@ -252,16 +252,7 @@ pub trait IPTables {
     fn commit(&self) -> Result<bool>;
 }
 
-/// Proxying type for the `IPTables` type of the [`rust-iptables`][rust-iptables] crate.
-///
-/// This type exists to be able to implement the [`IPTables`-trait](trait.IPTables.html) for the
-/// `IPTables`-type from the `rust-iptables` crate. This enables the use of different
-/// implementations for `IPTables` in [`ProcessDFW`](../struct.ProcessDFW.html).
-///
-/// [rust-iptables]: https://crates.io/crates/iptables
-pub struct IPTablesProxy(pub ::ipt::IPTables);
-
-impl IPTables for IPTablesProxy {
+impl IPTables for ::ipt::IPTables {
     proxies! {
         get_policy(table: &str, chain: &str) -> String;
         set_policy(table: &str, chain: &str, policy: &str) -> bool;
