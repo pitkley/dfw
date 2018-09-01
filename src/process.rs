@@ -214,7 +214,8 @@ impl<'a> ProcessDFW<'a> {
                 trace!(self.logger, "Add post-routing rule for external network interface";
                        o!("external_network_interface" => external_network_interface,
                           "rule" => &rule_str));
-                self.ipt4.append("nat", DFWRS_POSTROUTING_CHAIN, &rule_str)?;
+                self.ipt4
+                    .append("nat", DFWRS_POSTROUTING_CHAIN, &rule_str)?;
                 // TODO: verify what is needed for ipt6
             }
         }

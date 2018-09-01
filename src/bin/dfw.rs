@@ -164,8 +164,7 @@ fn spawn_event_monitor(
                     &EventsOptions::builder()
                         .filter(vec![EventFilter::Type(EventFilterType::Container)])
                         .build(),
-                )
-                .unwrap()
+                ).unwrap()
             {
                 trace!(logger, "Received event";
                        o!("event" => format!("{:?}", &event)));
@@ -204,29 +203,25 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                 .long("config-file")
                 .value_name("FILE")
                 .help("Set the configuration file"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("config-path")
                 .takes_value(true)
                 .long("config-path")
                 .value_name("PATH")
                 .help("Set a path with multiple TOML configuration files"),
-        )
-        .group(
+        ).group(
             ArgGroup::with_name("config")
                 .args(&["config-file", "config-path"])
                 .multiple(false)
                 .required(true),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("docker-url")
                 .takes_value(true)
                 .short("d")
                 .long("docker-url")
                 .value_name("URL")
                 .help("Set the url to the Docker instance (e.g. unix:///tmp/docker.sock)"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("load-interval")
                 .takes_value(true)
                 .default_value("0")
@@ -234,8 +229,7 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                 .long("load-interval")
                 .value_name("INTERVAL")
                 .help("Interval between rule processing runs, in seconds (0 = disabled)"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("load-mode")
                 .takes_value(true)
                 .short("m")
@@ -250,11 +244,9 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                         .map(|s| &**s)
                         .collect::<Vec<_>>()
                         .as_slice(),
-                )
-                .default_value("once")
+                ).default_value("once")
                 .help("Define if the config-files get loaded once, or before every run"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("burst-timeout")
                 .takes_value(true)
                 .default_value("500")
@@ -264,8 +256,7 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                     "Time to wait after a event was received before processing the rules, in \
                      milliseconds",
                 ),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("container-filter")
                 .takes_value(true)
                 .long("container-filter")
@@ -273,20 +264,17 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                 .possible_values(&["all", "running"])
                 .default_value("running")
                 .help("Filter the containers to be included during processing"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("disable-event-monitoring")
                 .takes_value(false)
                 .long("disable-event-monitoring")
                 .help("Disable Docker event monitoring"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("run-once")
                 .takes_value(false)
                 .long("run-once")
                 .help("Process rules once, then exit."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("iptables-backend")
                 .takes_value(true)
                 .long("iptables-backend")
@@ -300,17 +288,14 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                         .map(|s| &**s)
                         .collect::<Vec<_>>()
                         .as_slice(),
-                )
-                .default_value("iptables")
+                ).default_value("iptables")
                 .help("Choose the iptables backend to use"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("dry-run")
                 .takes_value(false)
                 .long("dry-run")
                 .help("Don't touch iptables, just show what would be done"),
-        )
-        .get_matches();
+        ).get_matches();
     debug!(root_logger, "Parsed command line arguments: {:#?}", matches);
 
     let docker = match matches.value_of("docker-url") {
@@ -398,7 +383,7 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                     &processing_options,
                     root_logger,
                 )?.process()
-                    .map_err(From::from)
+                .map_err(From::from)
             })
         }
         LoadMode::Always => {
@@ -417,7 +402,7 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                     &processing_options,
                     root_logger,
                 )?.process()
-                    .map_err(From::from)
+                .map_err(From::from)
             })
         }
     };

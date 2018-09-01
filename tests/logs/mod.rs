@@ -163,8 +163,7 @@ fn expand_command(command: &str) -> (Option<String>, bool) {
                             e.to_owned()
                         }
                     }
-                })
-                .collect::<Vec<_>>()
+                }).collect::<Vec<_>>()
                 .join(" ")
                 .to_owned(),
         ),
