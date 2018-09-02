@@ -190,7 +190,7 @@ dependencies = [
 
 [[package]]
 name = "dfw"
-version = "0.5.0"
+version = "0.5.1-alpha.0"
 dependencies = [
  "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "crossbeam-channel 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
