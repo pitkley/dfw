@@ -53,47 +53,23 @@ every configuration section.
 
 At least Docker 1.13.0 is required.
 
-DFW has been successfully tested under the following Docker versions:
-
-* `1.13.0`
+DFW has been successfully tested under the following stable Docker versions:
 
 * `1.13.1`
 
-* `17.03.0-ce`
+* `17.03.3-ce`
 
-* `17.03.1-ce`
-
-* `17.04.0-ce`
-
-* `17.05.0-ce`
-
-* `17.06.0-ce`
-
-* `17.06.1-ce`
+* `17.06.2-ce`
 
 * `17.07.0-ce`
 
-* `17.09.0-ce`
-
 * `17.09.1-ce`
 
-* `17.10.0-ce`
-
-* `17.11.0-ce`
-
-* `17.12.0-ce`
-
-* `18.01.0-ce`
-
-* `18.02.0-ce`
-
-* `18.03.0-ce`
+* `17.12.1-ce`
 
 * `18.03.1-ce`
 
-* `18.04.0-ce`
-
-* `18.05.0-ce`
+* `18.06.1-ce`
 
 ## Installation
 

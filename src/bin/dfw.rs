@@ -14,8 +14,7 @@
 // Import external libraries
 
 #[macro_use]
-extern crate chan;
-extern crate chan_signal;
+extern crate crossbeam_channel as channel;
 #[macro_use]
 extern crate clap;
 extern crate dfw;
@@ -24,14 +23,14 @@ extern crate failure;
 extern crate iptables as ipt;
 extern crate libc;
 extern crate shiplift;
+extern crate signal_hook;
 #[macro_use]
 extern crate slog;
-extern crate slog_term;
+extern crate sloggers;
 extern crate time;
 extern crate url;
 
-use chan::{Receiver, Sender};
-use chan_signal::Signal;
+use channel::{Receiver, Sender};
 use clap::{App, Arg, ArgGroup, ArgMatches};
 use dfw::iptables::{IPTables, IPTablesDummy, IPTablesRestore, IPVersion};
 use dfw::types::DFW;
@@ -39,12 +38,14 @@ use dfw::util::*;
 use dfw::{ContainerFilter, ProcessDFW, ProcessingOptions};
 use shiplift::builder::{EventFilter, EventFilterType, EventsOptions};
 use shiplift::Docker;
-use slog::{Drain, Logger};
+use slog::Logger;
+use sloggers::terminal::{Destination, TerminalLoggerBuilder};
+use sloggers::types::Severity;
+use sloggers::Build;
 #[allow(unused_imports, deprecated)]
 use std::ascii::AsciiExt;
-use std::os::unix::thread::JoinHandleExt;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 mod errors {
     use failure::Error;
@@ -53,6 +54,8 @@ mod errors {
 }
 
 use errors::*;
+
+type Signal = libc::c_int;
 
 arg_enum! {
     #[derive(Debug)]
@@ -90,7 +93,6 @@ fn spawn_burst_monitor(
     burst_timeout: u64,
     s_trigger: Sender<()>,
     r_event: Receiver<()>,
-    r_exit: Receiver<()>,
     logger: &Logger,
 ) -> thread::JoinHandle<()> {
     let logger = logger.new(o!("thread" => "burst_monitor"));
@@ -102,13 +104,13 @@ fn spawn_burst_monitor(
         None,
     }
     thread::spawn(move || {
-        let dummy: Receiver<()> = {
-            let (s_dummy, r_dummy) = chan::sync(0);
+        let dummy: Receiver<Instant> = {
+            let (s_dummy, r_dummy) = channel::bounded(0);
             // Leak the send-channel so that it never gets closed and `recv` never synchronizes.
             ::std::mem::forget(s_dummy);
             r_dummy
         };
-        let mut after: Receiver<()> = dummy.clone();
+        let mut after: Receiver<Instant> = dummy.clone();
 
         loop {
             // The `unused_assignments` warning for the following variable is wrong, since
@@ -118,26 +120,22 @@ fn spawn_burst_monitor(
             #[allow(unused_assignments)]
             let mut trigger: Trigger = Trigger::None;
 
-            chan_select! {
-                r_event.recv() => {
+            select! {
+                recv(r_event) => {
                     trace!(logger, "Received docker event");
                     trigger = Trigger::Event;
                 },
-                after.recv() => {
+                recv(after) => {
                     trace!(logger, "After timer ran out, sending trigger");
                     trigger = Trigger::After;
                     s_trigger.send(());
-                },
-                r_exit.recv() => {
-                    trace!(logger, "Received exit event");
-                    break;
                 }
             }
 
             trace!(logger, "Resetting after channel";
                    o!("trigger" => format!("{:?}", trigger)));
             match trigger {
-                Trigger::Event => after = chan::after(Duration::from_millis(burst_timeout)),
+                Trigger::Event => after = channel::after(Duration::from_millis(burst_timeout)),
                 Trigger::After => after = dummy.clone(),
                 Trigger::None => {}
             }
@@ -186,17 +184,231 @@ fn spawn_event_monitor(
 }
 
 #[cfg(unix)]
-fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
-    info!(root_logger, "Application starting";
-          o!("version" => crate_version!(),
-             "started_at" => format!("{}", time::now().rfc3339())));
+fn run<'a>(
+    matches: &ArgMatches<'a>,
+    r_signal: &Receiver<Signal>,
+    root_logger: &Logger,
+) -> Result<()> {
+    debug!(root_logger, "Application starting";
+           o!("version" => crate_version!(),
+              "started_at" => format!("{}", time::now().rfc3339())));
 
-    trace!(root_logger, "Parsing command line arguments");
-    let matches = App::new("dfw")
+    let docker = match matches.value_of("docker-url") {
+        Some(docker_url) => Docker::host(docker_url.parse()?),
+        None => Docker::new(),
+    };
+    // Check if the docker instance is reachable
+    trace!(root_logger, "Pinging docker");
+    docker.ping()?;
+
+    // Create a dummy channel
+    let load_interval = value_t!(matches.value_of("load-interval"), u64)?;
+    let load_interval_chan = {
+        let load_interval = value_t!(matches.value_of("load-interval"), u64)?;
+
+        if load_interval > 0 {
+            // If the load interval is greater than zero, we use a tick-channel
+            trace!(root_logger, "Creating tick channel";
+                   o!("load_interval" => load_interval));
+            channel::tick(Duration::from_secs(load_interval))
+        } else {
+            // Otherwise we use the dummy channel, which will never send and thus never receive any
+            // messages to circumvent having multiple `chan_select!`s below.
+            trace!(root_logger, "Creating dummy channel";
+                   o!("load_interval" => load_interval));
+            let (s_dummy, r_dummy) = channel::bounded(0);
+            // Leak the send-channel so that it never gets closed and `recv` never synchronizes.
+            ::std::mem::forget(s_dummy);
+
+            r_dummy
+        }
+    };
+
+    let container_filter = match matches.value_of("container-filter") {
+        Some("all") => ContainerFilter::All,
+        Some("running") => ContainerFilter::Running,
+        Some(_) | None => bail!("wrong or no container filter specified"),
+    };
+    let processing_options = ProcessingOptions { container_filter };
+
+    let monitor_events = !matches.is_present("disable-event-monitoring");
+    trace!(root_logger, "Monitoring events: {}", monitor_events;
+           o!("monitor_events" => monitor_events));
+
+    let run_once = matches.is_present("run-once");
+    trace!(root_logger, "Run once: {}", run_once;
+           o!("run_once" => run_once));
+
+    let toml = load_config(&matches)?;
+    debug!(root_logger, "Initial configuration loaded";
+           o!("config" => format!("{:#?}", toml)));
+
+    let dry_run = matches.is_present("dry-run");
+    let iptables_backend = value_t!(matches.value_of("iptables-backend"), IPTablesBackend)?;
+    trace!(root_logger, "Dry run: {}", dry_run;
+           o!("dry_run" => dry_run));
+
+    let (ipt4, ipt6): (Box<IPTables>, Box<IPTables>) = if dry_run {
+        (Box::new(IPTablesDummy), Box::new(IPTablesDummy))
+    } else {
+        match iptables_backend {
+            IPTablesBackend::IPTables => (Box::new(ipt::new(false)?), Box::new(ipt::new(true)?)),
+            IPTablesBackend::IPTablesRestore => (
+                Box::new(IPTablesRestore::new(IPVersion::IPv4)?),
+                Box::new(IPTablesRestore::new(IPVersion::IPv6)?),
+            ),
+            IPTablesBackend::IPTablesDummy => (Box::new(IPTablesDummy), Box::new(IPTablesDummy)),
+        }
+    };
+
+    let processing_logger = root_logger.new(o!());
+    let process: Box<Fn() -> Result<()>> = match value_t!(matches.value_of("load-mode"), LoadMode)?
+    {
+        LoadMode::Once => {
+            trace!(root_logger, "Creating process closure according to load mode";
+                   o!("load_mode" => "once"));
+            Box::new(|| {
+                ProcessDFW::new(
+                    &docker,
+                    &toml,
+                    &*ipt4,
+                    &*ipt6,
+                    &processing_options,
+                    &processing_logger,
+                )?.process()
+                .map_err(From::from)
+            })
+        }
+        LoadMode::Always => {
+            trace!(root_logger, "Creating process closure according to load mode";
+                   o!("load_mode" => "always"));
+            Box::new(|| {
+                let toml = load_config(&matches)?;
+                debug!(root_logger, "Reloaded configuration before processing";
+                       o!("config" => format!("{:#?}", toml)));
+
+                ProcessDFW::new(
+                    &docker,
+                    &toml,
+                    &*ipt4,
+                    &*ipt6,
+                    &processing_options,
+                    &processing_logger,
+                )?.process()
+                .map_err(From::from)
+            })
+        }
+    };
+    trace!(
+        root_logger,
+        "Load mode: {:?}",
+        matches.value_of("load-mode")
+    );
+
+    info!(root_logger, "Application started";
+          "version" => crate_version!(),
+          "started_at" => format!("{}", time::now().rfc3339()));
+
+    // Initial processing
+    debug!(root_logger, "Start first processing");
+    process()?;
+
+    if run_once || (!monitor_events && load_interval == 0) {
+        // Either run-once is specified or both events are not monitored and rules aren't processed
+        // regularly -- process once, then exit.
+        info!(root_logger,
+              "Run once specified (or load-interval is zero and events aren't monitored), exiting";
+              o!("version" => crate_version!(),
+                 "exited_at" => format!("{}", time::now().rfc3339())));
+        ::std::process::exit(0);
+    }
+
+    let event_trigger = if monitor_events {
+        // Setup event monitoring
+        trace!(root_logger, "Setup event monitoring channel";
+               o!("monitor_events" => monitor_events));
+
+        let (s_trigger, r_trigger) = channel::bounded(0);
+        let (s_event, r_event) = channel::bounded(0);
+        let docker_url = matches.value_of("docker-url").map(|s| s.to_owned());
+        let burst_timeout = value_t!(matches.value_of("burst-timeout"), u64)?;
+
+        trace!(root_logger, "Start burst monitoring thread";
+               o!("burst_timeout" => burst_timeout));
+        spawn_burst_monitor(burst_timeout, s_trigger, r_event, root_logger);
+
+        trace!(root_logger, "Start event monitoring thread";
+               o!("docker_url" => &docker_url));
+        spawn_event_monitor(docker_url, s_event, root_logger);
+
+        // Note: we need both spawned threads for the entirety of the programs lifetime. As such we
+        // do not bother cleaning them up, but rather let the OS handle the cleanup once we exit the
+        // main process.
+
+        r_trigger
+    } else {
+        trace!(root_logger, "Creating dummy channel";
+               o!("monitor_events" => monitor_events));
+        let (s_dummy, r_dummy) = channel::bounded(0);
+        // Leak the send-channel so that it never gets closed and `recv` never synchronizes.
+        ::std::mem::forget(s_dummy);
+
+        r_dummy
+    };
+
+    loop {
+        select! {
+            recv(load_interval_chan) => {
+                info!(root_logger, "Load interval ticked, starting processing");
+                process()?;
+            },
+            recv(event_trigger) => {
+                info!(root_logger, "Received Docker events, starting processing");
+                process()?;
+            },
+            recv(r_signal, signal) => {
+                match signal {
+                    Some(libc::SIGINT) | Some(libc::SIGTERM) => {
+                        info!(root_logger, "Received kill-signal, exiting";
+                              o!("signal" => format!("{:?}", signal)));
+
+                        break;
+                    }
+
+                    Some(libc::SIGHUP) => {
+                        info!(root_logger, "Received HUP-signal, starting processing";
+                              o!("signal" => format!("{:?}", signal)));
+                        process()?;
+                    }
+
+                    Some(_) => { bail!("got unexpected signal '{:?}'", signal); }
+                    None => { bail!("signal was empty"); }
+                }
+            }
+        }
+    }
+
+    info!(root_logger, "Application exiting";
+          o!("version" => crate_version!(),
+             "exited_at" => format!("{}", time::now().rfc3339())));
+
+    Ok(())
+}
+
+fn get_arg_matches<'a>() -> ArgMatches<'a> {
+    App::new("dfw")
         .version(crate_version!())
         .author(crate_authors!())
         .about("Docker Firewall Framework, in Rust")
         .arg(
+            Arg::with_name("log-level")
+                .takes_value(true)
+                .long("log-level")
+                .value_name("SEVERITY")
+                .possible_values(&["trace", "debug", "info", "warning", "error", "critical"])
+                .default_value("info")
+                .help("Define the log level"),
+        ).arg(
             Arg::with_name("config-file")
                 .takes_value(true)
                 .short("c")
@@ -295,268 +507,33 @@ fn run(signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()> {
                 .takes_value(false)
                 .long("dry-run")
                 .help("Don't touch iptables, just show what would be done"),
-        ).get_matches();
-    debug!(root_logger, "Parsed command line arguments: {:#?}", matches);
-
-    let docker = match matches.value_of("docker-url") {
-        Some(docker_url) => Docker::host(docker_url.parse()?),
-        None => Docker::new(),
-    };
-    // Check if the docker instance is reachable
-    trace!(root_logger, "Pinging docker");
-    docker.ping()?;
-
-    // Create a dummy channel
-    let load_interval = value_t!(matches.value_of("load-interval"), u64)?;
-    let load_interval_chan = {
-        let load_interval = value_t!(matches.value_of("load-interval"), u64)?;
-
-        if load_interval > 0 {
-            // If the load interval is greater than zero, we use a tick-channel
-            trace!(root_logger, "Creating tick channel";
-                   o!("load_interval" => load_interval));
-            chan::tick(Duration::from_secs(load_interval))
-        } else {
-            // Otherwise we use the dummy channel, which will never send and thus never receive any
-            // messages to circumvent having multiple `chan_select!`s below.
-            trace!(root_logger, "Creating dummy channel";
-                   o!("load_interval" => load_interval));
-            let (s_dummy, r_dummy) = chan::sync(0);
-            // Leak the send-channel so that it never gets closed and `recv` never synchronizes.
-            ::std::mem::forget(s_dummy);
-
-            r_dummy
-        }
-    };
-
-    let container_filter = match matches.value_of("container-filter") {
-        Some("all") => ContainerFilter::All,
-        Some("running") => ContainerFilter::Running,
-        Some(_) | None => bail!("wrong or no container filter specified"),
-    };
-    let processing_options = ProcessingOptions { container_filter };
-
-    let monitor_events = !matches.is_present("disable-event-monitoring");
-    trace!(root_logger, "Monitoring events: {}", monitor_events;
-           o!("monitor_events" => monitor_events));
-
-    let run_once = matches.is_present("run-once");
-    trace!(root_logger, "Run once: {}", run_once;
-           o!("run_once" => run_once));
-
-    let toml = load_config(&matches)?;
-    info!(root_logger, "Initial configuration loaded");
-    debug!(root_logger, "Loaded config: {:#?}", toml);
-
-    let dry_run = matches.is_present("dry-run");
-    let iptables_backend = value_t!(matches.value_of("iptables-backend"), IPTablesBackend)?;
-    trace!(root_logger, "Dry run: {}", dry_run;
-           o!("dry_run" => dry_run));
-
-    let (ipt4, ipt6): (Box<IPTables>, Box<IPTables>) = if dry_run {
-        (Box::new(IPTablesDummy), Box::new(IPTablesDummy))
-    } else {
-        match iptables_backend {
-            IPTablesBackend::IPTables => (Box::new(ipt::new(false)?), Box::new(ipt::new(true)?)),
-            IPTablesBackend::IPTablesRestore => (
-                Box::new(IPTablesRestore::new(IPVersion::IPv4)?),
-                Box::new(IPTablesRestore::new(IPVersion::IPv6)?),
-            ),
-            IPTablesBackend::IPTablesDummy => (Box::new(IPTablesDummy), Box::new(IPTablesDummy)),
-        }
-    };
-
-    let process: Box<Fn() -> Result<()>> = match value_t!(matches.value_of("load-mode"), LoadMode)?
-    {
-        LoadMode::Once => {
-            trace!(root_logger, "Creating process closure according to load mode";
-                   o!("load_mode" => "once"));
-            Box::new(|| {
-                ProcessDFW::new(
-                    &docker,
-                    &toml,
-                    &*ipt4,
-                    &*ipt6,
-                    &processing_options,
-                    root_logger,
-                )?.process()
-                .map_err(From::from)
-            })
-        }
-        LoadMode::Always => {
-            trace!(root_logger, "Creating process closure according to load mode";
-                   o!("load_mode" => "always"));
-            Box::new(|| {
-                let toml = load_config(&matches)?;
-                info!(root_logger, "Reloaded configuration before processing");
-                debug!(root_logger, "Reloaded config: {:#?}", toml);
-
-                ProcessDFW::new(
-                    &docker,
-                    &toml,
-                    &*ipt4,
-                    &*ipt6,
-                    &processing_options,
-                    root_logger,
-                )?.process()
-                .map_err(From::from)
-            })
-        }
-    };
-    trace!(
-        root_logger,
-        "Load mode: {:?}",
-        matches.value_of("load-mode")
-    );
-
-    info!(root_logger, "Application started";
-          "version" => crate_version!(),
-          "started_at" => format!("{}", time::now().rfc3339()));
-
-    // Initial processing
-    info!(root_logger, "Start first processing");
-    process()?;
-
-    if run_once || (!monitor_events && load_interval == 0) {
-        // Either run-once is specified or both events are not monitored and rules aren't processed
-        // regularly -- process once, then exit.
-        info!(root_logger,
-              "Run once specified (or load-interval is zero and events aren't monitored), exiting";
-              o!("version" => crate_version!(),
-                 "exited_at" => format!("{}", time::now().rfc3339())));
-        ::std::process::exit(0);
-    }
-
-    let (event_trigger, terminate_threads, thread_handles) = if monitor_events {
-        // Setup event monitoring
-        trace!(root_logger, "Setup event monitoring channel";
-               o!("monitor_events" => monitor_events));
-
-        let (s_burst_exit, r_burst_exit) = chan::sync(0);
-        let (s_trigger, r_trigger) = chan::sync(0);
-        let (s_event, r_event) = chan::sync(0);
-        let docker_url = matches.value_of("docker-url").map(|s| s.to_owned());
-        let burst_timeout = value_t!(matches.value_of("burst-timeout"), u64)?;
-
-        trace!(root_logger, "Start burst monitoring thread";
-               o!("burst_timeout" => burst_timeout));
-        let burst_handle =
-            spawn_burst_monitor(burst_timeout, s_trigger, r_event, r_burst_exit, root_logger);
-
-        trace!(root_logger, "Start event monitoring thread";
-               o!("docker_url" => &docker_url));
-        let event_handle = spawn_event_monitor(docker_url, s_event, root_logger);
-        let event_pthread_t = event_handle.as_pthread_t();
-
-        let terminate_threads: Box<Fn() -> ()> = Box::new(move || {
-            trace!(root_logger, "Triggering burst thread to exit");
-            s_burst_exit.send(());
-            unsafe {
-                // The event-thread is stuck in a potentially indefinitely blocking for loop,
-                // waiting for a Docker event to happen.
-                //
-                // I can think of two ways to exit it:
-                //
-                //   1. Artifically produce an event, which unblocks the loop and lets us check for
-                //      an exit trigger
-                //   2. Kill the thread
-                //
-                // While artifically producing an event sounds cleaner, it would require to
-                // actually cause an event on the host we are running on, i.e. starting a
-                // container, or maybe pulling a non-existant image.
-                //
-                // I don't necessarily want to interfere with the running host, although causing an
-                // event for something that will be known to fail might be an option.
-                //
-                // The alternative, killing the thread, requires the unix-specific `JoinHandle`
-                // extensions to get a (numeric) handle to the thread, which can then unsafely be
-                // killed using `libc`.
-                //
-                // We have to send the "hardest" signal, SIGKILL, since both SIGINT and SIGTERM are
-                // captured at the very start of the main thread, and this propagates to the child
-                // thread.
-                //
-                // TODO: find a cleaner way!
-                trace!(root_logger, "Sending SIGKILL to event thread";
-                       o!("pthread_t" => event_pthread_t));
-                libc::pthread_kill(event_pthread_t, libc::SIGKILL);
-            }
-        });
-
-        (
-            r_trigger,
-            terminate_threads,
-            vec![burst_handle, event_handle],
-        )
-    } else {
-        trace!(root_logger, "Creating dummy channel";
-               o!("monitor_events" => monitor_events));
-        let (s_dummy, r_dummy) = chan::sync(0);
-        // Leak the send-channel so that it never gets closed and `recv` never synchronizes.
-        ::std::mem::forget(s_dummy);
-
-        let terminate_threads: Box<Fn() -> ()> = Box::new(|| {});
-        (r_dummy, terminate_threads, vec![])
-    };
-
-    loop {
-        chan_select! {
-            load_interval_chan.recv() => {
-                info!(root_logger, "Load interval ticked, starting processing");
-                process()?;
-            },
-            event_trigger.recv() => {
-                info!(root_logger, "Received Docker events, starting processing");
-                process()?;
-            },
-            signal.recv() -> signal => {
-                match signal {
-                    Some(Signal::INT) | Some(Signal::TERM) => {
-                        info!(root_logger, "Received kill-signal, exiting";
-                              o!("signal" => format!("{:?}", signal)));
-
-                        trace!(root_logger, "Sending termination signals");
-                        terminate_threads();
-
-                        trace!(root_logger, "Joining threads";
-                               o!("handles" => format!("{:?}", thread_handles)));
-                        for handle in thread_handles {
-                            trace!(root_logger, "Joining thread";
-                                   o!("handle" => format!("{:?}", handle)));
-                            handle.join().expect("Couldn't join thread");
-                        }
-                        break;
-                    }
-
-                    Some(Signal::HUP) => {
-                        info!(root_logger, "Received HUP-signal, starting processing";
-                              o!("signal" => format!("{:?}", signal)));
-                        process()?;
-                    }
-
-                    Some(_) => { bail!("got unexpected signal '{:?}'", signal); }
-                    None => { bail!("signal was empty"); }
-                }
-            }
-        }
-    }
-
-    info!(root_logger, "Application exiting";
-          o!("version" => crate_version!(),
-             "exited_at" => format!("{}", time::now().rfc3339())));
-
-    Ok(())
+        ).get_matches()
 }
-
 fn main() {
+    // Parse arguments
+    let matches = get_arg_matches();
+
     // Signals should be set up as early as possible, to set proper signal masks to all threads
-    let signal = chan_signal::notify(&[Signal::INT, Signal::TERM, Signal::HUP]);
+    let (s_signal, r_signal) = channel::bounded(10);
+    let signals = signal_hook::iterator::Signals::new(&[libc::SIGINT, libc::SIGTERM, libc::SIGHUP])
+        .expect("Failed to bind to process signals");
+    thread::spawn(move || {
+        for signal in signals.forever() {
+            s_signal.send(signal);
+        }
+    });
 
-    let decorator = slog_term::PlainSyncDecorator::new(std::io::stdout());
-    let drain = slog_term::FullFormat::new(decorator).build().fuse();
-    let root_logger = Logger::root(drain, o!());
+    // Setup logging
+    let log_level =
+        value_t!(matches.value_of("log-level"), Severity).expect("Unknown severity specified");
+    let root_logger = TerminalLoggerBuilder::new()
+        .format(sloggers::types::Format::Full)
+        .level(log_level)
+        .destination(Destination::Stderr)
+        .build()
+        .expect("Failed to setup logging");
 
-    if let Err(ref e) = run(&signal, &root_logger) {
+    if let Err(ref e) = run(&matches, &r_signal, &root_logger) {
         error!(root_logger, "Encountered error";
                o!("error" => format!("{}", e)));
     }
