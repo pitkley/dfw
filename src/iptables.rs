@@ -157,6 +157,7 @@ macro_rules! loggers {
 
 /// Enum identifying a IP protocol version. Can be used by `IPTables` implementations to discern
 /// between IPv4 rules and IPv6 rules.
+#[derive(Clone, Copy)]
 pub enum IPVersion {
     /// IP protocol version 4
     IPv4,
@@ -359,7 +360,7 @@ impl IPTablesRestore {
         let s = unsafe { str::from_utf8_unchecked(&v) };
 
         // Trim whitespace, split on newlines, make owned and collect into `Vec<String>`
-        s.trim().split("\n").map(|e| e.to_owned()).collect()
+        s.trim().split('\n').map(|e| e.to_owned()).collect()
     }
 
     /// Write the rules in iptables-restore format to a given writer.
@@ -417,7 +418,7 @@ impl IPTables for IPTablesRestore {
             .entry(table.to_owned())
             .or_insert_with(|| (BTreeMap::new(), Vec::new()))
             .1
-            .push((None, format!("{}", command)));
+            .push((None, command.to_owned()));
         Ok(Output {
             status: ExitStatus::from_raw(9),
             stdout: vec![],
@@ -431,11 +432,9 @@ impl IPTables for IPTablesRestore {
         let (ref mut policies, ref mut rule_vec) = &mut rules
             .entry(table.to_owned())
             .or_insert_with(|| (BTreeMap::new(), Vec::new()));
-        let rule_exists = rule_vec
-            .iter()
-            .find(|(chain_opt, value)| {
-                chain_opt.as_ref().map(String::as_str) == Some(chain) && value == &rule
-            }).is_some();
+        let rule_exists = rule_vec.iter().any(|(chain_opt, value)| {
+            chain_opt.as_ref().map(String::as_str) == Some(chain) && value == &rule
+        });
 
         if !rule_exists {
             // Set the default policy, if unset

@@ -185,8 +185,8 @@ fn spawn_event_monitor(
 
 #[cfg(unix)]
 fn run<'a>(
-    matches: ArgMatches<'a>,
-    r_signal: Receiver<Signal>,
+    matches: &ArgMatches<'a>,
+    r_signal: &Receiver<Signal>,
     root_logger: &Logger,
 ) -> Result<()> {
     debug!(root_logger, "Application starting";
@@ -533,7 +533,7 @@ fn main() {
         .build()
         .expect("Failed to setup logging");
 
-    if let Err(ref e) = run(matches, r_signal, &root_logger) {
+    if let Err(ref e) = run(&matches, &r_signal, &root_logger) {
         error!(root_logger, "Encountered error";
                o!("error" => format!("{}", e)));
     }
