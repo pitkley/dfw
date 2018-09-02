@@ -26,7 +26,7 @@ extern crate shiplift;
 extern crate signal_hook;
 #[macro_use]
 extern crate slog;
-extern crate slog_term;
+extern crate sloggers;
 extern crate time;
 extern crate url;
 
@@ -38,7 +38,10 @@ use dfw::util::*;
 use dfw::{ContainerFilter, ProcessDFW, ProcessingOptions};
 use shiplift::builder::{EventFilter, EventFilterType, EventsOptions};
 use shiplift::Docker;
-use slog::{Drain, Logger};
+use slog::Logger;
+use sloggers::terminal::{Destination, TerminalLoggerBuilder};
+use sloggers::types::Severity;
+use sloggers::Build;
 #[allow(unused_imports, deprecated)]
 use std::ascii::AsciiExt;
 use std::thread;
@@ -181,117 +184,14 @@ fn spawn_event_monitor(
 }
 
 #[cfg(unix)]
-fn run(r_signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
+fn run<'a>(
+    matches: ArgMatches<'a>,
+    r_signal: Receiver<Signal>,
+    root_logger: &Logger,
+) -> Result<()> {
     info!(root_logger, "Application starting";
           o!("version" => crate_version!(),
              "started_at" => format!("{}", time::now().rfc3339())));
-
-    trace!(root_logger, "Parsing command line arguments");
-    let matches = App::new("dfw")
-        .version(crate_version!())
-        .author(crate_authors!())
-        .about("Docker Firewall Framework, in Rust")
-        .arg(
-            Arg::with_name("config-file")
-                .takes_value(true)
-                .short("c")
-                .long("config-file")
-                .value_name("FILE")
-                .help("Set the configuration file"),
-        ).arg(
-            Arg::with_name("config-path")
-                .takes_value(true)
-                .long("config-path")
-                .value_name("PATH")
-                .help("Set a path with multiple TOML configuration files"),
-        ).group(
-            ArgGroup::with_name("config")
-                .args(&["config-file", "config-path"])
-                .multiple(false)
-                .required(true),
-        ).arg(
-            Arg::with_name("docker-url")
-                .takes_value(true)
-                .short("d")
-                .long("docker-url")
-                .value_name("URL")
-                .help("Set the url to the Docker instance (e.g. unix:///tmp/docker.sock)"),
-        ).arg(
-            Arg::with_name("load-interval")
-                .takes_value(true)
-                .default_value("0")
-                .short("i")
-                .long("load-interval")
-                .value_name("INTERVAL")
-                .help("Interval between rule processing runs, in seconds (0 = disabled)"),
-        ).arg(
-            Arg::with_name("load-mode")
-                .takes_value(true)
-                .short("m")
-                .long("load-mode")
-                .value_name("MODE")
-                .possible_values(
-                    LoadMode::variants()
-                        .iter()
-                        .map(|s| s.to_ascii_lowercase())
-                        .collect::<Vec<_>>()
-                        .iter()
-                        .map(|s| &**s)
-                        .collect::<Vec<_>>()
-                        .as_slice(),
-                ).default_value("once")
-                .help("Define if the config-files get loaded once, or before every run"),
-        ).arg(
-            Arg::with_name("burst-timeout")
-                .takes_value(true)
-                .default_value("500")
-                .long("burst-timeout")
-                .value_name("TIMEOUT")
-                .help(
-                    "Time to wait after a event was received before processing the rules, in \
-                     milliseconds",
-                ),
-        ).arg(
-            Arg::with_name("container-filter")
-                .takes_value(true)
-                .long("container-filter")
-                .value_name("FILTER")
-                .possible_values(&["all", "running"])
-                .default_value("running")
-                .help("Filter the containers to be included during processing"),
-        ).arg(
-            Arg::with_name("disable-event-monitoring")
-                .takes_value(false)
-                .long("disable-event-monitoring")
-                .help("Disable Docker event monitoring"),
-        ).arg(
-            Arg::with_name("run-once")
-                .takes_value(false)
-                .long("run-once")
-                .help("Process rules once, then exit."),
-        ).arg(
-            Arg::with_name("iptables-backend")
-                .takes_value(true)
-                .long("iptables-backend")
-                .value_name("BACKEND")
-                .possible_values(
-                    IPTablesBackend::variants()
-                        .iter()
-                        .map(|s| s.to_ascii_lowercase())
-                        .collect::<Vec<_>>()
-                        .iter()
-                        .map(|s| &**s)
-                        .collect::<Vec<_>>()
-                        .as_slice(),
-                ).default_value("iptables")
-                .help("Choose the iptables backend to use"),
-        ).arg(
-            Arg::with_name("dry-run")
-                .takes_value(false)
-                .long("dry-run")
-                .help("Don't touch iptables, just show what would be done"),
-        ).get_matches();
-    debug!(root_logger, "Parsed command line arguments: {:#?}", matches);
 
     let docker = match matches.value_of("docker-url") {
         Some(docker_url) => Docker::host(docker_url.parse()?),
@@ -494,7 +394,124 @@ fn run(r_signal: Receiver<Signal>, root_logger: &Logger) -> Result<()> {
     Ok(())
 }
 
+fn get_arg_matches<'a>() -> ArgMatches<'a> {
+    App::new("dfw")
+        .version(crate_version!())
+        .author(crate_authors!())
+        .about("Docker Firewall Framework, in Rust")
+        .arg(
+            Arg::with_name("log-level")
+                .takes_value(true)
+                .long("log-level")
+                .value_name("SEVERITY")
+                .possible_values(&["trace", "debug", "info", "warning", "error", "critical"])
+                .default_value("info")
+                .help("Define the log level"),
+        ).arg(
+            Arg::with_name("config-file")
+                .takes_value(true)
+                .short("c")
+                .long("config-file")
+                .value_name("FILE")
+                .help("Set the configuration file"),
+        ).arg(
+            Arg::with_name("config-path")
+                .takes_value(true)
+                .long("config-path")
+                .value_name("PATH")
+                .help("Set a path with multiple TOML configuration files"),
+        ).group(
+            ArgGroup::with_name("config")
+                .args(&["config-file", "config-path"])
+                .multiple(false)
+                .required(true),
+        ).arg(
+            Arg::with_name("docker-url")
+                .takes_value(true)
+                .short("d")
+                .long("docker-url")
+                .value_name("URL")
+                .help("Set the url to the Docker instance (e.g. unix:///tmp/docker.sock)"),
+        ).arg(
+            Arg::with_name("load-interval")
+                .takes_value(true)
+                .default_value("0")
+                .short("i")
+                .long("load-interval")
+                .value_name("INTERVAL")
+                .help("Interval between rule processing runs, in seconds (0 = disabled)"),
+        ).arg(
+            Arg::with_name("load-mode")
+                .takes_value(true)
+                .short("m")
+                .long("load-mode")
+                .value_name("MODE")
+                .possible_values(
+                    LoadMode::variants()
+                        .iter()
+                        .map(|s| s.to_ascii_lowercase())
+                        .collect::<Vec<_>>()
+                        .iter()
+                        .map(|s| &**s)
+                        .collect::<Vec<_>>()
+                        .as_slice(),
+                ).default_value("once")
+                .help("Define if the config-files get loaded once, or before every run"),
+        ).arg(
+            Arg::with_name("burst-timeout")
+                .takes_value(true)
+                .default_value("500")
+                .long("burst-timeout")
+                .value_name("TIMEOUT")
+                .help(
+                    "Time to wait after a event was received before processing the rules, in \
+                     milliseconds",
+                ),
+        ).arg(
+            Arg::with_name("container-filter")
+                .takes_value(true)
+                .long("container-filter")
+                .value_name("FILTER")
+                .possible_values(&["all", "running"])
+                .default_value("running")
+                .help("Filter the containers to be included during processing"),
+        ).arg(
+            Arg::with_name("disable-event-monitoring")
+                .takes_value(false)
+                .long("disable-event-monitoring")
+                .help("Disable Docker event monitoring"),
+        ).arg(
+            Arg::with_name("run-once")
+                .takes_value(false)
+                .long("run-once")
+                .help("Process rules once, then exit."),
+        ).arg(
+            Arg::with_name("iptables-backend")
+                .takes_value(true)
+                .long("iptables-backend")
+                .value_name("BACKEND")
+                .possible_values(
+                    IPTablesBackend::variants()
+                        .iter()
+                        .map(|s| s.to_ascii_lowercase())
+                        .collect::<Vec<_>>()
+                        .iter()
+                        .map(|s| &**s)
+                        .collect::<Vec<_>>()
+                        .as_slice(),
+                ).default_value("iptables")
+                .help("Choose the iptables backend to use"),
+        ).arg(
+            Arg::with_name("dry-run")
+                .takes_value(false)
+                .long("dry-run")
+                .help("Don't touch iptables, just show what would be done"),
+        ).get_matches()
+}
 fn main() {
+    // Parse arguments
+    let matches = get_arg_matches();
+
     // Signals should be set up as early as possible, to set proper signal masks to all threads
     let (s_signal, r_signal) = channel::bounded(10);
     let signals = signal_hook::iterator::Signals::new(&[libc::SIGINT, libc::SIGTERM, libc::SIGHUP])
@@ -505,11 +522,17 @@ fn main() {
         }
     });
 
-    let decorator = slog_term::PlainSyncDecorator::new(std::io::stdout());
-    let drain = slog_term::FullFormat::new(decorator).build().fuse();
-    let root_logger = Logger::root(drain, o!());
+    // Setup logging
+    let log_level =
+        value_t!(matches.value_of("log-level"), Severity).expect("Unknown severity specified");
+    let root_logger = TerminalLoggerBuilder::new()
+        .format(sloggers::types::Format::Full)
+        .level(log_level)
+        .destination(Destination::Stderr)
+        .build()
+        .expect("Failed to setup logging");
 
-    if let Err(ref e) = run(r_signal, &root_logger) {
+    if let Err(ref e) = run(matches, r_signal, &root_logger) {
         error!(root_logger, "Encountered error";
                o!("error" => format!("{}", e)));
     }
