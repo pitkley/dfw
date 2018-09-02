@@ -189,9 +189,9 @@ fn run<'a>(
     r_signal: Receiver<Signal>,
     root_logger: &Logger,
 ) -> Result<()> {
-    info!(root_logger, "Application starting";
-          o!("version" => crate_version!(),
-             "started_at" => format!("{}", time::now().rfc3339())));
+    debug!(root_logger, "Application starting";
+           o!("version" => crate_version!(),
+              "started_at" => format!("{}", time::now().rfc3339())));
 
     let docker = match matches.value_of("docker-url") {
         Some(docker_url) => Docker::host(docker_url.parse()?),
@@ -240,8 +240,8 @@ fn run<'a>(
            o!("run_once" => run_once));
 
     let toml = load_config(&matches)?;
-    info!(root_logger, "Initial configuration loaded");
-    debug!(root_logger, "Loaded config: {:#?}", toml);
+    debug!(root_logger, "Initial configuration loaded";
+           o!("config" => format!("{:#?}", toml)));
 
     let dry_run = matches.is_present("dry-run");
     let iptables_backend = value_t!(matches.value_of("iptables-backend"), IPTablesBackend)?;
@@ -261,6 +261,7 @@ fn run<'a>(
         }
     };
 
+    let processing_logger = root_logger.new(o!());
     let process: Box<Fn() -> Result<()>> = match value_t!(matches.value_of("load-mode"), LoadMode)?
     {
         LoadMode::Once => {
@@ -273,7 +274,7 @@ fn run<'a>(
                     &*ipt4,
                     &*ipt6,
                     &processing_options,
-                    root_logger,
+                    &processing_logger,
                 )?.process()
                 .map_err(From::from)
             })
@@ -283,8 +284,8 @@ fn run<'a>(
                    o!("load_mode" => "always"));
             Box::new(|| {
                 let toml = load_config(&matches)?;
-                info!(root_logger, "Reloaded configuration before processing");
-                debug!(root_logger, "Reloaded config: {:#?}", toml);
+                debug!(root_logger, "Reloaded configuration before processing";
+                       o!("config" => format!("{:#?}", toml)));
 
                 ProcessDFW::new(
                     &docker,
@@ -292,7 +293,7 @@ fn run<'a>(
                     &*ipt4,
                     &*ipt6,
                     &processing_options,
-                    root_logger,
+                    &processing_logger,
                 )?.process()
                 .map_err(From::from)
             })
@@ -309,7 +310,7 @@ fn run<'a>(
           "started_at" => format!("{}", time::now().rfc3339()));
 
     // Initial processing
-    info!(root_logger, "Start first processing");
+    debug!(root_logger, "Start first processing");
     process()?;
 
     if run_once || (!monitor_events && load_interval == 0) {
