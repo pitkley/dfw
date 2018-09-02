@@ -84,9 +84,7 @@ macro_rules! restore {
             $( if stringify!($param) == "chain" {
                 chain_opt = Some($param.to_owned());
                 // Set the default policy, if unset
-                policies
-                    .entry($param.to_owned())
-                    .or_insert_with(|| "-".to_owned());
+                set_default_policy(policies, $param);
             });*;
             // Push the rule (with the associated optional chain)
             rules.push((chain_opt, rule.clone()));
@@ -427,6 +425,27 @@ impl IPTables for IPTablesRestore {
         })
     }
 
+    fn append_replace(&self, table: &str, chain: &str, rule: &str) -> Result<bool> {
+        let rule = format!("-A {} {}", chain, rule);
+        let mut rules = self.rules.borrow_mut();
+        let (ref mut policies, ref mut rule_vec) = &mut rules
+            .entry(table.to_owned())
+            .or_insert_with(|| (BTreeMap::new(), Vec::new()));
+        let rule_exists = rule_vec
+            .iter()
+            .find(|(chain_opt, value)| {
+                chain_opt.as_ref().map(String::as_str) == Some(chain) && value == &rule
+            }).is_some();
+
+        if !rule_exists {
+            // Set the default policy, if unset
+            set_default_policy(policies, chain);
+            rule_vec.push((Some(chain.to_owned()), rule));
+        }
+
+        Ok(true)
+    }
+
     fn list(&self, table: &str, chain: &str) -> Result<Vec<String>> {
         Ok(self
             .rules
@@ -528,12 +547,6 @@ impl IPTables for IPTablesRestore {
 
         /// **METHOD UNSUPPORTED IN `IPTablesRestore`!**
         ///
-        /// DFW does not require `append_replace`. Therefore no effort was made to replicate this
-        /// functionality.
-        append_replace(table: &str, chain: &str, rule: &str) -> bool;
-
-        /// **METHOD UNSUPPORTED IN `IPTablesRestore`!**
-        ///
         /// Getting a policy does not make sense in the context of `iptables-restore` since the only
         /// policies to get are the ones set by the same caller.
         get_policy(table: &str, chain: &str) -> String;
@@ -577,6 +590,12 @@ impl IPTables for IPTablesRestore {
     }
 }
 
+fn set_default_policy(policies: &mut BTreeMap<Chain, Policy>, chain: &str) {
+    policies
+        .entry(chain.to_owned())
+        .or_insert_with(|| "-".to_owned());
+}
+
 #[cfg(test)]
 mod tests_iptablesrestore {
     use super::{IPTables, IPTablesRestore, IPVersion};
@@ -610,14 +629,33 @@ mod tests_iptablesrestore {
 
     tests! {
         restore_set_policy(ipt) {
-            ipt.set_policy("nat", "TEST_CHAIN", "DROP")
+            ipt.set_policy("nat", "TEST_CHAIN", "DROP").unwrap();
         } -> [
             "*nat",
             ":TEST_CHAIN DROP [0:0]",
         ]
 
         restore_append(ipt) {
-            ipt.append("filter", "TEST_CHAIN", "-s 10.0.0.1 -j ACCEPT")
+            ipt.append("filter", "TEST_CHAIN", "-s 10.0.0.1 -j ACCEPT").unwrap();
+        } -> [
+            "*filter",
+            ":TEST_CHAIN - [0:0]",
+            "-A TEST_CHAIN -s 10.0.0.1 -j ACCEPT",
+        ]
+
+        double_append(ipt) {
+            ipt.append("filter", "TEST_CHAIN", "-s 10.0.0.1 -j ACCEPT").unwrap();
+            ipt.append("filter", "TEST_CHAIN", "-s 10.0.0.1 -j ACCEPT").unwrap();
+        } -> [
+            "*filter",
+            ":TEST_CHAIN - [0:0]",
+            "-A TEST_CHAIN -s 10.0.0.1 -j ACCEPT",
+            "-A TEST_CHAIN -s 10.0.0.1 -j ACCEPT",
+        ]
+
+        double_append_replace(ipt) {
+            ipt.append_replace("filter", "TEST_CHAIN", "-s 10.0.0.1 -j ACCEPT").unwrap();
+            ipt.append_replace("filter", "TEST_CHAIN", "-s 10.0.0.1 -j ACCEPT").unwrap();
         } -> [
             "*filter",
             ":TEST_CHAIN - [0:0]",

@@ -116,20 +116,20 @@ impl<'a> ProcessDFW<'a> {
         // Setup input and forward chain
         initialize_chain("filter", DFWRS_INPUT_CHAIN, self.ipt4, self.ipt6)?;
         self.ipt4
-            .append("filter", "INPUT", &format!("-j {}", DFWRS_INPUT_CHAIN))?;
+            .append_replace("filter", "INPUT", &format!("-j {}", DFWRS_INPUT_CHAIN))?;
         initialize_chain("filter", DFWRS_FORWARD_CHAIN, self.ipt4, self.ipt6)?;
         self.ipt4
-            .append("filter", "FORWARD", &format!("-j {}", DFWRS_FORWARD_CHAIN))?;
+            .append_replace("filter", "FORWARD", &format!("-j {}", DFWRS_FORWARD_CHAIN))?;
         // TODO: verify what is needed for ipt6
         debug!(self.logger, "Setup input and forward chains");
 
         // Setup pre- and postrouting
-        self.ipt4.append(
+        self.ipt4.append_replace(
             "nat",
             "PREROUTING",
             &format!("-j {}", DFWRS_PREROUTING_CHAIN),
         )?;
-        self.ipt4.append(
+        self.ipt4.append_replace(
             "nat",
             "POSTROUTING",
             &format!("-j {}", DFWRS_POSTROUTING_CHAIN),
