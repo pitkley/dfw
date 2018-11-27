@@ -20,7 +20,7 @@ include = [
 [dependencies]
 clap = "^2.31"
 crossbeam-channel = "^0.2"
-derive_builder = "^0.5"
+derive_builder = "^0.7"
 failure= "^0.1"
 glob = "^0.2"
 iptables = "^0.2"
