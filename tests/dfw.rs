@@ -247,7 +247,8 @@ fn test_iptables_restore(num: &str) {
                 command: Some(c.to_owned()),
                 regex: false,
                 eval: None,
-            }).collect::<Vec<_>>();
+            })
+            .collect::<Vec<_>>();
         let expected4 = load_loglines(
             &resource(&format!("docker/{}/expected-iptables-restore-v4.txt", num)).unwrap(),
         );
@@ -264,7 +265,8 @@ fn test_iptables_restore(num: &str) {
                 command: Some(c.to_owned()),
                 regex: false,
                 eval: None,
-            }).collect::<Vec<_>>();
+            })
+            .collect::<Vec<_>>();
         let expected6 = load_loglines(
             &resource(&format!("docker/{}/expected-iptables-restore-v6.txt", num)).unwrap(),
         );
@@ -292,7 +294,8 @@ fn test_iptables_logger(num: &str) {
                 command: c.clone(),
                 regex: false,
                 eval: None,
-            }).collect::<Vec<_>>();
+            })
+            .collect::<Vec<_>>();
         let expected4 = load_loglines(
             &resource(&format!("docker/{}/expected-iptables-v4-logs.txt", num)).unwrap(),
         );
@@ -308,7 +311,8 @@ fn test_iptables_logger(num: &str) {
                 command: c.clone(),
                 regex: false,
                 eval: None,
-            }).collect::<Vec<_>>();
+            })
+            .collect::<Vec<_>>();
         let expected6 = load_loglines(
             &resource(&format!("docker/{}/expected-iptables-v6-logs.txt", num)).unwrap(),
         );

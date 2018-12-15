@@ -456,9 +456,11 @@ impl IPTables for IPTablesRestore {
                     .filter(|(chain_opt, _)| match chain_opt {
                         Some(value) if chain == value => true,
                         _ => false,
-                    }).map(|(_, rule)| rule.to_owned())
+                    })
+                    .map(|(_, rule)| rule.to_owned())
                     .collect()
-            }).unwrap_or_else(|| vec![]))
+            })
+            .unwrap_or_else(|| vec![]))
     }
 
     fn list_table(&self, table: &str) -> Result<Vec<String>> {

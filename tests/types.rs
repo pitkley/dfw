@@ -23,10 +23,10 @@ fn parse_conf_file() {
         external_network_interfaces: Some(vec!["eni".to_owned()]),
     };
     let initialization = Initialization {
-        v4: Some(hashmap!{
+        v4: Some(hashmap! {
             "filter".to_owned() => vec!["-P INPUT ACCEPT".to_owned()],
         }),
-        v6: Some(hashmap!{
+        v6: Some(hashmap! {
             "nat".to_owned() => vec!["-P PREROUTING ACCEPT".to_owned()],
         }),
     };
@@ -106,10 +106,10 @@ fn parse_conf_path() {
         external_network_interfaces: Some(vec!["eni".to_owned()]),
     };
     let initialization = Initialization {
-        v4: Some(hashmap!{
+        v4: Some(hashmap! {
             "filter".to_owned() => vec!["-P INPUT ACCEPT".to_owned()],
         }),
-        v6: Some(hashmap!{
+        v6: Some(hashmap! {
             "nat".to_owned() => vec!["-P PREROUTING ACCEPT".to_owned()],
         }),
     };
