@@ -162,7 +162,8 @@ fn spawn_event_monitor(
                     &EventsOptions::builder()
                         .filter(vec![EventFilter::Type(EventFilterType::Container)])
                         .build(),
-                ).unwrap()
+                )
+                .unwrap()
             {
                 trace!(logger, "Received event";
                        o!("event" => format!("{:?}", &event)));
@@ -275,7 +276,8 @@ fn run<'a>(
                     &*ipt6,
                     &processing_options,
                     &processing_logger,
-                )?.process()
+                )?
+                .process()
                 .map_err(From::from)
             })
         }
@@ -294,7 +296,8 @@ fn run<'a>(
                     &*ipt6,
                     &processing_options,
                     &processing_logger,
-                )?.process()
+                )?
+                .process()
                 .map_err(From::from)
             })
         }
@@ -408,32 +411,37 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
                 .possible_values(&["trace", "debug", "info", "warning", "error", "critical"])
                 .default_value("info")
                 .help("Define the log level"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("config-file")
                 .takes_value(true)
                 .short("c")
                 .long("config-file")
                 .value_name("FILE")
                 .help("Set the configuration file"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("config-path")
                 .takes_value(true)
                 .long("config-path")
                 .value_name("PATH")
                 .help("Set a path with multiple TOML configuration files"),
-        ).group(
+        )
+        .group(
             ArgGroup::with_name("config")
                 .args(&["config-file", "config-path"])
                 .multiple(false)
                 .required(true),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("docker-url")
                 .takes_value(true)
                 .short("d")
                 .long("docker-url")
                 .value_name("URL")
                 .help("Set the url to the Docker instance (e.g. unix:///tmp/docker.sock)"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("load-interval")
                 .takes_value(true)
                 .default_value("0")
@@ -441,7 +449,8 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
                 .long("load-interval")
                 .value_name("INTERVAL")
                 .help("Interval between rule processing runs, in seconds (0 = disabled)"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("load-mode")
                 .takes_value(true)
                 .short("m")
@@ -456,9 +465,11 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
                         .map(|s| &**s)
                         .collect::<Vec<_>>()
                         .as_slice(),
-                ).default_value("once")
+                )
+                .default_value("once")
                 .help("Define if the config-files get loaded once, or before every run"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("burst-timeout")
                 .takes_value(true)
                 .default_value("500")
@@ -468,7 +479,8 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
                     "Time to wait after a event was received before processing the rules, in \
                      milliseconds",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("container-filter")
                 .takes_value(true)
                 .long("container-filter")
@@ -476,17 +488,20 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
                 .possible_values(&["all", "running"])
                 .default_value("running")
                 .help("Filter the containers to be included during processing"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("disable-event-monitoring")
                 .takes_value(false)
                 .long("disable-event-monitoring")
                 .help("Disable Docker event monitoring"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("run-once")
                 .takes_value(false)
                 .long("run-once")
                 .help("Process rules once, then exit."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("iptables-backend")
                 .takes_value(true)
                 .long("iptables-backend")
@@ -500,14 +515,17 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
                         .map(|s| &**s)
                         .collect::<Vec<_>>()
                         .as_slice(),
-                ).default_value("iptables")
+                )
+                .default_value("iptables")
                 .help("Choose the iptables backend to use"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("dry-run")
                 .takes_value(false)
                 .long("dry-run")
                 .help("Don't touch iptables, just show what would be done"),
-        ).get_matches()
+        )
+        .get_matches()
 }
 fn main() {
     // Parse arguments

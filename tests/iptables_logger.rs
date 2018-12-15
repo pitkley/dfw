@@ -60,7 +60,8 @@ fn log_all() {
         ("rename_chain", "table old_chain new_chain"),
         ("delete_chain", "table chain"),
         ("flush_table", "table"),
-    ].into_iter()
+    ]
+    .into_iter()
     .map(|(a, b)| (a.to_owned(), Some(b.to_owned())))
     .collect::<Vec<_>>();
 
