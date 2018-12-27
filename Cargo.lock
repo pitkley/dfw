@@ -268,7 +268,7 @@ dependencies = [
  "serde 1.0.82 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.82 (registry+https://github.com/rust-lang/crates.io-index)",
  "shiplift 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "signal-hook 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "signal-hook 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog 2.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sloggers 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.41 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -876,7 +876,7 @@ dependencies = [
 
 [[package]]
 name = "signal-hook"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "arc-swap 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1340,7 +1340,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum serde_derive 1.0.82 (registry+https://github.com/rust-lang/crates.io-index)" = "96a7f9496ac65a2db5929afa087b54f8fc5008dcfbe48a8874ed20049b0d6154"
 "checksum serde_json 1.0.33 (registry+https://github.com/rust-lang/crates.io-index)" = "c37ccd6be3ed1fdf419ee848f7c758eb31b054d7cd3ae3600e3bae0adf569811"
 "checksum shiplift 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "d7045d08bebeb4a31c65c2623ba36fc461a2503e5744c8c56bb0560916b2205d"
-"checksum signal-hook 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "8941ae94fa73d0f73b422774b3a40a7195cecd88d1c090f4b37ade7dc795ab66"
+"checksum signal-hook 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "1f272d1b7586bec132ed427f532dd418d8beca1ca7f2caf7df35569b1415a4b4"
 "checksum slog 2.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "1e1a2eec401952cd7b12a84ea120e2d57281329940c3f93c2bf04f462539508e"
 "checksum slog-async 2.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e544d16c6b230d84c866662fe55e31aacfca6ae71e6fc49ae9a311cb379bfc2f"
 "checksum slog-kvfilter 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ae939ed7d169eed9699f4f5cd440f046f5dc5dfc27c19e3cd311619594c175e0"
