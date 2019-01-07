@@ -121,11 +121,11 @@ fn spawn_burst_monitor(
             let mut trigger: Trigger = Trigger::None;
 
             select! {
-                recv(r_event) => {
+                recv(r_event) -> _ => {
                     trace!(logger, "Received docker event");
                     trigger = Trigger::Event;
                 },
-                recv(after) => {
+                recv(after) -> _ => {
                     trace!(logger, "After timer ran out, sending trigger");
                     trigger = Trigger::After;
                     s_trigger.send(());
@@ -361,31 +361,28 @@ fn run<'a>(
 
     loop {
         select! {
-            recv(load_interval_chan) => {
+            recv(load_interval_chan) -> _ => {
                 info!(root_logger, "Load interval ticked, starting processing");
                 process()?;
             },
-            recv(event_trigger) => {
+            recv(event_trigger) -> _ => {
                 info!(root_logger, "Received Docker events, starting processing");
                 process()?;
             },
-            recv(r_signal, signal) => {
-                match signal {
-                    Some(libc::SIGINT) | Some(libc::SIGTERM) => {
+            recv(r_signal) -> signal => {
+                match signal.expect("received an error instead of a signal") {
+                    libc::SIGINT | libc::SIGTERM => {
                         info!(root_logger, "Received kill-signal, exiting";
                               o!("signal" => format!("{:?}", signal)));
 
                         break;
                     }
-
-                    Some(libc::SIGHUP) => {
+                    libc::SIGHUP => {
                         info!(root_logger, "Received HUP-signal, starting processing";
                               o!("signal" => format!("{:?}", signal)));
                         process()?;
                     }
-
-                    Some(_) => { bail!("got unexpected signal '{:?}'", signal); }
-                    None => { bail!("signal was empty"); }
+                    _ => { bail!("got unexpected signal '{:?}'", signal); }
                 }
             }
         }
