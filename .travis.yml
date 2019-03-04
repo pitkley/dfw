@@ -6,4 +6,8 @@ rust:
 matrix:
   allow_failures:
     - rust: nightly
-
+branches:
+  only:
+    - staging
+    - trying
+    - master
