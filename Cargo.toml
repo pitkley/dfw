@@ -32,7 +32,7 @@ shiplift = "^0.3"
 slog = "^2"
 sloggers = "^0.3"
 time = "^0.1"
-toml = "^0.4"
+toml = "^0.5"
 url = "^1.7"
 
 [dev-dependencies]
