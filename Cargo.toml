@@ -18,7 +18,7 @@ include = [
 ]
 
 [dependencies]
-clap = "^2.31"
+clap = "^2.33"
 crossbeam-channel = "^0.3"
 derive_builder = "^0.7"
 failure= "^0.1"
