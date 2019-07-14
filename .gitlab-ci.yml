@@ -113,7 +113,6 @@ build for docker tests:
         - "docker:dind"
     only:
         - master
-        - /^develop\/.*$/
     dependencies: [] # don't download artifacts from previous jobs
     cache:
         key: "docker-tests"
@@ -188,30 +187,6 @@ package and push image for tags:
         - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
         - docker build --pull -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}" .
         - docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}"
-
-package and push image on develop patch:
-    stage: package
-    image: docker:latest
-    services:
-        - docker:dind
-    only:
-        - develop/patch
-    script:
-        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
-        - docker build --pull -t "${CI_REGISTRY_IMAGE}/develop:patch" .
-        - docker push "${CI_REGISTRY_IMAGE}/develop:patch"
-
-package and push image on develop minor:
-    stage: package
-    image: docker:latest
-    services:
-        - docker:dind
-    only:
-        - develop/minor
-    script:
-        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
-        - docker build --pull -t "${CI_REGISTRY_IMAGE}/develop:minor" .
-        - docker push "${CI_REGISTRY_IMAGE}/develop:minor"
 
 package and push image on master:
     stage: package
