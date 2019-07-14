@@ -22,6 +22,12 @@ append	filter DFWRS_FORWARD -d $dst_ip=ip -i eni -o $output=bridge -p udp --dpor
 append	nat DFWRS_PREROUTING -i eni -p udp --dport 53 -j DNAT --to-destination ${dst_ip=ip}:53
 append	filter DFWRS_FORWARD -d $dst_ip=ip -i other -o $output=bridge -p tcp --dport 443 -j ACCEPT
 append	nat DFWRS_PREROUTING -i other -p tcp --dport 443 -j DNAT --to-destination ${dst_ip=ip}:443
+append	filter DFWRS_FORWARD -s 192.0.2.1/32 -d $dst_ip=ip -i eni -o $output=bridge -p tcp --dport 22 -j ACCEPT
+append	nat DFWRS_PREROUTING -s 192.0.2.1/32 -i eni -p tcp --dport 22 -j DNAT --to-destination ${dst_ip=ip}:22
+append	filter DFWRS_FORWARD -s 192.0.2.2/32 -d $dst_ip=ip -i eni -o $output=bridge -p tcp --dport 25 -j ACCEPT
+append	filter DFWRS_FORWARD -s 192.0.2.3/32 -d $dst_ip=ip -i eni -o $output=bridge -p tcp --dport 25 -j ACCEPT
+append	nat DFWRS_PREROUTING -s 192.0.2.2/32 -i eni -p tcp --dport 25 -j DNAT --to-destination ${dst_ip=ip}:25
+append	nat DFWRS_PREROUTING -s 192.0.2.3/32 -i eni -p tcp --dport 25 -j DNAT --to-destination ${dst_ip=ip}:25
 append	filter DFWRS_FORWARD -i docker0 -o eni -j ACCEPT
 append	filter DFWRS_INPUT -i docker0 -j ACCEPT
 append	nat DFWRS_POSTROUTING -o eni -j MASQUERADE

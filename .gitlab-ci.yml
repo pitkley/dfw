@@ -134,10 +134,6 @@ test on docker 1.13.1:
     <<: *test-docker-tests
     services:
         - "docker:1.13.1-dind"
-test on docker 17.03.3-ce:
-    <<: *test-docker-tests
-    services:
-        - "docker:17.03.3-ce-dind"
 test on docker 17.06.2-ce:
     <<: *test-docker-tests
     services:
@@ -162,6 +158,10 @@ test on docker 18.06.1-ce:
     <<: *test-docker-tests
     services:
         - "docker:18.06.1-ce-dind"
+test on docker 18.09.7-ce:
+    <<: *test-docker-tests
+    services:
+        - "docker:18.09.7-dind"
     only:
         - /.*/
 

@@ -22,3 +22,15 @@ network = "dfwtest05_default"
 dst_container = "dfwtest05_a_1"
 expose_port = "443/tcp"
 external_network_interface = "other"
+
+[[wider_world_to_container.rules]]
+network = "dfwtest05_default"
+dst_container = "dfwtest05_a_1"
+expose_port = "22"
+source_cidr = "192.0.2.1/32"
+
+[[wider_world_to_container.rules]]
+network = "dfwtest05_default"
+dst_container = "dfwtest05_a_1"
+expose_port = "25"
+source_cidr = ["192.0.2.2/32", "192.0.2.3/32"]
