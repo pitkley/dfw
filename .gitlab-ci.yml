@@ -16,6 +16,8 @@ stages:
 .build and push hack image: &build-and-push-hack-image
     stage: prepare
     image: docker:latest
+    tags:
+        - privileged
     services:
         - docker:dind
     script:
@@ -109,6 +111,8 @@ build for docker tests:
 .test-docker-tests: &test-docker-tests
     stage: test docker
     image: "$TESTER_BUILD_IMAGE"
+    tags:
+        - privileged
     services:
         - "docker:dind"
     only:
@@ -164,6 +168,8 @@ test on docker 18.06.1-ce:
 package and push image for feature-branch:
     stage: package
     image: docker:latest
+    tags:
+        - privileged
     services:
         - docker:dind
     only:
@@ -179,6 +185,8 @@ package and push image for feature-branch:
 package and push image for tags:
     stage: package
     image: docker:latest
+    tags:
+        - privileged
     services:
         - docker:dind
     only:
@@ -191,6 +199,8 @@ package and push image for tags:
 package and push image on master:
     stage: package
     image: docker:latest
+    tags:
+        - privileged
     services:
         - docker:dind
     only:
