@@ -740,21 +740,66 @@ impl<'a> ProcessDFW<'a> {
                     continue;
                 }
 
-                let forward_rule_str = ipt_forward_rule.build()?;
-                debug!(self.logger, "Add forward rule";
+                // If source CIDRs have been specified, create the FORWARD-rules as required to
+                // restrict the traffic as intended.
+                // TODO: verify what is needed for ipt6
+                if let Some(source_cidrs) = &rule.source_cidr {
+                    debug!(self.logger, "Generate extended FORWARD rules, source CIDRs were specified";
+                           o!("args" => format!("{:?}", ipt_dnat_rule),
+                              "source_cidrs" => source_cidrs.join(", ")));
+                    for additional_forward_rule_str in source_cidrs
+                        .iter()
+                        .map(|source_cidr| {
+                            let mut forward_rule = ipt_forward_rule.clone();
+                            forward_rule.source(source_cidr);
+                            forward_rule
+                        })
+                        .map(|forward_rule| forward_rule.build())
+                        .collect::<Result<Vec<_>>>()?
+                    {
+                        debug!(self.logger, "Add FORWARD rule";
+                            o!("part" => "wider_world_to_container",
+                               "rule" => &additional_forward_rule_str));
+                        self.ipt4.append(
+                            "filter",
+                            DFWRS_FORWARD_CHAIN,
+                            &additional_forward_rule_str,
+                        )?;
+                    }
+                    for additional_dnat_rule_str in source_cidrs
+                        .iter()
+                        .map(|source_cidr| {
+                            let mut dnat_rule = ipt_dnat_rule.clone();
+                            dnat_rule.source(source_cidr);
+                            dnat_rule
+                        })
+                        .map(|dnat_rule| dnat_rule.build())
+                        .collect::<Result<Vec<_>>>()?
+                    {
+                        debug!(self.logger, "Add DNAT rule";
+                            o!("part" => "wider_world_to_container",
+                               "rule" => &additional_dnat_rule_str));
+                        self.ipt4.append(
+                            "nat",
+                            DFWRS_PREROUTING_CHAIN,
+                            &additional_dnat_rule_str,
+                        )?;
+                    }
+                } else {
+                    let forward_rule_str = ipt_forward_rule.build()?;
+                    debug!(self.logger, "Add forward rule";
                        o!("part" => "wider_world_to_container",
                           "rule" => &forward_rule_str));
-                let dnat_rule_str = ipt_dnat_rule.build()?;
-                debug!(self.logger, "Add DNAT rule";
+                    let dnat_rule_str = ipt_dnat_rule.build()?;
+                    debug!(self.logger, "Add DNAT rule";
                        o!("part" => "wider_world_to_container",
                           "rule" => &dnat_rule_str));
-
-                // Apply the rule
-                self.ipt4
-                    .append("filter", DFWRS_FORWARD_CHAIN, &forward_rule_str)?;
-                self.ipt4
-                    .append("nat", DFWRS_PREROUTING_CHAIN, &dnat_rule_str)?;
-                // TODO: verify what is needed for ipt6
+                    // Apply the rule
+                    self.ipt4
+                        .append("filter", DFWRS_FORWARD_CHAIN, &forward_rule_str)?;
+                    self.ipt4
+                        .append("nat", DFWRS_PREROUTING_CHAIN, &dnat_rule_str)?;
+                }
             }
         }
         Ok(())

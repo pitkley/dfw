@@ -60,16 +60,30 @@ fn parse_conf_file() {
         }]),
     };
     let wider_world_to_container = WiderWorldToContainer {
-        rules: Some(vec![WiderWorldToContainerRule {
-            network: "network".to_owned(),
-            dst_container: "dst_container".to_owned(),
-            expose_port: vec![ExposePort {
-                host_port: 80,
-                container_port: None,
-                family: "tcp".to_owned(),
-            }],
-            external_network_interface: Some("eni".to_owned()),
-        }]),
+        rules: Some(vec![
+            WiderWorldToContainerRule {
+                network: "network".to_owned(),
+                dst_container: "dst_container".to_owned(),
+                expose_port: vec![ExposePort {
+                    host_port: 80,
+                    container_port: None,
+                    family: "tcp".to_owned(),
+                }],
+                external_network_interface: Some("eni".to_owned()),
+                source_cidr: None,
+            },
+            WiderWorldToContainerRule {
+                network: "network".to_owned(),
+                dst_container: "dst_container".to_owned(),
+                expose_port: vec![ExposePort {
+                    host_port: 22,
+                    container_port: None,
+                    family: "tcp".to_owned(),
+                }],
+                external_network_interface: Some("eni".to_owned()),
+                source_cidr: Some(vec!["192.0.2.1/32".to_owned(), "192.0.2.2/32".to_owned()]),
+            },
+        ]),
     };
     let container_dnat = ContainerDNAT {
         rules: Some(vec![ContainerDNATRule {
@@ -143,16 +157,30 @@ fn parse_conf_path() {
         }]),
     };
     let wider_world_to_container = WiderWorldToContainer {
-        rules: Some(vec![WiderWorldToContainerRule {
-            network: "network".to_owned(),
-            dst_container: "dst_container".to_owned(),
-            expose_port: vec![ExposePort {
-                host_port: 80,
-                container_port: None,
-                family: "tcp".to_owned(),
-            }],
-            external_network_interface: Some("eni".to_owned()),
-        }]),
+        rules: Some(vec![
+            WiderWorldToContainerRule {
+                network: "network".to_owned(),
+                dst_container: "dst_container".to_owned(),
+                expose_port: vec![ExposePort {
+                    host_port: 80,
+                    container_port: None,
+                    family: "tcp".to_owned(),
+                }],
+                external_network_interface: Some("eni".to_owned()),
+                source_cidr: None,
+            },
+            WiderWorldToContainerRule {
+                network: "network".to_owned(),
+                dst_container: "dst_container".to_owned(),
+                expose_port: vec![ExposePort {
+                    host_port: 22,
+                    container_port: None,
+                    family: "tcp".to_owned(),
+                }],
+                external_network_interface: Some("eni".to_owned()),
+                source_cidr: Some(vec!["192.0.2.1/32".to_owned(), "192.0.2.2/32".to_owned()]),
+            },
+        ]),
     };
     let container_dnat = ContainerDNAT {
         rules: Some(vec![ContainerDNATRule {
@@ -200,6 +228,7 @@ fn parse_expose_port_single_int() {
             family: "tcp".to_owned(),
         }],
         external_network_interface: None,
+        source_cidr: None,
     };
     let actual: WiderWorldToContainerRule = toml::from_str(fragment).unwrap();
 
@@ -230,6 +259,7 @@ fn parse_expose_port_seq_int() {
             },
         ],
         external_network_interface: None,
+        source_cidr: None,
     };
     let actual: WiderWorldToContainerRule = toml::from_str(fragment).unwrap();
 
@@ -257,6 +287,7 @@ fn parse_expose_port_single_string() {
                 family: family.to_owned(),
             }],
             external_network_interface: None,
+            source_cidr: None,
         };
         let actual: WiderWorldToContainerRule = toml::from_str(&fragment).unwrap();
 
@@ -293,6 +324,7 @@ fn parse_expose_port_seq_string() {
             },
         ],
         external_network_interface: None,
+        source_cidr: None,
     };
     let actual: WiderWorldToContainerRule = toml::from_str(fragment).unwrap();
 
@@ -323,6 +355,7 @@ fn parse_expose_port_single_struct() {
                 family: "tcp".to_owned(),
             }],
             external_network_interface: None,
+            source_cidr: None,
         };
         let actual: WiderWorldToContainerRule = toml::from_str(&fragment).unwrap();
 
@@ -369,6 +402,7 @@ fn parse_expose_port_seq_struct() {
             },
         ],
         external_network_interface: None,
+        source_cidr: None,
     };
     let actual: WiderWorldToContainerRule = toml::from_str(fragment).unwrap();
 

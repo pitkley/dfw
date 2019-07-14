@@ -44,6 +44,13 @@ dst_container = "dst_container"
 expose_port = 80
 external_network_interface = "eni"
 
+[[wider_world_to_container.rules]]
+network = "network"
+dst_container = "dst_container"
+expose_port = 22
+external_network_interface = "eni"
+source_cidr = ["192.0.2.1/32", "192.0.2.2/32"]
+
 [container_dnat]
 
 [[container_dnat.rules]]
