@@ -49,7 +49,7 @@ build and push tester image:
 
 rustfmt:
     stage: preconditions
-    image: rustlang/rust
+    image: rust:latest
     script:
         - rustup component add rustfmt
         - cargo fmt --all -- --check
