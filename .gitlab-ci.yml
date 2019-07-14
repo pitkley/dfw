@@ -49,9 +49,9 @@ build and push tester image:
 
 rustfmt:
     stage: preconditions
-    image: rustlang/rust:nightly
+    image: rustlang/rust
     script:
-        - rustup component add rustfmt-preview
+        - rustup component add rustfmt
         - cargo fmt --all -- --check
 
 build and test dynamic binary on stable:
