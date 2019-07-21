@@ -177,7 +177,7 @@ impl<'a> ProcessDFW<'a> {
                                o!("docker_bridge" => bridge_name,
                                   "external_network_interface" => external_network_interface));
 
-                        let rule_str = Rule::default()
+                        let rule = Rule::new("filter", DFWRS_FORWARD_CHAIN)
                             .in_interface(bridge_name)
                             .out_interface(external_network_interface)
                             .jump("ACCEPT")
@@ -185,19 +185,19 @@ impl<'a> ProcessDFW<'a> {
 
                         trace!(self.logger, "Add forward rule for external network interface";
                                o!("external_network_interface" => external_network_interface,
-                                  "rule" => rule_str.to_owned()));
-                        self.ipt4.append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
+                                  "rule" => &rule.rule));
+                        self.ipt4.append(&rule.table, &rule.chain, &rule.rule)?;
                         // TODO: verify what is needed for ipt6
 
-                        let rule_str = Rule::default()
+                        let rule = Rule::new("filter", DFWRS_INPUT_CHAIN)
                             .in_interface(bridge_name)
                             .jump("ACCEPT")
                             .build()?;
 
                         trace!(self.logger, "Add input rule for external network interface";
                                o!("external_network_interface" => external_network_interface,
-                                  "rule" => &rule_str));
-                        self.ipt4.append("filter", DFWRS_INPUT_CHAIN, &rule_str)?;
+                                  "rule" => &rule.rule));
+                        self.ipt4.append(&rule.table, &rule.chain, &rule.rule)?;
                         // TODO: verify what is needed for ipt6
                     }
                 }
@@ -206,16 +206,15 @@ impl<'a> ProcessDFW<'a> {
                 debug!(self.logger, "Configure postrouting for external network interface";
                        o!("external_network_interface" => external_network_interface));
 
-                let rule_str = Rule::default()
+                let rule = Rule::new("nat", DFWRS_POSTROUTING_CHAIN)
                     .out_interface(external_network_interface)
                     .jump("MASQUERADE")
                     .build()?;
 
                 trace!(self.logger, "Add post-routing rule for external network interface";
                        o!("external_network_interface" => external_network_interface,
-                          "rule" => &rule_str));
-                self.ipt4
-                    .append("nat", DFWRS_POSTROUTING_CHAIN, &rule_str)?;
+                          "rule" => &rule.rule));
+                self.ipt4.append(&rule.table, &rule.chain, &rule.rule)?;
                 // TODO: verify what is needed for ipt6
             }
         }
@@ -310,7 +309,7 @@ impl<'a> ProcessDFW<'a> {
             debug!(self.logger, "Process rule";
                    o!("part" => "container_to_container",
                       "rule" => format!("{:?}", rule)));
-            let mut ipt_rule = Rule::default();
+            let mut ipt_rule = Rule::new("filter", DFWRS_FORWARD_CHAIN);
 
             let network = match self.network_map.get(&rule.network) {
                 Some(network) => network,
@@ -395,13 +394,13 @@ impl<'a> ProcessDFW<'a> {
             // Set jump
             ipt_rule.jump(&rule.action);
 
-            let rule_str = ipt_rule.build()?;
+            let rule = ipt_rule.build()?;
             debug!(self.logger, "Add forward rule";
                    o!("part" => "container_to_container",
-                      "rule" => &rule_str));
+                      "rule" => &rule.rule));
 
             // Apply the rule
-            self.ipt4.append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
+            self.ipt4.append(&rule.table, &rule.chain, &rule.rule)?;
             // TODO: verify what is needed for ipt6
         }
 
@@ -433,7 +432,7 @@ impl<'a> ProcessDFW<'a> {
                            o!("network_name" => &network.Name,
                               "bridge_name" => &bridge_name));
 
-                    let rule = Rule::default()
+                    let rule = Rule::new("filter", DFWRS_FORWARD_CHAIN)
                         .in_interface(&bridge_name)
                         .out_interface(external_network_interface)
                         .jump(&ctww.default_policy)
@@ -443,8 +442,8 @@ impl<'a> ProcessDFW<'a> {
                            o!("part" => "container_to_wider_world",
                               "external_network_interface" => external_network_interface,
                               "default_policy" => &ctww.default_policy,
-                              "rule" => &rule));
-                    self.ipt4.append("filter", DFWRS_FORWARD_CHAIN, &rule)?;
+                              "rule" => &rule.rule));
+                    self.ipt4.append(&rule.table, &rule.chain, &rule.rule)?;
                     // TODO: verify what is needed for ipt6
                 }
             }
@@ -458,7 +457,7 @@ impl<'a> ProcessDFW<'a> {
             debug!(self.logger, "Process rule";
                    o!("part" => "container_to_wider_world",
                       "rule" => format!("{:?}", rule)));
-            let mut ipt_rule = Rule::default();
+            let mut ipt_rule = Rule::new("filter", DFWRS_FORWARD_CHAIN);
 
             if let Some(ref network) = rule.network {
                 if let Some(network) = self.network_map.get(network) {
@@ -521,13 +520,13 @@ impl<'a> ProcessDFW<'a> {
                 ipt_rule.out_interface(primary_external_network_interface);
             }
 
-            let rule_str = ipt_rule.build()?;
+            let rule = ipt_rule.build()?;
             debug!(self.logger, "Add forward rule";
                    o!("part" => "container_to_wider_world",
-                      "rule" => &rule_str));
+                      "rule" => &rule.rule));
 
             // Apply the rule
-            self.ipt4.append("filter", DFWRS_FORWARD_CHAIN, &rule_str)?;
+            self.ipt4.append(&rule.table, &rule.chain, &rule.rule)?;
             // TODO: verify what is needed for ipt6
         }
 
@@ -549,7 +548,7 @@ impl<'a> ProcessDFW<'a> {
                    o!("network_name" => &network.Name,
                       "bridge_name" => &bridge_name));
 
-            let rule = Rule::default()
+            let rule = Rule::new("filter", DFWRS_INPUT_CHAIN)
                 .in_interface(&bridge_name)
                 .jump(&cth.default_policy)
                 .build()?;
@@ -557,8 +556,8 @@ impl<'a> ProcessDFW<'a> {
             trace!(self.logger, "Add input rule for default policy";
                    o!("part" => "container_to_host",
                       "default_policy" => &cth.default_policy,
-                      "rule" => &rule));
-            self.ipt4.append("filter", DFWRS_INPUT_CHAIN, &rule)?;
+                      "rule" => &rule.rule));
+            self.ipt4.append(&rule.table, &rule.chain, &rule.rule)?;
             // TODO: verify what is needed for ipt6
         }
 
@@ -570,7 +569,7 @@ impl<'a> ProcessDFW<'a> {
             debug!(self.logger, "Process rule";
                    o!("part" => "container_to_host",
                       "rule" => format!("{:?}", rule)));
-            let mut ipt_rule = Rule::default();
+            let mut ipt_rule = Rule::new("filter", DFWRS_INPUT_CHAIN);
 
             let network = match self.network_map.get(&rule.network) {
                 Some(network) => network,
@@ -619,13 +618,13 @@ impl<'a> ProcessDFW<'a> {
                    o!("args" => format!("{:?}", ipt_rule)));
             ipt_rule.build()?; // TODO: maybe add a `verify` method to `Rule`
 
-            let rule_str = ipt_rule.build()?;
+            let rule = ipt_rule.build()?;
             debug!(self.logger, "Add input rule";
                    o!("part" => "container_to_host",
-                      "rule" => &rule_str));
+                      "rule" => &rule.rule));
 
             // Apply the rule
-            self.ipt4.append("filter", DFWRS_INPUT_CHAIN, &rule_str)?;
+            self.ipt4.append(&rule.table, &rule.chain, &rule.rule)?;
             // TODO: verify what is needed for ipt6
         }
 
@@ -650,8 +649,8 @@ impl<'a> ProcessDFW<'a> {
                    o!("part" => "wider_world_to_container",
                       "rule" => format!("{:?}", rule)));
             for expose_port in &rule.expose_port {
-                let mut ipt_forward_rule = Rule::default();
-                let mut ipt_dnat_rule = Rule::default();
+                let mut ipt_forward_rule = Rule::new("filter", DFWRS_FORWARD_CHAIN);
+                let mut ipt_dnat_rule = Rule::new("nat", DFWRS_PREROUTING_CHAIN);
 
                 let network = match self.network_map.get(&rule.network) {
                     Some(network) => network,
@@ -747,7 +746,7 @@ impl<'a> ProcessDFW<'a> {
                     debug!(self.logger, "Generate extended FORWARD rules, source CIDRs were specified";
                            o!("args" => format!("{:?}", ipt_dnat_rule),
                               "source_cidrs" => source_cidrs.join(", ")));
-                    for additional_forward_rule_str in source_cidrs
+                    for additional_forward_rule in source_cidrs
                         .iter()
                         .map(|source_cidr| {
                             let mut forward_rule = ipt_forward_rule.clone();
@@ -759,14 +758,14 @@ impl<'a> ProcessDFW<'a> {
                     {
                         debug!(self.logger, "Add FORWARD rule";
                             o!("part" => "wider_world_to_container",
-                               "rule" => &additional_forward_rule_str));
+                               "rule" => &additional_forward_rule.rule));
                         self.ipt4.append(
-                            "filter",
-                            DFWRS_FORWARD_CHAIN,
-                            &additional_forward_rule_str,
+                            &additional_forward_rule.table,
+                            &additional_forward_rule.chain,
+                            &additional_forward_rule.rule,
                         )?;
                     }
-                    for additional_dnat_rule_str in source_cidrs
+                    for additional_dnat_rule in source_cidrs
                         .iter()
                         .map(|source_cidr| {
                             let mut dnat_rule = ipt_dnat_rule.clone();
@@ -778,27 +777,30 @@ impl<'a> ProcessDFW<'a> {
                     {
                         debug!(self.logger, "Add DNAT rule";
                             o!("part" => "wider_world_to_container",
-                               "rule" => &additional_dnat_rule_str));
+                               "rule" => &additional_dnat_rule.rule));
                         self.ipt4.append(
-                            "nat",
-                            DFWRS_PREROUTING_CHAIN,
-                            &additional_dnat_rule_str,
+                            &additional_dnat_rule.table,
+                            &additional_dnat_rule.chain,
+                            &additional_dnat_rule.rule,
                         )?;
                     }
                 } else {
-                    let forward_rule_str = ipt_forward_rule.build()?;
+                    let forward_rule = ipt_forward_rule.build()?;
                     debug!(self.logger, "Add forward rule";
                        o!("part" => "wider_world_to_container",
-                          "rule" => &forward_rule_str));
-                    let dnat_rule_str = ipt_dnat_rule.build()?;
+                          "rule" => &forward_rule.rule));
+                    let dnat_rule = ipt_dnat_rule.build()?;
                     debug!(self.logger, "Add DNAT rule";
                        o!("part" => "wider_world_to_container",
-                          "rule" => &dnat_rule_str));
+                          "rule" => &dnat_rule.rule));
                     // Apply the rule
+                    self.ipt4.append(
+                        &forward_rule.table,
+                        &forward_rule.chain,
+                        &forward_rule.rule,
+                    )?;
                     self.ipt4
-                        .append("filter", DFWRS_FORWARD_CHAIN, &forward_rule_str)?;
-                    self.ipt4
-                        .append("nat", DFWRS_PREROUTING_CHAIN, &dnat_rule_str)?;
+                        .append(&dnat_rule.table, &dnat_rule.chain, &dnat_rule.rule)?;
                 }
             }
         }
@@ -823,7 +825,7 @@ impl<'a> ProcessDFW<'a> {
                    o!("part" => "container_dnat",
                       "rule" => format!("{:?}", rule)));
             for expose_port in &rule.expose_port {
-                let mut ipt_rule = Rule::default();
+                let mut ipt_rule = Rule::new("nat", DFWRS_PREROUTING_CHAIN);
 
                 if let Some(ref network) = rule.src_network {
                     if let Some(network) = self.network_map.get(network) {
@@ -929,13 +931,13 @@ impl<'a> ProcessDFW<'a> {
                     }
                 }
 
-                let rule_str = ipt_rule.build()?;
+                let rule = ipt_rule.build()?;
                 debug!(self.logger, "Add prerouting rule";
                        o!("part" => "container_dnat",
-                          "rule" => &rule_str));
+                          "rule" => &rule.rule));
 
                 // Apply the rule
-                self.ipt4.append("nat", DFWRS_PREROUTING_CHAIN, &rule_str)?;
+                self.ipt4.append(&rule.table, &rule.chain, &rule.rule)?;
                 // TODO: verify what is needed for ipt6
             }
         }
@@ -944,8 +946,11 @@ impl<'a> ProcessDFW<'a> {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 struct Rule {
+    pub table: String,
+    pub chain: String,
+
     pub source: Option<String>,
     pub destination: Option<String>,
 
@@ -965,8 +970,34 @@ struct Rule {
     pub comment: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+struct BuiltRule {
+    pub table: String,
+    pub chain: String,
+    pub rule: String,
+}
+
 #[allow(dead_code)]
 impl Rule {
+    fn new(table: &str, chain: &str) -> Rule {
+        Rule {
+            table: table.into(),
+            chain: chain.into(),
+            source: None,
+            destination: None,
+            in_interface: None,
+            out_interface: None,
+            not_in_interface: false,
+            not_out_interface: false,
+            protocol: None,
+            source_port: None,
+            destination_port: None,
+            filter: None,
+            jump: None,
+            comment: None,
+        }
+    }
+
     pub fn source<S: ?Sized>(&mut self, value: &S) -> &mut Self
     where
         S: AsRef<str>,
@@ -1069,7 +1100,7 @@ impl Rule {
         new
     }
 
-    pub fn build(&self) -> Result<String> {
+    pub fn build(&self) -> Result<BuiltRule> {
         let mut args: Vec<String> = Vec::new();
 
         if let Some(ref source) = self.source {
@@ -1142,7 +1173,11 @@ impl Rule {
             args.push(format!("\"{}\"", comment));
         }
 
-        Ok(args.join(" "))
+        Ok(BuiltRule {
+            table: self.table.clone(),
+            chain: self.chain.clone(),
+            rule: args.join(" "),
+        })
     }
 }
 
