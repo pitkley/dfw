@@ -33,7 +33,7 @@ slog = "^2"
 sloggers = "^0.3"
 time = "^0.1"
 toml = "^0.5"
-url = "^1.7"
+url = "^2.0"
 
 [dev-dependencies]
 eval = "^0.4"
