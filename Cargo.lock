@@ -320,7 +320,7 @@ dependencies = [
  "slog 2.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "sloggers 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)",
- "toml 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "toml 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1206,7 +1206,7 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "0.5.1"
+version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "serde 1.0.98 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1528,7 +1528,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum textwrap 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d326610f408c7a4eb6f51c37c330e496b08506c9457c9d34287ecc38809fb060"
 "checksum thread_local 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)" = "c6b53e329000edc2b34dbe8545fd20e55a333362d0a321909685a19bd28c3f1b"
 "checksum time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)" = "db8dcfca086c1143c9270ac42a2bbd8a7ee477b78ac8e45b19abfb0cbede4b6f"
-"checksum toml 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b8c96d7873fa7ef8bdeb3a9cda3ac48389b4154f32b9803b4bc26220b677b039"
+"checksum toml 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)" = "c7aabe75941d914b72bf3e5d3932ed92ce0664d49d8432305a8b547c37227724"
 "checksum trackable 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)" = "53bac9fc90c105013eebfdffa064a1fb36142fd8eb72a5f9783a99147290caaa"
 "checksum trackable_derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "0f4062d54dd240bde289717d6b4af18048c3dd552f01a0fd93824f5fc4d2d084"
 "checksum traitobject 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "efd1f82c56340fdf16f2a953d7bda4f8fdffba13d93b00844c25572110b26079"
