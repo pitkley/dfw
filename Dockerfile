@@ -23,7 +23,7 @@ COPY . /app
 
 RUN set -ex; \
     cargo build --target x86_64-unknown-linux-musl --release; \
-    cargo test --target x86_64-unknown-linux-musl -- --nocapture; \
+    cargo test --target x86_64-unknown-linux-musl --release -- --nocapture; \
     strip target/x86_64-unknown-linux-musl/release/dfw;
 
 # Stage 1: final image

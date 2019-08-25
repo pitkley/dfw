@@ -1,6 +1,7 @@
 image: rustlang/rust:nightly
 
 variables:
+    DOCKER_TLS_CERTDIR: ''
     DOCKER_DRIVER: overlay2
     CARGO_HOME: "$CI_PROJECT_DIR/cargo"
     CROSS_BUILD_IMAGE: "${CI_REGISTRY_IMAGE}/hack/cross:latest"
@@ -49,14 +50,14 @@ build and push tester image:
 
 rustfmt:
     stage: preconditions
-    image: rust:latest
+    image: rust:stretch
     script:
         - rustup component add rustfmt
         - cargo fmt --all -- --check
 
 build and test dynamic binary on stable:
     stage: build
-    image: rust:latest
+    image: rust:stretch
     script:
         - cargo build --verbose
         - cargo test -- --nocapture
@@ -68,7 +69,7 @@ build and test dynamic binary on stable:
 
 build dynamic binary on nightly:
     stage: build
-    image: rustlang/rust:nightly
+    image: rustlang/rust:nightly-stretch
     script:
         - cargo build --verbose
     allow_failure: true
@@ -83,7 +84,7 @@ build static binary:
     image: "${CROSS_BUILD_IMAGE}"
     script:
         - cargo build --target x86_64-unknown-linux-musl --release
-        - cargo test --target x86_64-unknown-linux-musl -- --nocapture
+        - cargo test --target x86_64-unknown-linux-musl --release -- --nocapture
         - cp target/x86_64-unknown-linux-musl/release/dfw dfw-unstripped
         - cp target/x86_64-unknown-linux-musl/release/dfw dfw
         - strip dfw
@@ -95,17 +96,23 @@ build static binary:
             - dfw-unstripped
             - dfw
 
-build for docker tests:
+build test binary for docker tests:
     stage: build
-    image: rust:latest
+    image: rust:stretch
     script:
-        - cargo build --verbose
-        - cargo build --verbose --tests
+        - wget -O jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+        - chmod +x jq
+        - >
+          cp $(cargo test \
+            --features docker-tests \
+            --test dfw \
+            --no-run \
+            --message-format=json \
+            | ./jq -r 'select(.profile.test == true) | .executable') dfw-docker-test
     cache:
         key: "docker-tests"
         paths:
-        - target/
-        - cargo/
+        - dfw-docker-test
         policy: push
 
 .test-docker-tests: &test-docker-tests
@@ -121,13 +128,12 @@ build for docker tests:
     cache:
         key: "docker-tests"
         paths:
-        - target/
-        - cargo/
+        - dfw-docker-test
         policy: pull
     script:
         # Shiplift apparently doesn't work with a tcp docker host
         - export DOCKER_HOST="${DOCKER_HOST/tcp:/http:}"
-        - RUST_TEST_THREADS=1 cargo test --all-features -j1 -- --nocapture
+        - RUST_TEST_THREADS=1 ./dfw-docker-test --nocapture
 
 # API from 1.12.6 and below is not compatible.
 test on docker 1.13.1:
