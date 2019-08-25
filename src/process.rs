@@ -8,16 +8,23 @@
 
 //! This module holds the types related to configuration processing and rule creation.
 
-use errors::*;
-use iptables::*;
+use crate::errors::*;
+use crate::nftables::{self, Family, Hook, RuleVerdict, Type};
+use crate::rule::*;
+use crate::types::*;
+use failure::{bail, format_err};
 use shiplift::builder::{ContainerFilter as ContainerFilterShiplift, ContainerListOptions};
 use shiplift::rep::Container;
 use shiplift::rep::{NetworkContainerDetails, NetworkDetails};
 use shiplift::Docker;
 use slog::Logger;
+use slog::{debug, info, o, trace};
 use std::collections::HashMap as Map;
+use std::io::prelude::*;
+use std::io::BufWriter;
+use std::process::Command;
+use tempfile;
 use time;
-use types::*;
 
 const DFWRS_FORWARD_CHAIN: &'static str = "DFWRS_FORWARD";
 const DFWRS_INPUT_CHAIN: &'static str = "DFWRS_INPUT";

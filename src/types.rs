@@ -56,13 +56,13 @@
 //! expose_port = { host_port = 8080, container_port = 80, family = "tcp" }
 //! ```
 
-use serde::de::{self, Deserialize, DeserializeSeed, Deserializer};
-use std::collections::HashMap as Map;
+use derive_builder::Builder;
+use serde::{de, Deserialize};
 use std::fmt;
 use std::marker::PhantomData;
 use std::str::FromStr;
 
-const DEFAULT_PROTOCOL: &'static str = "tcp";
+const DEFAULT_PROTOCOL: &str = "tcp";
 
 /// `DFW` is the parent type defining the complete configuration used by DFW to build up the
 /// firewall rules.

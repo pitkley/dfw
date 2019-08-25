@@ -8,28 +8,17 @@
 
 #![cfg(feature = "docker-tests")]
 
-extern crate dfw;
-extern crate eval;
-extern crate failure;
-#[macro_use]
-extern crate lazy_static;
-extern crate regex;
-extern crate shiplift;
-#[macro_use]
-extern crate slog;
-
 mod common;
 mod logs;
 
 use common::*;
-use dfw::iptables::{IPTables, IPTablesLogger, IPTablesRestore, IPVersion};
 use dfw::types::*;
 use dfw::util::load_file;
 use dfw::*;
-use failure::Error;
+use itertools::{EitherOrBoth, Itertools};
 use logs::*;
 use shiplift::Docker;
-use slog::{Drain, Fuse, Logger, OwnedKVList, Record};
+use slog::{o, Drain, Fuse, Logger, OwnedKVList, Record};
 use std::panic;
 use std::panic::{AssertUnwindSafe, UnwindSafe};
 use std::process::{Command, Output};

@@ -7,6 +7,7 @@
 // except according to those terms.
 
 use eval;
+use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashMap as Map;
 use std::fs::File;
