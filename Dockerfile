@@ -29,7 +29,7 @@ RUN set -ex; \
 # Stage 1: final image
 FROM alpine
 
-RUN apk add --no-cache iptables ip6tables
+RUN apk add --no-cache nftables
 
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/dfw /dfw
 ENTRYPOINT ["/dfw"]

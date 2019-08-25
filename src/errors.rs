@@ -12,10 +12,12 @@
 
 #![allow(missing_docs)]
 
-use failure::Error;
+use failure::{Error, Fail};
 
 #[derive(Debug, Fail)]
 pub enum DFWError {
+    #[fail(display = "NFTables error: \n{}\n{}", stdout, stderr)]
+    NFTablesError { stdout: String, stderr: String },
     #[fail(display = "trait method unimplemented: {}", method)]
     TraitMethodUnimplemented { method: String },
 }

@@ -8,5 +8,5 @@ action = "REJECT"
 [[container_to_host.rules]]
 network = "dfwtest04_default"
 src_container = "dfwtest04_a_1"
-filter = "-m state --state RELATED"
+filter = "ct state related"
 action = "ACCEPT"

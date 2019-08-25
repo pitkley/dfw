@@ -35,15 +35,6 @@ type Signal = libc::c_int;
 
 arg_enum! {
     #[derive(Debug)]
-    enum IPTablesBackend {
-        IPTables,
-        IPTablesRestore,
-        IPTablesDummy
-    }
-}
-
-arg_enum! {
-    #[derive(Debug)]
     enum LoadMode {
         Once,
         Always
@@ -104,7 +95,7 @@ fn spawn_burst_monitor(
                 recv(after) -> _ => {
                     trace!(logger, "After timer ran out, sending trigger");
                     trigger = Trigger::After;
-                    s_trigger.send(());
+                    s_trigger.send(()).expect("Failed to send trigger event");
                 }
             }
 
@@ -150,7 +141,7 @@ fn spawn_event_monitor(
                         "create" | "destroy" | "start" | "restart" | "die" | "stop" => {
                             trace!(logger, "Trigger channel about event";
                                        o!("event" => format!("{:?}", event)));
-                            s_event.send(());
+                            s_event.send(()).expect("Failed to send trigger event");
                             break;
                         }
                         _ => continue,
@@ -223,22 +214,8 @@ fn run<'a>(
            o!("config" => format!("{:#?}", toml)));
 
     let dry_run = matches.is_present("dry-run");
-    let iptables_backend = value_t!(matches.value_of("iptables-backend"), IPTablesBackend)?;
     trace!(root_logger, "Dry run: {}", dry_run;
            o!("dry_run" => dry_run));
-
-    let (ipt4, ipt6): (Box<IPTables>, Box<IPTables>) = if dry_run {
-        (Box::new(IPTablesDummy), Box::new(IPTablesDummy))
-    } else {
-        match iptables_backend {
-            IPTablesBackend::IPTables => (Box::new(ipt::new(false)?), Box::new(ipt::new(true)?)),
-            IPTablesBackend::IPTablesRestore => (
-                Box::new(IPTablesRestore::new(IPVersion::IPv4)?),
-                Box::new(IPTablesRestore::new(IPVersion::IPv6)?),
-            ),
-            IPTablesBackend::IPTablesDummy => (Box::new(IPTablesDummy), Box::new(IPTablesDummy)),
-        }
-    };
 
     let processing_logger = root_logger.new(o!());
     let process: Box<Fn() -> Result<()>> = match value_t!(matches.value_of("load-mode"), LoadMode)?
@@ -247,13 +224,12 @@ fn run<'a>(
             trace!(root_logger, "Creating process closure according to load mode";
                    o!("load_mode" => "once"));
             Box::new(|| {
-                ProcessDFW::new(
+                ProcessContext::new(
                     &docker,
                     &toml,
-                    &*ipt4,
-                    &*ipt6,
                     &processing_options,
                     &processing_logger,
+                    dry_run,
                 )?
                 .process()
                 .map_err(From::from)
@@ -267,13 +243,12 @@ fn run<'a>(
                 debug!(root_logger, "Reloaded configuration before processing";
                        o!("config" => format!("{:#?}", toml)));
 
-                ProcessDFW::new(
+                ProcessContext::new(
                     &docker,
                     &toml,
-                    &*ipt4,
-                    &*ipt6,
                     &processing_options,
                     &processing_logger,
+                    dry_run,
                 )?
                 .process()
                 .map_err(From::from)
@@ -301,7 +276,7 @@ fn run<'a>(
               "Run once specified (or load-interval is zero and events aren't monitored), exiting";
               o!("version" => crate_version!(),
                  "exited_at" => format!("{}", time::now().rfc3339())));
-        ::std::process::exit(0);
+        return Ok(());
     }
 
     let event_trigger = if monitor_events {
@@ -477,28 +452,10 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
                 .help("Process rules once, then exit."),
         )
         .arg(
-            Arg::with_name("iptables-backend")
-                .takes_value(true)
-                .long("iptables-backend")
-                .value_name("BACKEND")
-                .possible_values(
-                    IPTablesBackend::variants()
-                        .iter()
-                        .map(|s| s.to_ascii_lowercase())
-                        .collect::<Vec<_>>()
-                        .iter()
-                        .map(|s| &**s)
-                        .collect::<Vec<_>>()
-                        .as_slice(),
-                )
-                .default_value("iptables")
-                .help("Choose the iptables backend to use"),
-        )
-        .arg(
             Arg::with_name("dry-run")
                 .takes_value(false)
                 .long("dry-run")
-                .help("Don't touch iptables, just show what would be done"),
+                .help("Don't touch nft, just show what would be done"),
         )
         .get_matches()
 }
@@ -512,7 +469,7 @@ fn main() {
         .expect("Failed to bind to process signals");
     thread::spawn(move || {
         for signal in signals.forever() {
-            s_signal.send(signal);
+            s_signal.send(signal).expect("Failed to send signal event");
         }
     });
 

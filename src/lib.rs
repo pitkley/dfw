@@ -160,8 +160,9 @@
 
 // declare modules
 pub mod errors;
-pub mod iptables;
+pub mod nftables;
 pub mod process;
+pub mod rule;
 pub mod types;
 pub mod util;
 

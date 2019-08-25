@@ -56,6 +56,7 @@
 //! expose_port = { host_port = 8080, container_port = 80, family = "tcp" }
 //! ```
 
+use crate::nftables::*;
 use derive_builder::Builder;
 use serde::{de, Deserialize};
 use std::fmt;
@@ -72,8 +73,10 @@ const DEFAULT_PROTOCOL: &str = "tcp";
 #[serde(deny_unknown_fields)]
 pub struct DFW {
     /// The `defaults` configuration section
+    #[serde(default)]
     pub defaults: Option<Defaults>,
     /// The `initialization` configuration section
+    #[serde(default)]
     pub initialization: Option<Initialization>,
     /// The `container_to_container` configuration section
     pub container_to_container: Option<ContainerToContainer>,
@@ -88,9 +91,32 @@ pub struct DFW {
 }
 
 /// The default configuration section, used by DFW for rule processing.
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Defaults {
+    /// Specify the names of custom nft-tables that should be partially managed.
+    ///
+    /// # Explanation
+    ///
+    /// If you want to use or already use an existing nftables table to manage rules independently
+    /// from DFW, it is important that two conditions are met:
+    ///
+    /// 1. The priority-values of the chains are _lower_ than the priority-values used by DFW.
+    /// 2. The default-policy of the any input or forward chains in the table are set to `accept`.
+    ///
+    /// While DFW cannot ensure that the first condition is met (since changing the priority of a
+    /// chain is not possible without recreating the chain), it can set the policies of your input
+    /// and output chains to `accept` for you.
+    ///
+    /// # Example
+    ///
+    /// ```toml
+    /// custom_tables = "filter"
+    /// custom_tables = ["filter", "custom"]
+    /// ```
+    #[serde(default, deserialize_with = "option_struct_or_seq_struct")]
+    pub custom_tables: Option<Vec<Table>>,
+
     /// This defines the external network interfaces of the host to consider during building the
     /// rules. The value can be non-existant, a string, or a sequence of strings.
     ///
@@ -102,6 +128,28 @@ pub struct Defaults {
     /// ```
     #[serde(default, deserialize_with = "option_string_or_seq_string")]
     pub external_network_interfaces: Option<Vec<String>>,
+
+    /// This defines whether the default Docker bridge (usually `docker0`) is allowed to access host
+    /// resources.
+    ///
+    /// For non-default Docker bridges this is controlled within the [container-to-host section].
+    ///
+    /// [container-to-host section]: struct.ContainerToHostRule.html
+    #[serde(default)]
+    pub default_docker_bridge_to_host_policy: ChainPolicy,
+}
+
+/// Reference to an nftables table, specifically to the input- and forward-chains within it.
+///
+/// This is used by DFW when managing other tables is required.
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash, Default)]
+#[serde(deny_unknown_fields)]
+pub struct Table {
+    /// Name of the custom table.
+    pub name: String,
+
+    /// Names of the input and forward chains defined within the custom table.
+    pub chains: Vec<String>,
 }
 
 /// The initialization section allows you to add custom rules to any table in both iptables and
@@ -123,37 +171,22 @@ pub struct Defaults {
 ///     # ...
 /// ]
 /// ```
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Initialization {
-    /// Initialization rules for iptables (IPv4). Expects a map where the key is a specific table
-    /// and the value is a list of rules.
+    /// Initialization rules for nftables
     ///
     /// # Example
     ///
     /// ```toml
-    /// [initialization.v4]
-    /// filter = [
-    ///     "-P INPUT DROP",
-    ///     "-F INPUT",
+    /// [initialization]
+    /// rules = [
+    ///     "add table inet custom",
+    ///     "flush table inet custom",
     ///     # ...
     /// ]
     /// ```
-    pub v4: Option<Map<String, Vec<String>>>,
-
-    /// Initialization rules for ip6tables (IPv6). Expects a map where the key is a specific table
-    /// and the value is a list of rules.
-    ///
-    /// # Example
-    ///
-    /// ```toml
-    /// [initialization.v6]
-    /// nat = [
-    ///     "-P PREROUTING DROP",
-    ///     # ...
-    /// ]
-    /// ```
-    pub v6: Option<Map<String, Vec<String>>>,
+    pub rules: Option<Vec<String>>,
 }
 
 /// The container-to-container section, defining how containers can communicate amongst each other.
@@ -161,7 +194,24 @@ pub struct Initialization {
 #[serde(deny_unknown_fields)]
 pub struct ContainerToContainer {
     /// The `default_policy` defines the default for when there is not a specific rule.
-    pub default_policy: String,
+    ///
+    /// # Filtering traffic within the same bridge
+    ///
+    /// Depending on how your host is configured, traffic whose origin and destination interface are
+    /// the same bridge is _not_ filtered by the kernel netfilter module. This means that this
+    /// default policy is not honored for traffic between containers that are on the same Docker
+    /// network, but only for traffic that traverses two bridges.
+    ///
+    /// If your kernel has the `br_netfilter` kernel-module available, you can set the sysctl
+    /// `net.bridge.bridge-nf-call-iptables` to `1` to have the netfilter-module act on traffic
+    /// within the same bridge, too. You can set this value temporarily like this:
+    ///
+    /// ```norun
+    /// sysctl net.bridge.bridge-nf-call-iptables=1
+    /// ```
+    ///
+    /// To permanently set this configuration, take a look at `man sysctl.d` and `man sysctl.conf`.
+    pub default_policy: ChainPolicy,
     /// An optional list of rules, see
     /// [`ContainerToContainerRule`](struct.ContainerToContainerRule.html).
     ///
@@ -192,10 +242,12 @@ pub struct ContainerToContainerRule {
     pub src_container: Option<String>,
     /// Destination container to apply the rule to.
     pub dst_container: Option<String>,
-    /// Additional filter, which will be added to the iptables command.
-    pub filter: Option<String>,
-    /// Action to take (i.e. `ACCEPT`, `DROP`, `REFUSE`).
-    pub action: String,
+    /// Additional match-string, which will be added to the nftables command.
+    #[serde(alias = "filter")]
+    pub matches: Option<String>,
+    /// Verdict for rule (accept, drop or reject).
+    #[serde(alias = "action")]
+    pub verdict: RuleVerdict,
 }
 
 /// The container-to-wider-world section, defining how containers can communicate with the wider
@@ -204,7 +256,7 @@ pub struct ContainerToContainerRule {
 #[serde(deny_unknown_fields)]
 pub struct ContainerToWiderWorld {
     /// The `default_policy` defines the default for when there is not a specific rule.
-    pub default_policy: String,
+    pub default_policy: RuleVerdict,
     /// An optional list of rules, see
     /// [`ContainerToWiderWorldRule`](struct.ContainerToWiderWorldRule.html).
     ///
@@ -232,10 +284,12 @@ pub struct ContainerToWiderWorldRule {
     pub network: Option<String>,
     /// Source container to apply the rule to.
     pub src_container: Option<String>,
-    /// Additional filter, which will be added to the iptables command.
-    pub filter: Option<String>,
-    /// Action to take (i.e. `ACCEPT`, `DROP`, `REFUSE`).
-    pub action: String,
+    /// Additional match-string, which will be added to the nftables command.
+    #[serde(alias = "filter")]
+    pub matches: Option<String>,
+    /// Verdict for rule (accept, drop or reject).
+    #[serde(alias = "action")]
+    pub verdict: RuleVerdict,
     /// Specific external network interface to target.
     pub external_network_interface: Option<String>,
 }
@@ -245,7 +299,7 @@ pub struct ContainerToWiderWorldRule {
 #[serde(deny_unknown_fields)]
 pub struct ContainerToHost {
     /// The `default_policy` defines the default for when there is not a specific rule.
-    pub default_policy: String,
+    pub default_policy: RuleVerdict,
     /// An optional list of rules, see
     /// [`ContainerToHostRule`](struct.ContainerToHostRule.html).
     ///
@@ -273,10 +327,12 @@ pub struct ContainerToHostRule {
     pub network: String,
     /// Source container to apply the rule to.
     pub src_container: Option<String>,
-    /// Additional filter, which will be added to the iptables command.
-    pub filter: Option<String>,
-    /// Action to take (i.e. `ACCEPT`, `DROP`, `REFUSE`).
-    pub action: String,
+    /// Additional match-string, which will be added to the nftables command.
+    #[serde(alias = "filter")]
+    pub matches: Option<String>,
+    /// Verdict for rule (accept, drop or reject).
+    #[serde(alias = "action")]
+    pub verdict: RuleVerdict,
 }
 
 /// The wider-world-to-container section, defining how containers can reached from the wider world.
@@ -539,7 +595,7 @@ struct StringOrStruct<T>(PhantomData<T>);
 
 impl<'de, T> de::Visitor<'de> for StringOrStruct<T>
 where
-    T: Deserialize<'de> + FromStr<Err = String>,
+    T: de::Deserialize<'de> + FromStr<Err = String>,
 {
     type Value = T;
 
@@ -565,21 +621,21 @@ where
     where
         M: de::MapAccess<'de>,
     {
-        Deserialize::deserialize(de::value::MapAccessDeserializer::new(visitor))
+        de::Deserialize::deserialize(de::value::MapAccessDeserializer::new(visitor))
     }
 }
 
 // Thanks to @dtolnay for the support:
 //   https://github.com/serde-rs/serde/issues/901#issuecomment-297070279
-impl<'de, T> DeserializeSeed<'de> for StringOrStruct<T>
+impl<'de, T> de::DeserializeSeed<'de> for StringOrStruct<T>
 where
-    T: Deserialize<'de> + FromStr<Err = String>,
+    T: de::Deserialize<'de> + FromStr<Err = String>,
 {
     type Value = T;
 
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
-        D: Deserializer<'de>,
+        D: de::Deserializer<'de>,
     {
         deserializer.deserialize_any(self)
     }
@@ -588,8 +644,8 @@ where
 #[allow(dead_code)]
 fn string_or_struct<'de, T, D>(deserializer: D) -> Result<T, D::Error>
 where
-    T: Deserialize<'de> + FromStr<Err = String>,
-    D: Deserializer<'de>,
+    T: de::Deserialize<'de> + FromStr<Err = String>,
+    D: de::Deserializer<'de>,
 {
     deserializer.deserialize_any(StringOrStruct(PhantomData))
 }
@@ -598,7 +654,7 @@ struct SingleOrSeqStringOrStruct<T>(PhantomData<T>);
 
 impl<'de, T> de::Visitor<'de> for SingleOrSeqStringOrStruct<T>
 where
-    T: Deserialize<'de> + FromStr<Err = String>,
+    T: de::Deserialize<'de> + FromStr<Err = String>,
 {
     type Value = Vec<T>;
 
@@ -631,7 +687,8 @@ where
     where
         M: de::MapAccess<'de>,
     {
-        Deserialize::deserialize(de::value::MapAccessDeserializer::new(visitor)).map(|e| vec![e])
+        de::Deserialize::deserialize(de::value::MapAccessDeserializer::new(visitor))
+            .map(|e| vec![e])
     }
 
     fn visit_seq<S>(self, mut seq: S) -> Result<Self::Value, S::Error>
@@ -648,15 +705,15 @@ where
 
 fn single_or_seq_string_or_struct<'de, T, D>(deserializer: D) -> Result<Vec<T>, D::Error>
 where
-    T: Deserialize<'de> + FromStr<Err = String>,
-    D: Deserializer<'de>,
+    T: de::Deserialize<'de> + FromStr<Err = String>,
+    D: de::Deserializer<'de>,
 {
     deserializer.deserialize_any(SingleOrSeqStringOrStruct(PhantomData))
 }
 
 fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
-    D: Deserializer<'de>,
+    D: de::Deserializer<'de>,
 {
     struct StringOrSeqString(PhantomData<Vec<String>>);
 
@@ -678,7 +735,7 @@ where
         where
             S: de::SeqAccess<'de>,
         {
-            Deserialize::deserialize(de::value::SeqAccessDeserializer::new(visitor))
+            de::Deserialize::deserialize(de::value::SeqAccessDeserializer::new(visitor))
         }
     }
 
@@ -687,7 +744,51 @@ where
 
 fn option_string_or_seq_string<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
 where
-    D: Deserializer<'de>,
+    D: de::Deserializer<'de>,
 {
     string_or_seq_string(deserializer).map(Some)
+}
+
+fn struct_or_seq_struct<'de, T, D>(deserializer: D) -> Result<Vec<T>, D::Error>
+where
+    T: de::Deserialize<'de>,
+    D: de::Deserializer<'de>,
+{
+    struct StructOrSeqStruct<T>(PhantomData<Vec<T>>);
+
+    impl<'de, T> de::Visitor<'de> for StructOrSeqStruct<T>
+    where
+        T: de::Deserialize<'de>,
+    {
+        type Value = Vec<T>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("map or sequence of maps")
+        }
+
+        fn visit_map<M>(self, visitor: M) -> Result<Self::Value, M::Error>
+        where
+            M: de::MapAccess<'de>,
+        {
+            de::Deserialize::deserialize(de::value::MapAccessDeserializer::new(visitor))
+                .map(|e| vec![e])
+        }
+
+        fn visit_seq<S>(self, visitor: S) -> Result<Self::Value, S::Error>
+        where
+            S: de::SeqAccess<'de>,
+        {
+            de::Deserialize::deserialize(de::value::SeqAccessDeserializer::new(visitor))
+        }
+    }
+
+    deserializer.deserialize_any(StructOrSeqStruct(PhantomData))
+}
+
+fn option_struct_or_seq_struct<'de, T, D>(deserializer: D) -> Result<Option<Vec<T>>, D::Error>
+where
+    T: de::Deserialize<'de>,
+    D: de::Deserializer<'de>,
+{
+    struct_or_seq_struct(deserializer).map(Some)
 }

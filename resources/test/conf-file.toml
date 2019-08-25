@@ -1,11 +1,8 @@
 [defaults]
 external_network_interfaces = "eni"
 
-[initialization.v4]
-filter = ["-P INPUT ACCEPT"]
-
-[initialization.v6]
-nat = ["-P PREROUTING ACCEPT"]
+[initialization]
+rules = ["add table inet custom"]
 
 [container_to_container]
 default_policy = "DROP"

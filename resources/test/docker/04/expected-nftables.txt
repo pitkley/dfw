@@ -1,0 +1,22 @@
+add table inet dfw
+flush table inet dfw
+add chain inet dfw input { type filter hook input priority -5 ; }
+add rule inet dfw input ct state invalid drop
+add rule inet dfw input ct state { related, established } accept
+add chain inet dfw forward { type filter hook forward priority -5 ; }
+add rule inet dfw forward ct state invalid drop
+add rule inet dfw forward ct state { related, established } accept
+add table ip dfw
+flush table ip dfw
+add chain ip dfw prerouting { type nat hook prerouting priority -105 ; }
+add chain ip dfw postrouting { type nat hook postrouting priority 95 ; }
+add table ip6 dfw
+flush table ip6 dfw
+add chain ip6 dfw prerouting { type nat hook prerouting priority -105 ; }
+add chain ip6 dfw postrouting { type nat hook postrouting priority 95 ; }
+add rule inet dfw input meta iifname $input=bridge meta mark set 0xdf reject
+add rule inet dfw input ip saddr $src_ip=ip meta iifname $input=bridge meta mark set 0xdf ct state related accept
+add rule inet dfw input meta iifname $input=bridge meta mark set 0xdf drop
+add rule inet dfw input meta iifname $input=bridge meta mark set 0xdf drop
+add rule inet dfw input meta iifname $input=bridge meta mark set 0xdf drop
+add rule inet dfw input meta iifname $input=bridge meta mark set 0xdf drop
