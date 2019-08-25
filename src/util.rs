@@ -8,7 +8,7 @@
 
 //! Utilities module
 
-use errors::*;
+use crate::errors::*;
 
 use glob::glob;
 use serde::de::DeserializeOwned;

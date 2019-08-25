@@ -158,23 +158,6 @@
 #![recursion_limit = "1024"]
 #![deny(missing_docs)]
 
-// Import external libraries
-
-#[macro_use]
-extern crate derive_builder;
-#[macro_use]
-extern crate failure;
-extern crate glob;
-extern crate iptables as ipt;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate shiplift;
-#[macro_use]
-extern crate slog;
-extern crate time;
-extern crate toml;
-
 // declare modules
 pub mod errors;
 pub mod iptables;
@@ -183,5 +166,4 @@ pub mod types;
 pub mod util;
 
 // re-export process types
-
 pub use process::*;

@@ -6,11 +6,6 @@
 // option. This file may not be copied, modified or distributed
 // except according to those terms.
 
-extern crate eval;
-#[macro_use]
-extern crate lazy_static;
-extern crate regex;
-
 mod logs;
 
 use logs::*;

@@ -6,14 +6,12 @@
 // option. This file may not be copied, modified or distributed
 // except according to those terms.
 
-extern crate dfw;
 #[macro_use]
 extern crate maplit;
-extern crate toml;
-
 mod common;
 
 use common::resource;
+use dfw::nftables::{ChainPolicy, RuleVerdict};
 use dfw::types::*;
 use dfw::util::*;
 
