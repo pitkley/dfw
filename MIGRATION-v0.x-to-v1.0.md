@@ -32,6 +32,9 @@ For more general information on nftables, see the following resources:
 * [nftables wiki][nftableswiki]
 * [nftables - Debian Wiki][debianwiki-nftables]
 
+[nftableswiki]: https://wiki.nftables.org/wiki-nftables/index.php/Main_Page
+[debianwiki-nftables]: https://wiki.debian.org/nftables
+
 ## <a name="migrating-config"></a>Migrating your pre-v1.0 DFW configuration
 
 The switch to nftables required changes to the configuration-structure of DFW.
