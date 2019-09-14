@@ -9,8 +9,21 @@
 # and every struct field contains some documentation that might help you out.
 
 [defaults]
+# If you are already using nftables or are running a default nftables
+# installation, chances are that you already have nftables table called
+# "filter". For DFW to work correctly it is necessary to provide the existing
+# tables and the names of their input and forward chains such that it can hook
+# into them, ensuring that the traffic managed by DFW is correctly accepted or
+# denied. (If you have multiple pre-existing tables, you can specify a list
+# here, too.)
+# The following is a sane default that should work for most setups.
+custom_tables = { name = "filter", chains = ["input", "forward"] }
 # Define the external network interface(s) that the Docker networks should be
 # able to communicate with. (You can also skip this key, or specify it as a
 # list of strings if you have multiple interfaces.)
 external_network_interfaces = "eth0"
-
+# This setting controls whether the default Docker bridge (usually `docker0`) is
+# allowed to access host resources. Non-default bridges are managed through the
+# container-to-host section. The default is to accept traffic.
+# You can specify "accept" or "drop".
+default_docker_bridge_to_host_policy = "accept"

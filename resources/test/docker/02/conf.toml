@@ -1,5 +1,5 @@
 [container_to_container]
-default_policy = "DROP"
+default_policy = "drop"
 
 [[container_to_container.rules]]
 network = "dfwtest02_default"

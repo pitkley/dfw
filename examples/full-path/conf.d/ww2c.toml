@@ -64,4 +64,3 @@ network = "reverseproxy_network"
 dst_container = "my_reverseproxy"
 expose_port = [80, 443]
 external_network_interface = "tun0"
-

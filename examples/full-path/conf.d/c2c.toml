@@ -12,8 +12,8 @@
 # The container_to_container table defines if and how containers are allowed to
 # communicate amongst each other. The first thing you have to define is the
 # default policy that should be applied to C2C communication, e.g. disallow all
-# communication by default:
-default_policy = "DROP"
+# communication by default: (valid values are "accept" and "drop")
+default_policy = "drop"
 
 [[container_to_container.rules]]
 # To then allow specific communication between containers, you'll have to add a
@@ -24,7 +24,7 @@ default_policy = "DROP"
 network = "common_network"
 src_container = "container_a"
 dst_container = "container_b"
-action = "ACCEPT"
+verdict = "accept"
 # (If you want to enable communication between two containers that are on
 # separate Docker networks, check out the container_dnat section at the end of
 # the file.)
@@ -35,7 +35,7 @@ action = "ACCEPT"
 # configure the allowed communication on a complete Docker network, no matter
 # the containers involved:
 network = "internal_network"
-action = "ACCEPT"
+verdict = "accept"
 
 [[container_to_container.rules]]
 # Being able to specify only one of `src_container` and `dst_container` can be
@@ -46,17 +46,16 @@ action = "ACCEPT"
 # the reverse proxy, i.e. related and established traffic will be allowed):
 network = "reverseproxy_network"
 src_container = "my_reverseproxy"
-action = "ACCEPT"
+verdict = "accept"
 
 [[container_to_container.rules]]
-# If the simple iptables actions (ACCEPT, REJECT, DROP) are not enough for your
-# use-case, you can also specify the `filter` field which will add your
+# If the simple iptables actions (accept, reject, drop) are not enough for your
+# use-case, you can also specify the `matches` field which will add your
 # specified string to the iptables command executed. This enables you to for
 # example set a specific destination port that should be reachable, rather than
 # the container as a whole:
 network = "reverseproxy_network"
 src_container = "my_reverseproxy"
 dst_container = "my_webserver"
-filter = "-p tcp --dport 8080"
-action = "ACCEPT"
-
+matches = "tcp dport 8080"
+verdict = "accept"

@@ -31,4 +31,3 @@ src_container = "container_a"
 dst_network = "network_b"
 dst_container = "container_b"
 expose_port = "50000/udp"
-

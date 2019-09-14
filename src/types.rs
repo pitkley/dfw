@@ -14,30 +14,30 @@
 //!
 //! ```toml
 //! [defaults]
+//! custom_tables = { name = "filter", chains = ["input", "forward"]}
 //! external_network_interfaces = "eth0"
 //!
 //! [initialization]
-//! [initialization.v4]
-//! filter = [
-//!     "-P INPUT DROP",
+//! rules = [
+//!     "add table inet custom",
 //! ]
 //!
 //! [container_to_container]
-//! default_policy = "DROP"
+//! default_policy = "drop"
 //!
 //! [[container_to_container.rules]]
 //! network = "common_network"
 //! src_container = "container_a"
 //! dst_container = "container_b"
-//! action = "ACCEPT"
+//! verdict = "accept"
 //!
 //! [container_to_wider_world]
-//! default_policy = "ACCEPT"
+//! default_policy = "accept"
 //!
 //! [[container_to_container.rules]]
 //! network = "other_network"
 //! src_container = "container_c"
-//! action = "DROP"
+//! verdict = "drop"
 //!
 //! [wider_world_to_container]
 //!
@@ -111,8 +111,11 @@ pub struct Defaults {
     /// # Example
     ///
     /// ```toml
-    /// custom_tables = "filter"
-    /// custom_tables = ["filter", "custom"]
+    /// custom_tables = { name = "filter", chains = ["input", "forward"] }
+    /// custom_tables = [
+    ///     { name = "filter", chains = ["input", "forward"] },
+    ///     { name = "custom", chains = ["input", "forward"] }
+    /// ]
     /// ```
     #[serde(default, deserialize_with = "option_struct_or_seq_struct")]
     pub custom_tables: Option<Vec<Table>>,
@@ -152,25 +155,7 @@ pub struct Table {
     pub chains: Vec<String>,
 }
 
-/// The initialization section allows you to add custom rules to any table in both iptables and
-/// ip6tables.
-///
-/// # Example
-///
-/// ```toml
-/// [initialization.v4]
-/// filter = [
-///     "-P INPUT DROP",
-///     "-F INPUT",
-///     # ...
-/// ]
-///
-/// [initialization.v6]
-/// nat = [
-///     "-P PREROUTING DROP",
-///     # ...
-/// ]
-/// ```
+/// The initialization section allows you to execute any commands against nftables.
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Initialization {
@@ -243,7 +228,6 @@ pub struct ContainerToContainerRule {
     /// Destination container to apply the rule to.
     pub dst_container: Option<String>,
     /// Additional match-string, which will be added to the nftables command.
-    #[serde(alias = "filter")]
     pub matches: Option<String>,
     /// Verdict for rule (accept, drop or reject).
     #[serde(alias = "action")]
@@ -285,7 +269,6 @@ pub struct ContainerToWiderWorldRule {
     /// Source container to apply the rule to.
     pub src_container: Option<String>,
     /// Additional match-string, which will be added to the nftables command.
-    #[serde(alias = "filter")]
     pub matches: Option<String>,
     /// Verdict for rule (accept, drop or reject).
     #[serde(alias = "action")]
@@ -328,7 +311,6 @@ pub struct ContainerToHostRule {
     /// Source container to apply the rule to.
     pub src_container: Option<String>,
     /// Additional match-string, which will be added to the nftables command.
-    #[serde(alias = "filter")]
     pub matches: Option<String>,
     /// Verdict for rule (accept, drop or reject).
     #[serde(alias = "action")]

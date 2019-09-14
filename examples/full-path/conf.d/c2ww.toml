@@ -10,13 +10,12 @@
 
 [container_to_wider_world]
 # The container_to_wider_world table defines if and how containers should be
-# able to communicate with the wider world, i.e. communications across the
-# iptables `OUTPUT` chain. (Communications with the host are handled
-# separately, see the next section.) This table expects a default policy, i.e.
-# if you want to allow or block traffic to the wider world by default. If your
-# containers should be able to reach the internet, you'll probably want to set
-# this to ACCEPT.
-default_policy = "ACCEPT"
+# able to communicate with the wider world. (Communications with the host are
+# handled separately, see the next section.) This table expects a default
+# policy, i.e. if you want to allow or block traffic to the wider world by
+# default. If your containers should be able to reach the internet, you'll
+# probably want to set this to "accept".
+default_policy = "accept"
 
 [[container_to_wider_world.rules]]
 # The container_to_wider_world rules work very similar to the
@@ -26,7 +25,7 @@ default_policy = "ACCEPT"
 # block a specific Docker network from accessing resources on `eth0`, you can
 # do this:
 network = "internal_network"
-action = "REJECT"
+verdict = "reject"
 external_network_interface = "eth0"
 
 [[container_to_wider_world.rules]]
@@ -35,8 +34,8 @@ external_network_interface = "eth0"
 # section of this config, in this case `eth0`. This means that the following
 # rule is identical to the one above:
 network = "internal_network"
-action = "REJECT"
+verdict = "reject"
 
 # Note: you are also free to specify the `src_container` and `filter` fields
-# here. Their behaviour is identical to what was shown for the C2C rules.
-
+# here. Their behaviour is identical to what was shown for the
+# container-to-container rules.
