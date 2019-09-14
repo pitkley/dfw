@@ -23,13 +23,13 @@ COPY . /app
 
 RUN set -ex; \
     cargo build --target x86_64-unknown-linux-musl --release; \
-    cargo test --target x86_64-unknown-linux-musl -- --nocapture; \
+    cargo test --target x86_64-unknown-linux-musl --release -- --nocapture; \
     strip target/x86_64-unknown-linux-musl/release/dfw;
 
 # Stage 1: final image
 FROM alpine
 
-RUN apk add --no-cache iptables ip6tables
+RUN apk add --no-cache nftables
 
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/dfw /dfw
 ENTRYPOINT ["/dfw"]

@@ -1,40 +1,37 @@
 [defaults]
 external_network_interfaces = "eni"
 
-[initialization.v4]
-filter = ["-P INPUT ACCEPT"]
-
-[initialization.v6]
-nat = ["-P PREROUTING ACCEPT"]
+[initialization]
+rules = ["add table inet custom"]
 
 [container_to_container]
-default_policy = "DROP"
+default_policy = "drop"
 
 [[container_to_container.rules]]
 network = "network"
 src_container = "src_container"
 dst_container = "dst_container"
-filter = "FILTER"
-action = "ACCEPT"
+matches = "FILTER"
+verdict = "accept"
 
 [container_to_wider_world]
-default_policy = "ACCEPT"
+default_policy = "accept"
 
 [[container_to_wider_world.rules]]
 network = "network"
 src_container = "src_container"
-filter = "FILTER"
-action = "ACCEPT"
+matches = "FILTER"
+verdict = "accept"
 external_network_interface = "eni"
 
 [container_to_host]
-default_policy = "ACCEPT"
+default_policy = "accept"
 
 [[container_to_host.rules]]
 network = "network"
 src_container = "src_container"
-filter = "FILTER"
-action = "ACCEPT"
+matches = "FILTER"
+verdict = "accept"
 
 [wider_world_to_container]
 

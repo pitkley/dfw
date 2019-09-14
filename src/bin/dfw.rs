@@ -1,4 +1,4 @@
-// Copyright 2017, 2018 Pit Kleyersburg <pitkley@googlemail.com>
+// Copyright 2017 - 2019 Pit Kleyersburg <pitkley@googlemail.com>
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -8,42 +8,18 @@
 
 //! # DFW - binary
 
-// Increase the compiler's recursion limit for the `error_chain` crate.
-#![recursion_limit = "1024"]
-
-// Import external libraries
-
-#[macro_use]
-extern crate crossbeam_channel as channel;
-#[macro_use]
-extern crate clap;
-extern crate dfw;
-#[macro_use]
-extern crate failure;
-extern crate iptables as ipt;
-extern crate libc;
-extern crate shiplift;
-extern crate signal_hook;
-#[macro_use]
-extern crate slog;
-extern crate sloggers;
-extern crate time;
-extern crate url;
-
-use channel::{Receiver, Sender};
-use clap::{App, Arg, ArgGroup, ArgMatches};
-use dfw::iptables::{IPTables, IPTablesDummy, IPTablesRestore, IPVersion};
+use clap::{arg_enum, crate_authors, crate_version, value_t, App, Arg, ArgGroup, ArgMatches};
+use crossbeam_channel::{select, Receiver, Sender};
 use dfw::types::DFW;
 use dfw::util::*;
-use dfw::{ContainerFilter, ProcessDFW, ProcessingOptions};
+use dfw::{ContainerFilter, ProcessContext, ProcessingOptions};
+use failure::bail;
 use shiplift::builder::{EventFilter, EventFilterType, EventsOptions};
 use shiplift::Docker;
-use slog::Logger;
+use slog::{debug, error, info, o, trace, Logger};
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
 use sloggers::Build;
-#[allow(unused_imports, deprecated)]
-use std::ascii::AsciiExt;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -53,18 +29,9 @@ mod errors {
     pub type Result<E> = ::std::result::Result<E, Error>;
 }
 
-use errors::*;
+use crate::errors::*;
 
 type Signal = libc::c_int;
-
-arg_enum! {
-    #[derive(Debug)]
-    enum IPTablesBackend {
-        IPTables,
-        IPTablesRestore,
-        IPTablesDummy
-    }
-}
 
 arg_enum! {
     #[derive(Debug)]
@@ -105,7 +72,7 @@ fn spawn_burst_monitor(
     }
     thread::spawn(move || {
         let dummy: Receiver<Instant> = {
-            let (s_dummy, r_dummy) = channel::bounded(0);
+            let (s_dummy, r_dummy) = crossbeam_channel::bounded(0);
             // Leak the send-channel so that it never gets closed and `recv` never synchronizes.
             ::std::mem::forget(s_dummy);
             r_dummy
@@ -128,14 +95,16 @@ fn spawn_burst_monitor(
                 recv(after) -> _ => {
                     trace!(logger, "After timer ran out, sending trigger");
                     trigger = Trigger::After;
-                    s_trigger.send(());
+                    s_trigger.send(()).expect("Failed to send trigger event");
                 }
             }
 
             trace!(logger, "Resetting after channel";
                    o!("trigger" => format!("{:?}", trigger)));
             match trigger {
-                Trigger::Event => after = channel::after(Duration::from_millis(burst_timeout)),
+                Trigger::Event => {
+                    after = crossbeam_channel::after(Duration::from_millis(burst_timeout))
+                }
                 Trigger::After => after = dummy.clone(),
                 Trigger::None => {}
             }
@@ -172,7 +141,7 @@ fn spawn_event_monitor(
                         "create" | "destroy" | "start" | "restart" | "die" | "stop" => {
                             trace!(logger, "Trigger channel about event";
                                        o!("event" => format!("{:?}", event)));
-                            s_event.send(());
+                            s_event.send(()).expect("Failed to send trigger event");
                             break;
                         }
                         _ => continue,
@@ -194,6 +163,15 @@ fn run<'a>(
            o!("version" => crate_version!(),
               "started_at" => format!("{}", time::now().rfc3339())));
 
+    let toml = load_config(&matches);
+    if matches.is_present("check-config") {
+        return toml.map(|_| ());
+    }
+
+    let toml = toml?;
+    debug!(root_logger, "Initial configuration loaded";
+           o!("config" => format!("{:#?}", toml)));
+
     let docker = match matches.value_of("docker-url") {
         Some(docker_url) => Docker::host(docker_url.parse()?),
         None => Docker::new(),
@@ -211,13 +189,13 @@ fn run<'a>(
             // If the load interval is greater than zero, we use a tick-channel
             trace!(root_logger, "Creating tick channel";
                    o!("load_interval" => load_interval));
-            channel::tick(Duration::from_secs(load_interval))
+            crossbeam_channel::tick(Duration::from_secs(load_interval))
         } else {
             // Otherwise we use the dummy channel, which will never send and thus never receive any
             // messages to circumvent having multiple `chan_select!`s below.
             trace!(root_logger, "Creating dummy channel";
                    o!("load_interval" => load_interval));
-            let (s_dummy, r_dummy) = channel::bounded(0);
+            let (s_dummy, r_dummy) = crossbeam_channel::bounded(0);
             // Leak the send-channel so that it never gets closed and `recv` never synchronizes.
             ::std::mem::forget(s_dummy);
 
@@ -240,27 +218,9 @@ fn run<'a>(
     trace!(root_logger, "Run once: {}", run_once;
            o!("run_once" => run_once));
 
-    let toml = load_config(&matches)?;
-    debug!(root_logger, "Initial configuration loaded";
-           o!("config" => format!("{:#?}", toml)));
-
     let dry_run = matches.is_present("dry-run");
-    let iptables_backend = value_t!(matches.value_of("iptables-backend"), IPTablesBackend)?;
     trace!(root_logger, "Dry run: {}", dry_run;
            o!("dry_run" => dry_run));
-
-    let (ipt4, ipt6): (Box<IPTables>, Box<IPTables>) = if dry_run {
-        (Box::new(IPTablesDummy), Box::new(IPTablesDummy))
-    } else {
-        match iptables_backend {
-            IPTablesBackend::IPTables => (Box::new(ipt::new(false)?), Box::new(ipt::new(true)?)),
-            IPTablesBackend::IPTablesRestore => (
-                Box::new(IPTablesRestore::new(IPVersion::IPv4)?),
-                Box::new(IPTablesRestore::new(IPVersion::IPv6)?),
-            ),
-            IPTablesBackend::IPTablesDummy => (Box::new(IPTablesDummy), Box::new(IPTablesDummy)),
-        }
-    };
 
     let processing_logger = root_logger.new(o!());
     let process: Box<Fn() -> Result<()>> = match value_t!(matches.value_of("load-mode"), LoadMode)?
@@ -269,13 +229,12 @@ fn run<'a>(
             trace!(root_logger, "Creating process closure according to load mode";
                    o!("load_mode" => "once"));
             Box::new(|| {
-                ProcessDFW::new(
+                ProcessContext::new(
                     &docker,
                     &toml,
-                    &*ipt4,
-                    &*ipt6,
                     &processing_options,
                     &processing_logger,
+                    dry_run,
                 )?
                 .process()
                 .map_err(From::from)
@@ -289,13 +248,12 @@ fn run<'a>(
                 debug!(root_logger, "Reloaded configuration before processing";
                        o!("config" => format!("{:#?}", toml)));
 
-                ProcessDFW::new(
+                ProcessContext::new(
                     &docker,
                     &toml,
-                    &*ipt4,
-                    &*ipt6,
                     &processing_options,
                     &processing_logger,
+                    dry_run,
                 )?
                 .process()
                 .map_err(From::from)
@@ -323,7 +281,7 @@ fn run<'a>(
               "Run once specified (or load-interval is zero and events aren't monitored), exiting";
               o!("version" => crate_version!(),
                  "exited_at" => format!("{}", time::now().rfc3339())));
-        ::std::process::exit(0);
+        return Ok(());
     }
 
     let event_trigger = if monitor_events {
@@ -331,8 +289,8 @@ fn run<'a>(
         trace!(root_logger, "Setup event monitoring channel";
                o!("monitor_events" => monitor_events));
 
-        let (s_trigger, r_trigger) = channel::bounded(0);
-        let (s_event, r_event) = channel::bounded(0);
+        let (s_trigger, r_trigger) = crossbeam_channel::bounded(0);
+        let (s_event, r_event) = crossbeam_channel::bounded(0);
         let docker_url = matches.value_of("docker-url").map(|s| s.to_owned());
         let burst_timeout = value_t!(matches.value_of("burst-timeout"), u64)?;
 
@@ -352,7 +310,7 @@ fn run<'a>(
     } else {
         trace!(root_logger, "Creating dummy channel";
                o!("monitor_events" => monitor_events));
-        let (s_dummy, r_dummy) = channel::bounded(0);
+        let (s_dummy, r_dummy) = crossbeam_channel::bounded(0);
         // Leak the send-channel so that it never gets closed and `recv` never synchronizes.
         ::std::mem::forget(s_dummy);
 
@@ -499,28 +457,21 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
                 .help("Process rules once, then exit."),
         )
         .arg(
-            Arg::with_name("iptables-backend")
-                .takes_value(true)
-                .long("iptables-backend")
-                .value_name("BACKEND")
-                .possible_values(
-                    IPTablesBackend::variants()
-                        .iter()
-                        .map(|s| s.to_ascii_lowercase())
-                        .collect::<Vec<_>>()
-                        .iter()
-                        .map(|s| &**s)
-                        .collect::<Vec<_>>()
-                        .as_slice(),
-                )
-                .default_value("iptables")
-                .help("Choose the iptables backend to use"),
-        )
-        .arg(
             Arg::with_name("dry-run")
                 .takes_value(false)
                 .long("dry-run")
-                .help("Don't touch iptables, just show what would be done"),
+                .help("Don't touch nft, just show what would be done")
+                .long_help(
+                    "Don't touch nft, just show what would be done. Note that this requires Docker \
+                     and the containers/networks referenced in the configuration to be available. \
+                     If you want to check the config for validity, specify --check-config instead."
+                ),
+        )
+        .arg(
+            Arg::with_name("check-config")
+                .takes_value(false)
+                .long("check-config")
+                .help("Verify if the provided configuration is valid, exit afterwards."),
         )
         .get_matches()
 }
@@ -529,12 +480,12 @@ fn main() {
     let matches = get_arg_matches();
 
     // Signals should be set up as early as possible, to set proper signal masks to all threads
-    let (s_signal, r_signal) = channel::bounded(10);
+    let (s_signal, r_signal) = crossbeam_channel::bounded(10);
     let signals = signal_hook::iterator::Signals::new(&[libc::SIGINT, libc::SIGTERM, libc::SIGHUP])
         .expect("Failed to bind to process signals");
     thread::spawn(move || {
         for signal in signals.forever() {
-            s_signal.send(signal);
+            s_signal.send(signal).expect("Failed to send signal event");
         }
     });
 

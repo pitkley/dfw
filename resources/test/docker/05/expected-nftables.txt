@@ -1,0 +1,41 @@
+add table inet dfw
+flush table inet dfw
+add chain inet dfw input { type filter hook input priority -5 ; }
+add rule inet dfw input ct state invalid drop
+add rule inet dfw input ct state { related, established } accept
+add chain inet dfw forward { type filter hook forward priority -5 ; }
+add rule inet dfw forward ct state invalid drop
+add rule inet dfw forward ct state { related, established } accept
+add table ip dfw
+flush table ip dfw
+add chain ip dfw prerouting { type nat hook prerouting priority -105 ; }
+add chain ip dfw postrouting { type nat hook postrouting priority 95 ; }
+add table ip6 dfw
+flush table ip6 dfw
+add chain ip6 dfw prerouting { type nat hook prerouting priority -105 ; }
+add chain ip6 dfw postrouting { type nat hook postrouting priority 95 ; }
+add rule inet dfw input meta iifname docker0 meta mark set 0xdf accept
+add rule inet dfw forward meta iifname docker0 oifname eni meta mark set 0xdf accept
+add rule ip dfw postrouting meta oifname eni meta mark set 0xdf masquerade
+add rule ip6 dfw postrouting meta oifname eni meta mark set 0xdf masquerade
+add rule inet dfw forward tcp dport 80 ip daddr $dst_ip=ip meta iifname eni oifname $output=bridge meta mark set 0xdf accept
+add rule ip dfw prerouting tcp dport 80 meta iifname eni meta mark set 0xdf dnat ${dst_ip=ip}:80
+add rule ip6 dfw prerouting tcp dport 80 meta iifname eni meta mark set 0xdf
+add rule inet dfw forward tcp dport 80 ip daddr $dst_ip=ip meta iifname eni oifname $output=bridge meta mark set 0xdf accept
+add rule ip dfw prerouting tcp dport 80 meta iifname eni meta mark set 0xdf dnat ${dst_ip=ip}:80
+add rule ip6 dfw prerouting tcp dport 80 meta iifname eni meta mark set 0xdf
+add rule inet dfw forward udp dport 53 ip daddr $dst_ip=ip meta iifname eni oifname $output=bridge meta mark set 0xdf accept
+add rule ip dfw prerouting udp dport 53 meta iifname eni meta mark set 0xdf dnat ${dst_ip=ip}:53
+add rule ip6 dfw prerouting udp dport 53 meta iifname eni meta mark set 0xdf
+add rule inet dfw forward tcp dport 443 ip daddr $dst_ip=ip meta iifname other oifname $output=bridge meta mark set 0xdf accept
+add rule ip dfw prerouting tcp dport 443 meta iifname other meta mark set 0xdf dnat ${dst_ip=ip}:443
+add rule ip6 dfw prerouting tcp dport 443 meta iifname other meta mark set 0xdf
+add rule inet dfw forward tcp dport 22 ip saddr 192.0.2.1/32 daddr $dst_ip=ip meta iifname eni oifname $output=bridge meta mark set 0xdf accept
+add rule ip dfw prerouting tcp dport 22 ip saddr 192.0.2.1/32 meta iifname eni meta mark set 0xdf dnat ${dst_ip=ip}:22
+add rule ip6 dfw prerouting tcp dport 22 ip saddr 192.0.2.1/32 meta iifname eni meta mark set 0xdf
+add rule inet dfw forward tcp dport 25 ip saddr 192.0.2.2/32 daddr $dst_ip=ip meta iifname eni oifname $output=bridge meta mark set 0xdf accept
+add rule inet dfw forward tcp dport 25 ip saddr 192.0.2.3/32 daddr $dst_ip=ip meta iifname eni oifname $output=bridge meta mark set 0xdf accept
+add rule ip dfw prerouting tcp dport 25 ip saddr 192.0.2.2/32 meta iifname eni meta mark set 0xdf dnat ${dst_ip=ip}:25
+add rule ip dfw prerouting tcp dport 25 ip saddr 192.0.2.3/32 meta iifname eni meta mark set 0xdf dnat ${dst_ip=ip}:25
+add rule ip6 dfw prerouting tcp dport 25 ip saddr 192.0.2.2/32 meta iifname eni meta mark set 0xdf
+add rule ip6 dfw prerouting tcp dport 25 ip saddr 192.0.2.3/32 meta iifname eni meta mark set 0xdf

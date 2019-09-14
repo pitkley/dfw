@@ -1,4 +1,4 @@
-// Copyright 2017, 2018 Pit Kleyersburg <pitkley@googlemail.com>
+// Copyright 2017 - 2019 Pit Kleyersburg <pitkley@googlemail.com>
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -7,6 +7,7 @@
 // except according to those terms.
 
 use eval;
+use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashMap as Map;
 use std::fs::File;
@@ -27,19 +28,13 @@ lazy_static! {
 
 #[derive(Debug)]
 pub struct LogLine {
-    pub function: String,
     pub regex: bool,
-    pub command: Option<String>,
+    pub command: String,
     pub eval: Option<String>,
 }
 
 impl PartialEq for LogLine {
     fn eq(&self, other: &LogLine) -> bool {
-        // If `function` is unequal, we don't have to do further comparisons
-        if self.function != other.function {
-            return false;
-        }
-
         if self.regex {
             if other.regex {
                 // Both are regex, not equal by our definition.
@@ -47,17 +42,17 @@ impl PartialEq for LogLine {
             }
 
             // Handle regex
-            let re = Regex::new(&self.command.as_ref().unwrap()).unwrap();
+            let re = Regex::new(&self.command).unwrap();
 
             // Verify we have a match
-            if !re.is_match(&other.command.as_ref().unwrap()) {
+            if !re.is_match(&other.command) {
                 return false;
             }
 
             // Check if we have to have constraints to evaluate
             if let Some(ref eval) = self.eval {
                 // Get capture groups
-                let captures = re.captures(&other.command.as_ref().unwrap()).unwrap();
+                let captures = re.captures(&other.command).unwrap();
 
                 // Try to expand the capture groups used in the eval-string
                 let mut expansion = String::new();
@@ -85,14 +80,12 @@ impl FromStr for LogLine {
 
     /// Convert a formatted string into a [`LogLine`](struct.LogLine.html).
     ///
-    /// The string has to be in the format `<FUNCTION>\t<COMMAND>` or
-    /// `<FUNCTION>\t<COMMAND>\t<EVAL>`.
+    /// The string has to be in the format `<COMMAND>` or `<COMMAND>\t<EVAL>`.
     ///
     /// # Example
     ///
     /// ```norun
-    /// let logline: LogLine = "function\tcommand".parse().unwrap();
-    /// assert_eq!(logline.function, "function");
+    /// let logline: LogLine = "command".parse().unwrap();
     /// assert_eq!(logline.command, "command");
     /// assert_eq!(logline.regex, false);
     /// assert_eq!(logline.eval, None);
@@ -102,72 +95,64 @@ impl FromStr for LogLine {
         let s = s.split('\t').collect::<Vec<_>>();
 
         // String has to be either:
-        //     function
+        //     command
         // or
-        //     function<TAB>command
-        // or
-        //     function<TAB>command<TAB>eval
+        //     command<TAB>eval
 
         // The command might contain pattern-expansions in the form `$group_name=pattern`.
-        let (command, expanded) = match s.len() {
-            1 => (None, false),
-            _ => expand_command(s[1]),
-        };
+        let (command, expanded) = expand_command(s[0]);
         let eval = match s.len() {
-            1 | 2 => None,
-            3 => Some(s[2].to_owned()),
+            1 => None,
+            2 => Some(s[1].to_owned()),
             _ => return Err("string split incorrectly".to_owned()),
         };
 
         Ok(LogLine {
-            function: s[0].to_owned(),
-            command: command,
+            command,
             regex: expanded,
             eval: eval,
         })
     }
 }
 
-fn expand_command(command: &str) -> (Option<String>, bool) {
+fn expand_command(command: &str) -> (String, bool) {
     let mut expanded = false;
     (
-        Some(
-            command
-                .split(' ')
-                .into_iter()
-                .map(|e| {
-                    if !RE.is_match(e) && RE.find(e).is_none() {
-                        // Segment of command is not in the form `$group_name=pattern`,
-                        // return as is.
-                        e.to_owned()
+        command
+            .split(' ')
+            .into_iter()
+            .map(|e| {
+                if !RE.is_match(e) && RE.find(e).is_none() {
+                    // Segment of command is not in the form `$group_name=pattern`,
+                    // return as is.
+                    e.to_owned()
+                } else {
+                    let c = RE.captures(e).unwrap();
+
+                    // Since the regex matched, both the complete match and the
+                    // named groups can't be none, so unwrapping is safe.
+                    let c0 = c.get(0).unwrap();
+                    let (group_name, pattern) = (
+                        c.name("group_name").unwrap().as_str(),
+                        c.name("pattern").unwrap().as_str(),
+                    );
+
+                    // Check if the pattern exists, otherwise leave the segment
+                    // unchanged.
+                    if let Some(pattern) = PATTERNS.get(pattern) {
+                        expanded = true;
+                        // Match could be in the middle of a string, keep the parts before and
+                        // after.
+                        let (before, after) = (&e[..c0.start()], &e[c0.end()..]);
+                        format!(r"{}(?P<{}>{}){}", before, group_name, pattern, after)
                     } else {
-                        let c = RE.captures(e).unwrap();
-
-                        // Since the regex matched, both the complete match and the
-                        // named groups can't be none, so unwrapping is safe.
-                        let c0 = c.get(0).unwrap();
-                        let (group_name, pattern) = (
-                            c.name("group_name").unwrap().as_str(),
-                            c.name("pattern").unwrap().as_str(),
-                        );
-
-                        // Check if the pattern exists, otherwise leave the segment
-                        // unchanged.
-                        if let Some(pattern) = PATTERNS.get(pattern) {
-                            expanded = true;
-                            // Match could be in the middle of a string, keep the parts before and
-                            // after.
-                            let (before, after) = (&e[..c0.start()], &e[c0.end()..]);
-                            format!(r"{}(?P<{}>{}){}", before, group_name, pattern, after)
-                        } else {
-                            e.to_owned()
-                        }
+                        e.to_owned()
                     }
-                })
-                .collect::<Vec<_>>()
-                .join(" ")
-                .to_owned(),
-        ),
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" ")
+            .to_owned(),
         expanded,
     )
 }

@@ -1,4 +1,4 @@
-// Copyright 2017, 2018 Pit Kleyersburg <pitkley@googlemail.com>
+// Copyright 2017 - 2019 Pit Kleyersburg <pitkley@googlemail.com>
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -8,95 +8,20 @@
 
 #![cfg(feature = "docker-tests")]
 
-extern crate dfw;
-extern crate eval;
-extern crate failure;
-#[macro_use]
-extern crate lazy_static;
-extern crate regex;
-extern crate shiplift;
-#[macro_use]
-extern crate slog;
-
 mod common;
 mod logs;
 
 use common::*;
-use dfw::iptables::{IPTables, IPTablesLogger, IPTablesRestore, IPVersion};
 use dfw::types::*;
 use dfw::util::load_file;
 use dfw::*;
-use failure::Error;
+use itertools::{EitherOrBoth, Itertools};
 use logs::*;
 use shiplift::Docker;
-use slog::{Drain, Fuse, Logger, OwnedKVList, Record};
+use slog::{o, Drain, Fuse, Logger, OwnedKVList, Record};
 use std::panic;
 use std::panic::{AssertUnwindSafe, UnwindSafe};
-use std::process::{Command, Output};
-
-macro_rules! proxy {
-    ( $( #[$attr:meta] )* $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty ) => {
-        $( #[$attr] )*
-        fn $name(&self $(, $param: $ty )*) -> Result<$ret, Error> {
-            (self.0).$name($($param),+).map_err(Into::into)
-        }
-    };
-}
-
-macro_rules! proxies {
-    ( $( $( #[$attr:meta] )*
-         $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
-        $( proxy!( $( #[$attr] )* $name ( $( $param : $ty ),* ) -> $ret ); )+
-    };
-}
-
-macro_rules! dummy {
-    ( $( #[$attr:meta] )* $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty ) => {
-        $( #[$attr] )*
-        #[allow(unused_variables)]
-        fn $name(&self $(, $param: $ty )*) -> Result<$ret, Error> {
-            Ok(Default::default())
-        }
-    };
-}
-
-macro_rules! dummies {
-    ( $( $( #[$attr:meta] )*
-         $name:ident ( $( $param:ident : $ty:ty ),* ) -> $ret:ty );+ $(;)* ) => {
-        $( dummy!( $( #[$attr] )* $name ( $( $param : $ty ),* ) -> $ret ); )+
-    };
-}
-
-struct IPTablesRestoreProxy(IPTablesRestore);
-impl IPTables for IPTablesRestoreProxy {
-    proxies! {
-        get_policy(table: &str, chain: &str) -> String;
-        set_policy(table: &str, chain: &str, policy: &str) -> bool;
-        execute(table: &str, command: &str) -> Output;
-        exists(table: &str, chain: &str, rule: &str) -> bool;
-        chain_exists(table: &str, chain: &str) -> bool;
-        insert(table: &str, chain: &str, rule: &str, position: i32) -> bool;
-        insert_unique(table: &str, chain: &str, rule: &str, position: i32) -> bool;
-        replace(table: &str, chain: &str, rule: &str, position: i32) -> bool;
-        append(table: &str, chain: &str, rule: &str) -> bool;
-        append_unique(table: &str, chain: &str, rule: &str) -> bool;
-        append_replace(table: &str, chain: &str, rule: &str) -> bool;
-        delete(table: &str, chain: &str, rule: &str) -> bool;
-        delete_all(table: &str, chain: &str, rule: &str) -> bool;
-        list(table: &str, chain: &str) -> Vec<String>;
-        list_table(table: &str) -> Vec<String>;
-        list_chains(table: &str) -> Vec<String>;
-        new_chain(table: &str, chain: &str) -> bool;
-        flush_chain(table: &str, chain: &str) -> bool;
-        rename_chain(table: &str, old_chain: &str, new_chain: &str) -> bool;
-        delete_chain(table: &str, chain: &str) -> bool;
-        flush_table(table: &str) -> bool;
-    }
-
-    dummies! {
-        commit() -> bool;
-    }
-}
+use std::process::Command;
 
 static PROCESSING_OPTIONS: ProcessingOptions = ProcessingOptions {
     container_filter: ContainerFilter::Running,
@@ -121,10 +46,28 @@ fn logger() -> Logger {
 fn compare_loglines(actual: &Vec<LogLine>, expected: &Vec<LogLine>) {
     // If the logs don't match, include correctly formatted output for comparison.
     if actual != expected {
-        println!("LogLines didn't match");
+        let width = expected
+            .iter()
+            .map(|expected| expected.command.len())
+            .max()
+            .unwrap_or_default();
+        println!("LogLines didn't match (expected -- actual)");
         println!("---------------------");
-        for line in actual {
-            println!("{}\t{:?}", line.function, line.command);
+        for either in expected.iter().zip_longest(actual) {
+            match either {
+                EitherOrBoth::Both(expected, actual) => println!(
+                    "{:<width$} {}",
+                    expected.command,
+                    actual.command,
+                    width = width,
+                ),
+                EitherOrBoth::Left(expected) => {
+                    println!("{:<width$} -", expected.command, width = width)
+                }
+                EitherOrBoth::Right(actual) => {
+                    println!("{:<width$} {}", "-", actual.command, width = width)
+                }
+            }
         }
         println!();
     }
@@ -170,14 +113,7 @@ where
     }
 }
 
-fn dc_template<F: FnOnce(&I, &I) -> (), I: IPTables>(
-    num: &str,
-    ipt4: AssertUnwindSafe<I>,
-    ipt6: AssertUnwindSafe<I>,
-    body: F,
-) where
-    F: UnwindSafe,
-{
+fn test_nftables(num: &str) {
     // Load toml
     let toml: DFW = load_file(&resource(&format!("docker/{}/conf.toml", num)).unwrap()).unwrap();
 
@@ -199,10 +135,9 @@ fn dc_template<F: FnOnce(&I, &I) -> (), I: IPTables>(
         &resource(&format!("docker/{}/docker-compose.yml", num)).unwrap(),
         &format!("dfwtest{}", num),
         || {
-            // TODO: only start environment once, then test both IPTablesLogger and IPTablesRestore
-            let process =
-                ProcessDFW::new(&docker, &toml, &*ipt4, &*ipt6, &PROCESSING_OPTIONS, &logger)
-                    .unwrap();
+            let toml2 = toml.clone();
+            let dfw =
+                ProcessContext::new(&docker, &toml2, &PROCESSING_OPTIONS, &logger, true).unwrap();
 
             // Test if container is available
             let containers = docker.containers();
@@ -214,169 +149,52 @@ fn dc_template<F: FnOnce(&I, &I) -> (), I: IPTables>(
             assert_eq!(inspect.Id.is_empty(), false);
 
             // Run processing, verify that it succeeded
-            let result = process.process();
+            let result = toml.process(&dfw);
             assert!(result.is_ok());
-            assert_eq!(result.unwrap(), ());
 
-            body(&ipt4, &ipt6);
+            let actual = result
+                .unwrap()
+                .unwrap()
+                .iter()
+                .map(|nft_command| LogLine {
+                    command: nft_command.to_owned(),
+                    regex: false,
+                    eval: None,
+                })
+                .collect::<Vec<_>>();
+            let expected =
+                load_loglines(&resource(&format!("docker/{}/expected-nftables.txt", num)).unwrap());
+            compare_loglines(&actual, &expected);
         },
     );
 }
 
-fn test_iptables_restore(num: &str) {
-    // `IPTablesLogger` uses a `RefCell` to be able to modify its logging-vector across the
-    // lifetime of the struct. `RefCell` is not `UnwindSafe`, so we have to force it to be.
-    //
-    // This would cause issues if a `panic` would occur within `IPTablesLogger`, but this should
-    // not happen.
-    let ipt4 = AssertUnwindSafe(IPTablesRestoreProxy(
-        IPTablesRestore::new(IPVersion::IPv4).unwrap(),
-    ));
-    let ipt6 = AssertUnwindSafe(IPTablesRestoreProxy(
-        IPTablesRestore::new(IPVersion::IPv6).unwrap(),
-    ));
-
-    dc_template(num, ipt4, ipt6, |ref ipt4, ref ipt6| {
-        // Verify logs for iptables (IPv4)
-        let logs4 = ipt4
-            .0
-            .get_rules()
-            .iter()
-            .map(|c| LogLine {
-                function: "-".to_owned(),
-                command: Some(c.to_owned()),
-                regex: false,
-                eval: None,
-            })
-            .collect::<Vec<_>>();
-        let expected4 = load_loglines(
-            &resource(&format!("docker/{}/expected-iptables-restore-v4.txt", num)).unwrap(),
-        );
-
-        compare_loglines(&logs4, &expected4);
-
-        // Verify logs for ip6tables (IPv6)
-        let logs6 = ipt6
-            .0
-            .get_rules()
-            .iter()
-            .map(|c| LogLine {
-                function: "-".to_owned(),
-                command: Some(c.to_owned()),
-                regex: false,
-                eval: None,
-            })
-            .collect::<Vec<_>>();
-        let expected6 = load_loglines(
-            &resource(&format!("docker/{}/expected-iptables-restore-v6.txt", num)).unwrap(),
-        );
-
-        compare_loglines(&logs6, &expected6);
-    });
-}
-
-fn test_iptables_logger(num: &str) {
-    // `IPTablesLogger` uses a `RefCell` to be able to modify its logging-vector across the
-    // lifetime of the struct. `RefCell` is not `UnwindSafe`, so we have to force it to be.
-    //
-    // This would cause issues if a `panic` would occur within `IPTablesLogger`, but this should
-    // not happen.
-    let ipt4 = AssertUnwindSafe(IPTablesLogger::new());
-    let ipt6 = AssertUnwindSafe(IPTablesLogger::new());
-
-    dc_template(num, ipt4, ipt6, |ref ipt4, ref ipt6| {
-        // Verify logs for iptables (IPv4)
-        let logs4 = ipt4
-            .logs()
-            .iter()
-            .map(|&(ref f, ref c)| LogLine {
-                function: f.to_owned(),
-                command: c.clone(),
-                regex: false,
-                eval: None,
-            })
-            .collect::<Vec<_>>();
-        let expected4 = load_loglines(
-            &resource(&format!("docker/{}/expected-iptables-v4-logs.txt", num)).unwrap(),
-        );
-
-        compare_loglines(&logs4, &expected4);
-
-        // Verify logs for ip6tables (IPv6)
-        let logs6 = ipt6
-            .logs()
-            .iter()
-            .map(|&(ref f, ref c)| LogLine {
-                function: f.to_owned(),
-                command: c.clone(),
-                regex: false,
-                eval: None,
-            })
-            .collect::<Vec<_>>();
-        let expected6 = load_loglines(
-            &resource(&format!("docker/{}/expected-iptables-v6-logs.txt", num)).unwrap(),
-        );
-
-        compare_loglines(&logs6, &expected6);
-    });
+#[test]
+fn test_nftables_01() {
+    test_nftables("01");
 }
 
 #[test]
-fn test_iptables_logger_01() {
-    test_iptables_logger("01");
+fn test_nftables_02() {
+    test_nftables("02");
 }
 
 #[test]
-fn test_iptables_logger_02() {
-    test_iptables_logger("02");
+fn test_nftables_03() {
+    test_nftables("03");
 }
 
 #[test]
-fn test_iptables_logger_03() {
-    test_iptables_logger("03");
+fn test_nftables_04() {
+    test_nftables("04");
 }
 
 #[test]
-fn test_iptables_logger_04() {
-    test_iptables_logger("04");
+fn test_nftables_05() {
+    test_nftables("05");
 }
 
 #[test]
-fn test_iptables_logger_05() {
-    test_iptables_logger("05");
-}
-
-#[test]
-fn test_iptables_logger_06() {
-    test_iptables_logger("06");
-}
-
-#[test]
-fn test_iptables_restore_01() {
-    test_iptables_restore("01");
-}
-
-#[test]
-fn test_iptables_restore_02() {
-    test_iptables_restore("02");
-}
-
-#[test]
-fn test_iptables_restore_03() {
-    test_iptables_restore("03");
-}
-
-#[test]
-fn test_iptables_restore_04() {
-    test_iptables_restore("04");
-}
-
-#[test]
-fn test_iptables_restore_05() {
-    test_iptables_restore("05");
-}
-
-#[test]
-fn test_iptables_restore_06() {
-    test_iptables_restore("06");
+fn test_nftables_06() {
+    test_nftables("06");
 }

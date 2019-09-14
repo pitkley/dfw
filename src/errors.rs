@@ -1,4 +1,4 @@
-// Copyright 2017, 2018 Pit Kleyersburg <pitkley@googlemail.com>
+// Copyright 2017 - 2019 Pit Kleyersburg <pitkley@googlemail.com>
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -12,10 +12,12 @@
 
 #![allow(missing_docs)]
 
-use failure::Error;
+use failure::{Error, Fail};
 
 #[derive(Debug, Fail)]
 pub enum DFWError {
+    #[fail(display = "NFTables error: \n{}\n{}", stdout, stderr)]
+    NFTablesError { stdout: String, stderr: String },
     #[fail(display = "trait method unimplemented: {}", method)]
     TraitMethodUnimplemented { method: String },
 }

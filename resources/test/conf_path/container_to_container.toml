@@ -1,10 +1,9 @@
 [container_to_container]
-default_policy = "DROP"
+default_policy = "drop"
 
 [[container_to_container.rules]]
 network = "network"
 src_container = "src_container"
 dst_container = "dst_container"
-filter = "FILTER"
-action = "ACCEPT"
-
+matches = "FILTER"
+verdict = "accept"

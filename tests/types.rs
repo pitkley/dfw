@@ -1,4 +1,4 @@
-// Copyright 2017, 2018 Pit Kleyersburg <pitkley@googlemail.com>
+// Copyright 2017 - 2019 Pit Kleyersburg <pitkley@googlemail.com>
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -6,57 +6,50 @@
 // option. This file may not be copied, modified or distributed
 // except according to those terms.
 
-extern crate dfw;
-#[macro_use]
-extern crate maplit;
-extern crate toml;
-
 mod common;
 
 use common::resource;
+use dfw::nftables::{ChainPolicy, RuleVerdict};
 use dfw::types::*;
 use dfw::util::*;
 
 #[test]
 fn parse_conf_file() {
     let defaults = Defaults {
+        custom_tables: None,
         external_network_interfaces: Some(vec!["eni".to_owned()]),
+        default_docker_bridge_to_host_policy: ChainPolicy::Accept,
     };
     let initialization = Initialization {
-        v4: Some(hashmap! {
-            "filter".to_owned() => vec!["-P INPUT ACCEPT".to_owned()],
-        }),
-        v6: Some(hashmap! {
-            "nat".to_owned() => vec!["-P PREROUTING ACCEPT".to_owned()],
-        }),
+        rules: Some(vec!["add table inet custom".to_owned()]),
     };
     let container_to_container = ContainerToContainer {
-        default_policy: "DROP".to_owned(),
+        default_policy: ChainPolicy::Drop,
         rules: Some(vec![ContainerToContainerRule {
             network: "network".to_owned(),
             src_container: Some("src_container".to_owned()),
             dst_container: Some("dst_container".to_owned()),
-            filter: Some("FILTER".to_owned()),
-            action: "ACCEPT".to_owned(),
+            matches: Some("FILTER".to_owned()),
+            verdict: RuleVerdict::Accept,
         }]),
     };
     let container_to_wider_world = ContainerToWiderWorld {
-        default_policy: "ACCEPT".to_owned(),
+        default_policy: RuleVerdict::Accept,
         rules: Some(vec![ContainerToWiderWorldRule {
             network: Some("network".to_owned()),
             src_container: Some("src_container".to_owned()),
-            filter: Some("FILTER".to_owned()),
-            action: "ACCEPT".to_owned(),
+            matches: Some("FILTER".to_owned()),
+            verdict: RuleVerdict::Accept,
             external_network_interface: Some("eni".to_owned()),
         }]),
     };
     let container_to_host = ContainerToHost {
-        default_policy: "ACCEPT".to_owned(),
+        default_policy: RuleVerdict::Accept,
         rules: Some(vec![ContainerToHostRule {
             network: "network".to_owned(),
             src_container: Some("src_container".to_owned()),
-            filter: Some("FILTER".to_owned()),
-            action: "ACCEPT".to_owned(),
+            matches: Some("FILTER".to_owned()),
+            verdict: RuleVerdict::Accept,
         }]),
     };
     let wider_world_to_container = WiderWorldToContainer {
@@ -117,43 +110,40 @@ fn parse_conf_file() {
 #[test]
 fn parse_conf_path() {
     let defaults = Defaults {
+        custom_tables: None,
         external_network_interfaces: Some(vec!["eni".to_owned()]),
+        default_docker_bridge_to_host_policy: ChainPolicy::Accept,
     };
     let initialization = Initialization {
-        v4: Some(hashmap! {
-            "filter".to_owned() => vec!["-P INPUT ACCEPT".to_owned()],
-        }),
-        v6: Some(hashmap! {
-            "nat".to_owned() => vec!["-P PREROUTING ACCEPT".to_owned()],
-        }),
+        rules: Some(vec!["add table inet custom".to_owned()]),
     };
     let container_to_container = ContainerToContainer {
-        default_policy: "DROP".to_owned(),
+        default_policy: ChainPolicy::Drop,
         rules: Some(vec![ContainerToContainerRule {
             network: "network".to_owned(),
             src_container: Some("src_container".to_owned()),
             dst_container: Some("dst_container".to_owned()),
-            filter: Some("FILTER".to_owned()),
-            action: "ACCEPT".to_owned(),
+            matches: Some("FILTER".to_owned()),
+            verdict: RuleVerdict::Accept,
         }]),
     };
     let container_to_wider_world = ContainerToWiderWorld {
-        default_policy: "ACCEPT".to_owned(),
+        default_policy: RuleVerdict::Accept,
         rules: Some(vec![ContainerToWiderWorldRule {
             network: Some("network".to_owned()),
             src_container: Some("src_container".to_owned()),
-            filter: Some("FILTER".to_owned()),
-            action: "ACCEPT".to_owned(),
+            matches: Some("FILTER".to_owned()),
+            verdict: RuleVerdict::Accept,
             external_network_interface: Some("eni".to_owned()),
         }]),
     };
     let container_to_host = ContainerToHost {
-        default_policy: "ACCEPT".to_owned(),
+        default_policy: RuleVerdict::Accept,
         rules: Some(vec![ContainerToHostRule {
             network: "network".to_owned(),
             src_container: Some("src_container".to_owned()),
-            filter: Some("FILTER".to_owned()),
-            action: "ACCEPT".to_owned(),
+            matches: Some("FILTER".to_owned()),
+            verdict: RuleVerdict::Accept,
         }]),
     };
     let wider_world_to_container = WiderWorldToContainer {
@@ -450,7 +440,9 @@ fn parse_external_network_interfaces_single() {
     let fragment = r#"external_network_interfaces = "eni""#;
 
     let expected = Defaults {
+        custom_tables: None,
         external_network_interfaces: Some(vec!["eni".to_owned()]),
+        default_docker_bridge_to_host_policy: ChainPolicy::Accept,
     };
     let actual: Defaults = toml::from_str(fragment).unwrap();
 
@@ -462,7 +454,9 @@ fn parse_external_network_interfaces_seq() {
     let fragment = r#"external_network_interfaces = ["eni1", "eni2"]"#;
 
     let expected = Defaults {
+        custom_tables: None,
         external_network_interfaces: Some(vec!["eni1".to_owned(), "eni2".to_owned()]),
+        default_docker_bridge_to_host_policy: ChainPolicy::Accept,
     };
     let actual: Defaults = toml::from_str(fragment).unwrap();
 

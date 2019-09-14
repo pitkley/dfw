@@ -1,13 +1,13 @@
 [container_to_wider_world]
-default_policy = "DROP"
+default_policy = "drop"
 
 [[container_to_wider_world.rules]]
 network = "dfwtest03_default"
-action = "REJECT"
+verdict = "reject"
 
 [[container_to_wider_world.rules]]
 network = "dfwtest03_default"
 src_container = "dfwtest03_a_1"
-filter = "-m state --state RELATED"
-action = "ACCEPT"
+matches = "ct state related"
+verdict = "accept"
 external_network_interface = "eni"
