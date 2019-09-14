@@ -438,6 +438,19 @@ pub struct ExposePort {
 }
 
 impl ExposePortBuilder {
+    fn client_and_host_port(&mut self, value: &str) -> Result<&mut Self, String> {
+        let split: Vec<&str> = value.split(':').collect();
+        match split.len() {
+            1 => self.host_port = Some(split[0].parse().map_err(|e| format!("{}", e))?),
+            2 => {
+                self.host_port = Some(split[0].parse().map_err(|e| format!("{}", e))?);
+                self.container_port = Some(Some(split[1].parse().map_err(|e| format!("{}", e))?));
+            }
+            _ => return Err(format!("port string has invalid format '{}'", value)),
+        }
+        Ok(self)
+    }
+
     fn default_container_port(&self) -> Result<Option<u16>, String> {
         Ok(None)
     }
@@ -452,8 +465,9 @@ impl FromStr for ExposePort {
 
     /// Convert a formatted string into a [`ExposePort`](struct.ExposePort.html).
     ///
-    /// The string has to be in the format `<HOST_PORT>/<FAMILY>`, i.e. `80/tcp`. Specifying the
-    /// container-port is not (yet) possible.
+    /// The string has to be in the format `<HOST_PORT>[:<CONTAINER_PORT>]/<FAMILY>`, i.e.
+    /// `80:8080/tcp`. If you don't specify the container-port, it is assumed to be identical to the
+    /// host-port.
     ///
     /// # Example
     ///
@@ -472,14 +486,22 @@ impl FromStr for ExposePort {
     /// assert_eq!(port.container_port, None);
     /// assert_eq!(port.family, "udp");
     /// ```
+    ///
+    /// ```
+    /// # use dfw::types::ExposePort;
+    /// let port: ExposePort = "80:8080/tcp".parse().unwrap();
+    /// assert_eq!(port.host_port, 80);
+    /// assert_eq!(port.container_port, Some(8080));
+    /// assert_eq!(port.family, "tcp");
+    /// ```
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let split: Vec<&str> = s.split('/').collect();
         Ok(match split.len() {
             1 => ExposePortBuilder::default()
-                .host_port(split[0].parse().map_err(|e| format!("{}", e))?)
+                .client_and_host_port(split[0])?
                 .build()?,
             2 => ExposePortBuilder::default()
-                .host_port(split[0].parse().map_err(|e| format!("{}", e))?)
+                .client_and_host_port(split[0])?
                 .family(split[1].to_owned())
                 .build()?,
             _ => return Err(format!("port string has invalid format '{}'", s)),
