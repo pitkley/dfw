@@ -39,6 +39,7 @@ For further information, look at the README in the `iptables` branch, but in sho
     1. [Preparing your host](#installation-preparingyourhost)
     2. [Running DFW](#installation-runningdfw)
 3. [Configuration](#configuration)
+    1. [IPv6 support](#configuration-ipv6)
 4. [Troubleshooting](#troubleshooting)
 
 -----
@@ -54,7 +55,7 @@ While DFW is running, Docker container events will be monitored and the rules re
 One of the key-features of DFW (and DFWFW before it) is to not require the running containers to publish their ports on the host (à la `docker container run --publish 80:8080`), but rather use the network-address translation (NAT) features of the host-firewall to forward packets directly to the port in the container.
 _(Note: this only applies if you use IPv4 on your host.
 If you want to have IPv6-support, you still need to publish the ports.
-See [IPv6 setup](#ipv6-setup) for more information.)_
+See [IPv6 support](#configuration-ipv6) for more information.)_
 
 See [DFWFW's README][dfwfw-readme] for more insight.
 Most of what you will read there will be applicable to DFW.
@@ -223,6 +224,57 @@ The general configuration happens across six categories:
 One category which DFWFW covers that is not (yet) implemented in DFW is `container_internals`, that is configuring iptables rules within containers.
 
 **See the [examples][examples] and [configuration types][types.rs] for detailed descriptions and examples of every configuration section.**
+
+### <a name="configuration-ipv6"></a> IPv6 support
+
+If you make a container publicly available, DFW will use "destination NATting" and "masquerading" to redirect incoming packets to the correct internal IP of the container, and then correctly redirect the reponses back to the original requester.
+Every default installation of Docker does _not_ assign private IPv6 addresses to networks and containers, it only assigns private IPv4s.
+
+Generally there is also no need for private IPv6 addresses: Docker uses a proxy-binary when host-binding a container-port to perform the translation of traffic from the host to the container.
+This host-binding is compatible with both IPv4 and IPv6, which means internally a single IPv4 is sufficient.
+
+As mentioned, DFW does work differently: since it uses NAT to manage traffic, it effectively would have to translate incoming packets from IPv6 to IPv4 and the responses from IPv4 to IPv6, something that nftables does not support.
+
+The consequence of this is that if you want your services to be reachable via IPv6, you have to ensure the following things:
+
+1. You _have to_ publish the ports of the containers you want to be able to reach on your host through the Docker-integrated run-option `--publish`.
+
+    The host-port you select here is the one under which it will be reachable publicly later, i.e. if you want your webserver to be reachable from host-ports 80 and 443, you need to publish the container ports under 80 and 443.
+
+2. In your wider-world-to-container rule, the host-port part of your exposed port _must match_ the port you published the container ports under.
+
+    As part of the wider-world-to-container rule DFW will create the firewall-rules necessary for the host-bound ports to be reachable via IPv6.
+    For this to work the ports need to match the ports you have selected when publishing the container-ports.
+
+#### Example: webserver reachable via IPv6
+
+Let's assume you want to run a webserver as a Docker container and want ports 80 for HTTP and 443 for HTTPS on your host to forward to this container.
+The container you use internally uses ports 8080 and 8443 for HTTP and HTTPS respectively.
+
+The following is how you have to configure the container:
+
+```
+$ docker run \
+    --name "your_container" \
+    --network "your_network" \
+    --publish 80:8080 \
+    --publish 443:8443 \
+    ...
+```
+
+This is how you'd configure your rule:
+
+```toml
+[[wider_world_to_container.rules]]
+network = "your_network"
+dst_container = "your_container"
+expose_port = [
+    "80:8080",
+    "443:8443",
+]
+```
+
+The result of this is that your container will be reachable from the host-ports 80 and 443, from both IPv4 and IPv6.
 
 ## <a name="troubleshooting"></a> Troubleshooting
 
