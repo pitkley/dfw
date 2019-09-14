@@ -1,3 +1,18 @@
+# DEPRECATED: iptables implementation
+
+Please note that you are currently viewing the `iptables`-branch, which is the last-working state of DFW that supports the iptables-based backends.
+This branch is supported on a best-effort basis, mainly in terms of keeping the dependencies up-to-date using [Dependabot](https://dependabot.com)
+
+To keep using this version of DFW, simply use the `pitkley/dfw:iptables` tag when launching DFW from Docker.
+This tag will always be the latest version of the `iptables` branch.
+
+If possible, please migrate to DFW v1.0.
+See [the migration documentation][migration-docs] on how to migrate.
+
+[migration-docs]: https://github.com/pitkley/dfw/blob/master/MIGRATION-v0.x-to-v1.0.md
+
+-----
+
 # DFW - Docker Firewall Framework in Rust
 
 `dfw` is conceptually based on the [Docker Firewall Framework, `dfwfw`][dfwfw-github]. Its

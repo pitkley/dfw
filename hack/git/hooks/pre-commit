@@ -3,21 +3,6 @@ set -e
 
 exec 2>&1
 
-# Update README
-cargo readme --no-license --no-indent-headings --no-title -o README.md >/dev/null
-
-# Did the contents of README.md change?
-if git diff --quiet --diff-filter=M HEAD -- README.md; then
-    # nothing to do
-    true
-else
-    # Are those changes staged?
-    if git diff --cached --quiet --diff-filter=M HEAD -- README.md; then
-        echo "README changed, please stage and recommit"
-        exit 1
-    fi
-fi
-
 # Check if code is formatted
 cargo fmt --all -- --check
 
