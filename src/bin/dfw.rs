@@ -163,6 +163,15 @@ fn run<'a>(
            o!("version" => crate_version!(),
               "started_at" => format!("{}", time::now().rfc3339())));
 
+    let toml = load_config(&matches);
+    if matches.is_present("check-config") {
+        return toml.map(|_| ());
+    }
+
+    let toml = toml?;
+    debug!(root_logger, "Initial configuration loaded";
+           o!("config" => format!("{:#?}", toml)));
+
     let docker = match matches.value_of("docker-url") {
         Some(docker_url) => Docker::host(docker_url.parse()?),
         None => Docker::new(),
@@ -208,10 +217,6 @@ fn run<'a>(
     let run_once = matches.is_present("run-once");
     trace!(root_logger, "Run once: {}", run_once;
            o!("run_once" => run_once));
-
-    let toml = load_config(&matches)?;
-    debug!(root_logger, "Initial configuration loaded";
-           o!("config" => format!("{:#?}", toml)));
 
     let dry_run = matches.is_present("dry-run");
     trace!(root_logger, "Dry run: {}", dry_run;
@@ -455,7 +460,18 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
             Arg::with_name("dry-run")
                 .takes_value(false)
                 .long("dry-run")
-                .help("Don't touch nft, just show what would be done"),
+                .help("Don't touch nft, just show what would be done")
+                .long_help(
+                    "Don't touch nft, just show what would be done. Note that this requires Docker \
+                     and the containers/networks referenced in the configuration to be available. \
+                     If you want to check the config for validity, specify --check-config instead."
+                ),
+        )
+        .arg(
+            Arg::with_name("check-config")
+                .takes_value(false)
+                .long("check-config")
+                .help("Verify if the provided configuration is valid, exit afterwards."),
         )
         .get_matches()
 }
