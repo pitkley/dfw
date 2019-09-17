@@ -12,7 +12,7 @@
 
 #![allow(missing_docs)]
 
-use failure::Error;
+use failure::{Error, Fail};
 
 #[derive(Debug, Fail)]
 pub enum DFWError {

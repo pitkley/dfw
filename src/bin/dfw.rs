@@ -10,9 +10,10 @@
 
 use clap::{arg_enum, crate_authors, crate_version, value_t, App, Arg, ArgGroup, ArgMatches};
 use crossbeam_channel::{select, Receiver, Sender};
+use dfw::iptables::{IPTables, IPTablesDummy, IPTablesRestore, IPVersion};
 use dfw::types::DFW;
 use dfw::util::*;
-use dfw::{ContainerFilter, ProcessContext, ProcessingOptions};
+use dfw::{ContainerFilter, ProcessDFW, ProcessingOptions};
 use failure::bail;
 use shiplift::builder::{EventFilter, EventFilterType, EventsOptions};
 use shiplift::Docker;
@@ -231,7 +232,10 @@ fn run<'a>(
         (Box::new(IPTablesDummy), Box::new(IPTablesDummy))
     } else {
         match iptables_backend {
-            IPTablesBackend::IPTables => (Box::new(ipt::new(false)?), Box::new(ipt::new(true)?)),
+            IPTablesBackend::IPTables => (
+                Box::new(iptables::new(false)?),
+                Box::new(iptables::new(true)?),
+            ),
             IPTablesBackend::IPTablesRestore => (
                 Box::new(IPTablesRestore::new(IPVersion::IPv4)?),
                 Box::new(IPTablesRestore::new(IPVersion::IPv6)?),
