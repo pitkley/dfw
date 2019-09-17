@@ -11,7 +11,6 @@ extern crate maplit;
 mod common;
 
 use common::resource;
-use dfw::nftables::{ChainPolicy, RuleVerdict};
 use dfw::types::*;
 use dfw::util::*;
 

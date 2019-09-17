@@ -12,10 +12,11 @@ mod common;
 mod logs;
 
 use common::*;
+use dfw::iptables::{IPTables, IPTablesLogger, IPTablesRestore, IPVersion};
 use dfw::types::*;
 use dfw::util::load_file;
 use dfw::*;
-use itertools::{EitherOrBoth, Itertools};
+use failure::Error;
 use logs::*;
 use shiplift::Docker;
 use slog::{o, Drain, Fuse, Logger, OwnedKVList, Record};

@@ -9,8 +9,7 @@
 //! This module holds the types related to configuration processing and rule creation.
 
 use crate::errors::*;
-use crate::nftables::{self, Family, Hook, RuleVerdict, Type};
-use crate::rule::*;
+use crate::iptables::*;
 use crate::types::*;
 use failure::{bail, format_err};
 use shiplift::builder::{ContainerFilter as ContainerFilterShiplift, ContainerListOptions};
@@ -20,10 +19,6 @@ use shiplift::Docker;
 use slog::Logger;
 use slog::{debug, info, o, trace};
 use std::collections::HashMap as Map;
-use std::io::prelude::*;
-use std::io::BufWriter;
-use std::process::Command;
-use tempfile;
 use time;
 
 const DFWRS_FORWARD_CHAIN: &'static str = "DFWRS_FORWARD";
@@ -1279,7 +1274,7 @@ fn get_container_map(containers: &[Container]) -> Result<Option<Map<String, Cont
     for container in containers {
         for name in &container.Names {
             container_map.insert(
-                name.clone().trim_left_matches('/').to_owned(),
+                name.clone().trim_start_matches('/').to_owned(),
                 container.clone(),
             );
         }

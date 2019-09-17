@@ -12,7 +12,8 @@
 //!
 //! [rust-iptables]: https://crates.io/crates/iptables
 
-use errors::*;
+use crate::errors::*;
+use failure::{bail, format_err};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::convert::Into;
@@ -254,7 +255,7 @@ pub trait IPTables {
     fn commit(&self) -> Result<bool>;
 }
 
-impl IPTables for ::ipt::IPTables {
+impl IPTables for iptables::IPTables {
     proxies! {
         get_policy(table: &str, chain: &str) -> String;
         set_policy(table: &str, chain: &str, policy: &str) -> bool;

@@ -58,6 +58,7 @@
 
 use derive_builder::Builder;
 use serde::{de, Deserialize};
+use std::collections::HashMap as Map;
 use std::fmt;
 use std::marker::PhantomData;
 use std::str::FromStr;
@@ -571,7 +572,7 @@ where
 
 // Thanks to @dtolnay for the support:
 //   https://github.com/serde-rs/serde/issues/901#issuecomment-297070279
-impl<'de, T> DeserializeSeed<'de> for StringOrStruct<T>
+impl<'de, T> de::DeserializeSeed<'de> for StringOrStruct<T>
 where
     T: Deserialize<'de> + FromStr<Err = String>,
 {
@@ -579,7 +580,7 @@ where
 
     fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
     where
-        D: Deserializer<'de>,
+        D: de::Deserializer<'de>,
     {
         deserializer.deserialize_any(self)
     }
@@ -589,7 +590,7 @@ where
 fn string_or_struct<'de, T, D>(deserializer: D) -> Result<T, D::Error>
 where
     T: Deserialize<'de> + FromStr<Err = String>,
-    D: Deserializer<'de>,
+    D: de::Deserializer<'de>,
 {
     deserializer.deserialize_any(StringOrStruct(PhantomData))
 }
@@ -649,14 +650,14 @@ where
 fn single_or_seq_string_or_struct<'de, T, D>(deserializer: D) -> Result<Vec<T>, D::Error>
 where
     T: Deserialize<'de> + FromStr<Err = String>,
-    D: Deserializer<'de>,
+    D: de::Deserializer<'de>,
 {
     deserializer.deserialize_any(SingleOrSeqStringOrStruct(PhantomData))
 }
 
 fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
-    D: Deserializer<'de>,
+    D: de::Deserializer<'de>,
 {
     struct StringOrSeqString(PhantomData<Vec<String>>);
 
@@ -687,7 +688,7 @@ where
 
 fn option_string_or_seq_string<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
 where
-    D: Deserializer<'de>,
+    D: de::Deserializer<'de>,
 {
     string_or_seq_string(deserializer).map(Some)
 }
