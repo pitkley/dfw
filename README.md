@@ -30,7 +30,7 @@ For further information, look at the README in the `iptables` branch, but in sho
 [nftableswiki]: https://wiki.nftables.org/wiki-nftables/index.php/Main_Page
 [nftableswiki-movingfromiptables]: https://wiki.nftables.org/wiki-nftables/index.php/Moving_from_iptables_to_nftables
 [debianwiki-nftables]: https://wiki.debian.org/nftables
-[migration-v0.x-to-v1.0]: MIGRATION-v0.x-to-v1.0.md
+[migration-v0.x-to-v1.0]: https://github.com/pitkley/dfw/blob/master/MIGRATION-v0.x-to-v1.0.md
 
 -----
 
@@ -314,5 +314,5 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 
 [docker-networks]: https://docs.docker.com/engine/userguide/networking/
 
-[examples]: examples/
+[examples]: https://github.com/pitkley/dfw/tree/master/examples
 [types.rs]: https://docs.rs/dfw/*/dfw/types/index.html
