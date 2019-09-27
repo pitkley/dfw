@@ -501,6 +501,7 @@ fn main() {
 
     if let Err(ref e) = run(&matches, &r_signal, &root_logger) {
         error!(root_logger, "Encountered error";
-               o!("error" => format!("{}", e)));
+               o!("error" => format!("{}", e),
+                  "backtrace" => format!("{}", e.backtrace())));
     }
 }
