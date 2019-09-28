@@ -27,10 +27,12 @@ external_network_interface = "other"
 network = "dfwtest05_default"
 dst_container = "dfwtest05_a_1"
 expose_port = "22"
-source_cidr = "192.0.2.1/32"
+source_cidr_v4 = "192.0.2.1/32"
+source_cidr_v6 = "2001:db8::1/128"
 
 [[wider_world_to_container.rules]]
 network = "dfwtest05_default"
 dst_container = "dfwtest05_a_1"
 expose_port = "25"
-source_cidr = ["192.0.2.2/32", "192.0.2.3/32"]
+source_cidr_v4 = ["192.0.2.2/32", "192.0.2.3/32"]
+source_cidr_v6 = ["2001:db8::2/128", "2001:db8::3/128"]

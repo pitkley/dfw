@@ -394,7 +394,7 @@ pub struct WiderWorldToContainerRule {
     /// Specific external network interface to target.
     pub external_network_interface: Option<String>,
 
-    /// Source CIDRs to which incoming traffic should be restricted.
+    /// Source CIDRs (IPv4) to which incoming traffic should be restricted.
     ///
     /// This can be:
     ///
@@ -409,12 +409,42 @@ pub struct WiderWorldToContainerRule {
     /// All of the following are legal TOML fragments:
     ///
     /// ```toml
-    /// source_cidr = "127.0.0.0/8"
+    /// source_cidr_v4 = "127.0.0.0/8"
     ///
-    /// source_cidr = ["127.0.0.0/8", "192.0.2.1/32"]
+    /// source_cidr _v4= ["127.0.0.0/8", "192.0.2.1/32"]
     /// ```
-    #[serde(default, deserialize_with = "option_string_or_seq_string")]
-    pub source_cidr: Option<Vec<String>>,
+    #[serde(
+        default,
+        deserialize_with = "option_string_or_seq_string",
+        alias = "source_cidr"
+    )]
+    pub source_cidr_v4: Option<Vec<String>>,
+
+    /// Source CIDRs (IPv6) to which incoming traffic should be restricted.
+    ///
+    /// This can be:
+    ///
+    /// * a single string
+    ///
+    /// * a list of strings
+    ///
+    /// There is no validation whether the provided CIDRs are actually valid.
+    ///
+    /// # Example
+    ///
+    /// All of the following are legal TOML fragments:
+    ///
+    /// ```toml
+    /// source_cidr_v6 = "fe80::/10"
+    ///
+    /// source_cidr_v6 = ["fe80::/10", "2001:db8::/32"]
+    /// ```
+    #[serde(
+        default,
+        deserialize_with = "option_string_or_seq_string",
+        alias = "source_cidr"
+    )]
+    pub source_cidr_v6: Option<Vec<String>>,
 }
 
 /// Struct to hold a port definition to expose on the host/between containers.
