@@ -19,6 +19,10 @@ pub struct Rule {
     #[builder(setter(into))]
     pub destination_address: String,
     #[builder(setter(into))]
+    pub source_address_v6: String,
+    #[builder(setter(into))]
+    pub destination_address_v6: String,
+    #[builder(setter(into))]
     pub protocol: String,
     #[builder(setter(into))]
     pub source_port: String,
@@ -52,16 +56,27 @@ impl RuleBuilder {
         }
 
         // Handle `ip` matches
-        if self.source_address.is_some() || self.destination_address.is_some() {
+        if let Some(source_address) = &self.source_address {
             args.push("ip".to_owned());
-            if let Some(source_address) = &self.source_address {
-                args.push("saddr".to_owned());
-                args.push(source_address.to_owned());
-            }
-            if let Some(destination_address) = &self.destination_address {
-                args.push("daddr".to_owned());
-                args.push(destination_address.to_owned());
-            }
+            args.push("saddr".to_owned());
+            args.push(source_address.to_owned());
+        }
+        if let Some(destination_address) = &self.destination_address {
+            args.push("ip".to_owned());
+            args.push("daddr".to_owned());
+            args.push(destination_address.to_owned());
+        }
+
+        // Handle `ip6` matches
+        if let Some(source_address) = &self.source_address_v6 {
+            args.push("ip6".to_owned());
+            args.push("saddr".to_owned());
+            args.push(source_address.to_owned());
+        }
+        if let Some(destination_address) = &self.destination_address_v6 {
+            args.push("ip6".to_owned());
+            args.push("daddr".to_owned());
+            args.push(destination_address.to_owned());
         }
 
         // Handle interface-matches

@@ -784,71 +784,27 @@ impl Process for WiderWorldToContainerRule {
 
             // If source CIDRs have been specified, create the FORWARD-rules as required to
             // restrict the traffic as intended.
-            if let Some(source_cidrs) = &self.source_cidr {
-                debug!(ctx.logger, "Generate extended FORWARD rules, source CIDRs were specified";
-                       o!("args" => format!("{:?}", nft_dnat_rule),
-                          "source_cidrs" => source_cidrs.join(", ")));
-                for additional_forward_rule in source_cidrs
-                    .iter()
-                    .map(|source_cidr| {
-                        let mut forward_rule = nft_forward_rule.clone();
-                        forward_rule.source_address(source_cidr);
-                        forward_rule
-                    })
-                    .map(|forward_rule| forward_rule.build())
-                    .collect::<Result<Vec<_>>>()?
-                {
-                    debug!(ctx.logger, "Add FORWARD rule";
-                            o!("part" => "wider_world_to_container",
-                               "rule" => &additional_forward_rule));
-                    rules.push(nftables::add_rule(
-                        Family::Inet,
-                        "dfw",
-                        "forward",
-                        &additional_forward_rule,
-                    ));
-                }
-                for additional_dnat_rule in source_cidrs
-                    .iter()
-                    .map(|source_cidr| {
-                        let mut dnat_rule = nft_dnat_rule.clone();
-                        dnat_rule.source_address(source_cidr);
-                        dnat_rule
-                    })
-                    .map(|dnat_rule| dnat_rule.build())
-                    .collect::<Result<Vec<_>>>()?
-                {
-                    debug!(ctx.logger, "Add DNAT rule";
-                            o!("part" => "wider_world_to_container",
-                               "rule" => &additional_dnat_rule));
-                    rules.push(nftables::add_rule(
-                        Family::Ip,
-                        "dfw",
-                        "prerouting",
-                        &additional_dnat_rule,
-                    ));
-                }
-                for additional_mark_rule in source_cidrs
-                    .iter()
-                    .map(|source_cidr| {
-                        let mut mark_rule = nft_mark_rule.clone();
-                        mark_rule.source_address(source_cidr);
-                        mark_rule
-                    })
-                    .map(|dnat_rule| dnat_rule.build())
-                    .collect::<Result<Vec<_>>>()?
-                {
-                    debug!(ctx.logger, "Add mark rule";
-                            o!("part" => "wider_world_to_container",
-                               "rule" => &additional_mark_rule));
-                    rules.push(nftables::add_rule(
-                        Family::Ip6,
-                        "dfw",
-                        "prerouting",
-                        &additional_mark_rule,
-                    ));
-                }
-            } else {
+            if let Some(source_cidrs_v4) = &self.source_cidr_v4 {
+                self.apply_source_cidrs_v4(
+                    ctx,
+                    &mut rules,
+                    source_cidrs_v4,
+                    nft_forward_rule.clone(),
+                    nft_dnat_rule.clone(),
+                )?;
+            }
+            if let Some(source_cidrs_v6) = &self.source_cidr_v6 {
+                self.apply_source_cidrs_v6(
+                    ctx,
+                    &mut rules,
+                    source_cidrs_v6,
+                    nft_mark_rule.clone(),
+                )?;
+            }
+
+            // If no source CIDRs were specified, we create the default rules that allow all
+            // connections from any IP.
+            if self.source_cidr_v4.is_none() && self.source_cidr_v6.is_none() {
                 let forward_rule = nft_forward_rule.build()?;
                 debug!(ctx.logger, "Add forward rule";
                        o!("part" => "wider_world_to_container",
@@ -884,6 +840,96 @@ impl Process for WiderWorldToContainerRule {
         }
 
         Ok(Some(rules))
+    }
+}
+
+impl WiderWorldToContainerRule {
+    fn apply_source_cidrs_v4(
+        &self,
+        ctx: &ProcessContext,
+        rules: &mut Vec<String>,
+        source_cidrs: &Vec<String>,
+        nft_forward_rule: RuleBuilder,
+        nft_dnat_rule: RuleBuilder,
+    ) -> Result<()> {
+        debug!(ctx.logger, "Generate extended FORWARD rules, source CIDRs (IPv4) were specified";
+               o!("args" => format!("{:?}", nft_dnat_rule),
+                  "source_cidrs" => source_cidrs.join(", ")));
+        for additional_forward_rule in source_cidrs
+            .iter()
+            .map(|source_cidr| {
+                let mut forward_rule = nft_forward_rule.clone();
+                forward_rule.source_address(source_cidr);
+                forward_rule
+            })
+            .map(|forward_rule| forward_rule.build())
+            .collect::<Result<Vec<_>>>()?
+        {
+            debug!(ctx.logger, "Add FORWARD rule";
+                   o!("part" => "wider_world_to_container",
+                      "rule" => &additional_forward_rule));
+            rules.push(nftables::add_rule(
+                Family::Inet,
+                "dfw",
+                "forward",
+                &additional_forward_rule,
+            ));
+        }
+        for additional_dnat_rule in source_cidrs
+            .iter()
+            .map(|source_cidr| {
+                let mut dnat_rule = nft_dnat_rule.clone();
+                dnat_rule.source_address(source_cidr);
+                dnat_rule
+            })
+            .map(|dnat_rule| dnat_rule.build())
+            .collect::<Result<Vec<_>>>()?
+        {
+            debug!(ctx.logger, "Add DNAT rule";
+                   o!("part" => "wider_world_to_container",
+                      "rule" => &additional_dnat_rule));
+            rules.push(nftables::add_rule(
+                Family::Ip,
+                "dfw",
+                "prerouting",
+                &additional_dnat_rule,
+            ));
+        }
+
+        Ok(())
+    }
+
+    fn apply_source_cidrs_v6(
+        &self,
+        ctx: &ProcessContext,
+        rules: &mut Vec<String>,
+        source_cidrs: &Vec<String>,
+        nft_mark_rule: RuleBuilder,
+    ) -> Result<()> {
+        debug!(ctx.logger, "Generate extended prerouting rules, source CIDRs (IPv6) were specified";
+               o!("args" => format!("{:?}", nft_mark_rule),
+                  "source_cidrs" => source_cidrs.join(", ")));
+        for additional_mark_rule in source_cidrs
+            .iter()
+            .map(|source_cidr| {
+                let mut mark_rule = nft_mark_rule.clone();
+                mark_rule.source_address_v6(source_cidr);
+                mark_rule
+            })
+            .map(|dnat_rule| dnat_rule.build())
+            .collect::<Result<Vec<_>>>()?
+        {
+            debug!(ctx.logger, "Add mark rule";
+                            o!("part" => "wider_world_to_container",
+                               "rule" => &additional_mark_rule));
+            rules.push(nftables::add_rule(
+                Family::Ip6,
+                "dfw",
+                "prerouting",
+                &additional_mark_rule,
+            ));
+        }
+        Ok(())
     }
 }
 

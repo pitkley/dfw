@@ -46,7 +46,8 @@ network = "network"
 dst_container = "dst_container"
 expose_port = 22
 external_network_interface = "eni"
-source_cidr = ["192.0.2.1/32", "192.0.2.2/32"]
+source_cidr_v4 = ["192.0.2.1/32", "192.0.2.2/32"]
+source_cidr_v6 = ["2001:db8::1/128", "2001:db8::2/128"]
 
 [container_dnat]
 
