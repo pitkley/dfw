@@ -10,12 +10,19 @@
 
 use crate::errors::*;
 
+use futures::{sync::oneshot::spawn, Future};
 use glob::glob;
+use lazy_static::lazy_static;
 use serde::de::DeserializeOwned;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
+use tokio::runtime::Runtime;
 use toml;
+
+lazy_static! {
+    static ref RUNTIME: Runtime = Runtime::new().unwrap();
+}
 
 /// Load single TOML-file from path and deserialize it into type `T`.
 pub fn load_file<T>(file: &str) -> Result<T>
@@ -46,4 +53,22 @@ where
     }
 
     Ok(toml::from_str(&contents)?)
+}
+
+/// An extension trait for `Future` allowing synchronized execution of the future.
+pub trait FutureExt: Future
+where
+    Self: Send + Sized + 'static,
+    Self::Item: Send + 'static,
+    Self::Error: Send + 'static,
+{
+    /// Execute future synchronously, blocking until a result can be returned.
+    fn sync(self) -> std::result::Result<Self::Item, Self::Error> {
+        spawn(self, &RUNTIME.executor()).wait()
+    }
+}
+
+impl<T: Send + 'static, I: Send + 'static, E: Send + 'static> FutureExt for T where
+    T: Future<Item = I, Error = E>
+{
 }

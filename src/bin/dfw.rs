@@ -14,6 +14,7 @@ use dfw::types::DFW;
 use dfw::util::*;
 use dfw::{ContainerFilter, ProcessContext, ProcessingOptions};
 use failure::bail;
+use futures::Stream;
 use shiplift::builder::{EventFilter, EventFilterType, EventsOptions};
 use shiplift::Docker;
 use slog::{debug, error, info, o, trace, Logger};
@@ -118,7 +119,6 @@ fn spawn_event_monitor(
     logger: &Logger,
 ) -> thread::JoinHandle<()> {
     let logger = logger.new(o!("thread" => "event_monitor"));
-
     thread::spawn(move || {
         let docker = match docker_url {
             Some(docker_url) => Docker::host(docker_url.parse().unwrap()),
@@ -126,29 +126,34 @@ fn spawn_event_monitor(
         };
         loop {
             trace!(logger, "Waiting for events");
-            for event in docker
+            docker
                 .events(
                     &EventsOptions::builder()
                         .filter(vec![EventFilter::Type(EventFilterType::Container)])
                         .build(),
                 )
-                .unwrap()
-            {
-                trace!(logger, "Received event";
-                       o!("event" => format!("{:?}", &event)));
-                match event.status {
-                    Some(ref status) => match &**status {
-                        "create" | "destroy" | "start" | "restart" | "die" | "stop" => {
-                            trace!(logger, "Trigger channel about event";
-                                       o!("event" => format!("{:?}", event)));
-                            s_event.send(()).expect("Failed to send trigger event");
-                            break;
+                .for_each({
+                    let logger = logger.clone();
+                    let s_event = s_event.clone();
+                    move |event| {
+                        trace!(logger, "Received event";
+                        o!("event" => format!("{:?}", &event)));
+                        match event.status {
+                            Some(ref status) => match &**status {
+                                "create" | "destroy" | "start" | "restart" | "die" | "stop" => {
+                                    trace!(logger, "Trigger channel about event";
+                                        o!("event" => format!("{:?}", event)));
+                                    s_event.send(()).expect("Failed to send trigger event");
+                                }
+                                _ => {}
+                            },
+                            None => {}
                         }
-                        _ => continue,
-                    },
-                    None => continue,
-                }
-            }
+                        Ok(())
+                    }
+                })
+                .sync()
+                .expect("failed to handle events");
         }
     })
 }
@@ -178,7 +183,7 @@ fn run<'a>(
     };
     // Check if the docker instance is reachable
     trace!(root_logger, "Pinging docker");
-    docker.ping()?;
+    docker.ping().sync()?;
 
     // Create a dummy channel
     let load_interval = value_t!(matches.value_of("load-interval"), u64)?;
@@ -223,43 +228,43 @@ fn run<'a>(
            o!("dry_run" => dry_run));
 
     let processing_logger = root_logger.new(o!());
-    let process: Box<Fn() -> Result<()>> = match value_t!(matches.value_of("load-mode"), LoadMode)?
-    {
-        LoadMode::Once => {
-            trace!(root_logger, "Creating process closure according to load mode";
+    let mut process: Box<dyn FnMut() -> Result<()>> =
+        match value_t!(matches.value_of("load-mode"), LoadMode)? {
+            LoadMode::Once => {
+                trace!(root_logger, "Creating process closure according to load mode";
                    o!("load_mode" => "once"));
-            Box::new(|| {
-                ProcessContext::new(
-                    &docker,
-                    &toml,
-                    &processing_options,
-                    &processing_logger,
-                    dry_run,
-                )?
-                .process()
-                .map_err(From::from)
-            })
-        }
-        LoadMode::Always => {
-            trace!(root_logger, "Creating process closure according to load mode";
+                Box::new(|| {
+                    ProcessContext::new(
+                        &docker,
+                        &toml,
+                        &processing_options,
+                        &processing_logger,
+                        dry_run,
+                    )?
+                    .process()
+                    .map_err(From::from)
+                })
+            }
+            LoadMode::Always => {
+                trace!(root_logger, "Creating process closure according to load mode";
                    o!("load_mode" => "always"));
-            Box::new(|| {
-                let toml = load_config(&matches)?;
-                debug!(root_logger, "Reloaded configuration before processing";
+                Box::new(|| {
+                    let toml = load_config(&matches)?;
+                    debug!(root_logger, "Reloaded configuration before processing";
                        o!("config" => format!("{:#?}", toml)));
 
-                ProcessContext::new(
-                    &docker,
-                    &toml,
-                    &processing_options,
-                    &processing_logger,
-                    dry_run,
-                )?
-                .process()
-                .map_err(From::from)
-            })
-        }
-    };
+                    ProcessContext::new(
+                        &docker,
+                        &toml,
+                        &processing_options,
+                        &processing_logger,
+                        dry_run,
+                    )?
+                    .process()
+                    .map_err(From::from)
+                })
+            }
+        };
     trace!(
         root_logger,
         "Load mode: {:?}",
@@ -475,6 +480,7 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
         )
         .get_matches()
 }
+
 fn main() {
     // Parse arguments
     let matches = get_arg_matches();

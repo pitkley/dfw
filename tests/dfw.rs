@@ -13,7 +13,7 @@ mod logs;
 
 use common::*;
 use dfw::types::*;
-use dfw::util::load_file;
+use dfw::util::{load_file, FutureExt};
 use dfw::*;
 use itertools::{EitherOrBoth, Itertools};
 use logs::*;
@@ -122,7 +122,7 @@ fn test_nftables(num: &str) {
 
     // Setup docker instance
     let docker = Docker::new();
-    let ping = docker.ping();
+    let ping = docker.ping().sync();
 
     assert!(ping.is_ok());
     assert_eq!(ping.unwrap().is_empty(), false);
@@ -143,10 +143,10 @@ fn test_nftables(num: &str) {
             let containers = docker.containers();
             let container_name = format!("dfwtest{}_a_1", num);
             let container = containers.get(&container_name);
-            let inspect = container.inspect();
+            let inspect = container.inspect().sync();
             assert!(inspect.is_ok());
             let inspect = inspect.unwrap();
-            assert_eq!(inspect.Id.is_empty(), false);
+            assert_eq!(inspect.id.is_empty(), false);
 
             // Run processing, verify that it succeeded
             let result = toml.process(&dfw);

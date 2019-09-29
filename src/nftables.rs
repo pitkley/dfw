@@ -131,7 +131,7 @@ impl slog::Value for ChainPolicy {
         &self,
         record: &slog::Record,
         key: slog::Key,
-        serializer: &mut slog::Serializer,
+        serializer: &mut dyn slog::Serializer,
     ) -> slog::Result {
         self.to_string().serialize(record, key, serializer)
     }
@@ -174,7 +174,7 @@ impl slog::Value for RuleVerdict {
         &self,
         record: &slog::Record,
         key: slog::Key,
-        serializer: &mut slog::Serializer,
+        serializer: &mut dyn slog::Serializer,
     ) -> slog::Result {
         self.to_string().serialize(record, key, serializer)
     }
