@@ -122,3 +122,20 @@ impl RuleBuilder {
         Ok(args.join(" "))
     }
 }
+
+mod test {
+    use super::*;
+
+    #[test]
+    fn builder_should_fail() {
+        let rule = RuleBuilder::default();
+        assert!(rule.build().is_err());
+    }
+
+    #[test]
+    fn builder_should_succeed() {
+        let mut rule = RuleBuilder::default();
+        rule.source_port("1");
+        assert!(rule.build().is_ok());
+    }
+}
