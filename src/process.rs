@@ -12,7 +12,7 @@ use crate::errors::*;
 use crate::nftables::{self, Family, Hook, RuleVerdict, Type};
 use crate::rule::*;
 use crate::types::*;
-use failure::{bail, format_err};
+use failure::{bail, format_err, ResultExt};
 use shiplift::builder::{ContainerFilter as ContainerFilterShiplift, ContainerListOptions};
 use shiplift::rep::Container;
 use shiplift::rep::{NetworkContainerDetails, NetworkDetails};
@@ -528,7 +528,11 @@ impl Process for ContainerToWiderWorldRule {
         // mandatory fields has been populated.
         debug!(ctx.logger, "Build rule to verify contents";
                    o!("args" => format!("{:?}", nft_rule)));
-        nft_rule.build()?; // TODO: maybe add a `verify` method to `Rule`
+        // TODO: maybe add a `verify` method to `Rule`
+        nft_rule.build().context(format!(
+            "failed to build rule, maybe the network `{:?}` or container `{:?}` doesn't exist",
+            self.network, self.src_container
+        ))?;
 
         if let Some(ref external_network_interface) = self.external_network_interface {
             trace!(ctx.logger, "Rule has specific external network interface";
@@ -637,7 +641,11 @@ impl Process for ContainerToHostRule {
         // mandatory fields has been populated.
         debug!(ctx.logger, "Build rule to verify contents";
                    o!("args" => format!("{:?}", nft_rule)));
-        nft_rule.build()?; // TODO: maybe add a `verify` method to `Rule`
+        // TODO: maybe add a `verify` method to `Rule`
+        nft_rule.build().context(format!(
+            "failed to build rule, maybe the container `{:?}` doesn't exist",
+            self.src_container
+        ))?;
 
         let rule = nft_rule.build()?;
         debug!(ctx.logger, "Add input rule";

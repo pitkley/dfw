@@ -6,6 +6,7 @@ use crate::errors::*;
 use crate::nftables::RuleVerdict;
 use crate::process::DFW_MARK;
 use derive_builder::Builder;
+use failure::bail;
 
 #[derive(Debug, Clone, Builder)]
 #[builder(derive(Debug), pattern = "mutable", build_fn(skip))]
@@ -92,6 +93,11 @@ impl RuleBuilder {
             }
         }
 
+        // Bail if none of the above was initialized
+        if args.is_empty() {
+            bail!("one of `{source,destination}_{port,address{,_v6}}`, `{in,out}_interface` must be initialized");
+        }
+
         // Unconditionally set mark
         args.push("meta".to_owned());
         args.push("mark".to_owned());
@@ -114,5 +120,22 @@ impl RuleBuilder {
         }
 
         Ok(args.join(" "))
+    }
+}
+
+mod test {
+    use super::*;
+
+    #[test]
+    fn builder_should_fail() {
+        let rule = RuleBuilder::default();
+        assert!(rule.build().is_err());
+    }
+
+    #[test]
+    fn builder_should_succeed() {
+        let mut rule = RuleBuilder::default();
+        rule.source_port("1");
+        assert!(rule.build().is_ok());
     }
 }
