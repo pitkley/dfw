@@ -6,6 +6,7 @@ use crate::errors::*;
 use crate::nftables::RuleVerdict;
 use crate::process::DFW_MARK;
 use derive_builder::Builder;
+use failure::bail;
 
 #[derive(Debug, Clone, Builder)]
 #[builder(derive(Debug), pattern = "mutable", build_fn(skip))]
@@ -90,6 +91,11 @@ impl RuleBuilder {
                 args.push("oifname".to_owned());
                 args.push(out_interface.to_owned());
             }
+        }
+
+        // Bail if none of the above was initialized
+        if args.is_empty() {
+            bail!("one of `{source,destination}_{port,address{,_v6}}`, `{in,out}_interface` must be initialized");
         }
 
         // Unconditionally set mark
