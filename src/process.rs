@@ -483,13 +483,6 @@ impl Process for ContainerToWiderWorldRule {
 
         if let Some(ref network) = self.network {
             if let Some(network) = ctx.network_map.get(network) {
-                let bridge_name = get_bridge_name(&network.Id)?;
-                trace!(ctx.logger, "Got bridge name";
-                           o!("network_name" => &network.Name,
-                              "bridge_name" => &bridge_name));
-
-                nft_rule.in_interface(&bridge_name);
-
                 if let Some(ref src_container) = self.src_container {
                     if let Some(src_network) = get_network_for_container(
                         ctx.docker,
@@ -514,6 +507,13 @@ impl Process for ContainerToWiderWorldRule {
                                 .ok_or_else(|| format_err!("IPv4 address is empty"))?,
                         );
                     }
+                } else {
+                    let bridge_name = get_bridge_name(&network.Id)?;
+                    trace!(ctx.logger, "Got bridge name";
+                               o!("network_name" => &network.Name,
+                                  "bridge_name" => &bridge_name));
+
+                    nft_rule.in_interface(&bridge_name);
                 }
             }
         }
