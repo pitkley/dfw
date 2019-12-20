@@ -31,7 +31,7 @@ signal-hook = "^0.1"
 shiplift = "^0.3"
 slog = { version = "^2", features = ["max_level_trace"] }
 sloggers = "^0.3"
-strum = "^0.16"
+strum = "^0.17"
 strum_macros = "^0.16"
 tempfile = "^3.1"
 time = "^0.1"
