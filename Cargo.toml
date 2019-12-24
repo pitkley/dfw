@@ -31,7 +31,7 @@ signal-hook = "^0.1"
 shiplift = "^0.3"
 slog = "^2"
 sloggers = "^0.3"
-time = "^0.1"
+time = "^0.2"
 toml = "^0.5"
 url = "^2.1"
 
