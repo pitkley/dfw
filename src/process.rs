@@ -101,7 +101,7 @@ impl<'a> ProcessDFW<'a> {
     /// Start the processing using the configuration given at creation.
     pub fn process(&self) -> Result<()> {
         info!(self.logger, "Starting processing";
-              o!("started_processing_at" => format!("{}", time::now().rfc3339())));
+              o!("started_processing_at" => format!("{}", time::Time::now().format("%FT%T%z"))));
 
         create_and_flush_chain("filter", DFWRS_FORWARD_CHAIN, self.ipt4, self.ipt6)?;
         create_and_flush_chain("filter", DFWRS_INPUT_CHAIN, self.ipt4, self.ipt6)?;
@@ -236,7 +236,7 @@ impl<'a> ProcessDFW<'a> {
         }
 
         info!(self.logger, "Finished processing";
-              o!("finished_processing_at" => format!("{}", time::now().rfc3339())));
+              o!("finished_processing_at" => format!("{}", time::Time::now().format("%FT%T%z"))));
         info!(self.logger, "Committing changes");
         self.ipt4.commit()?;
         // TODO: self.ipt6.commit()?;
