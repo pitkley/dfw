@@ -34,7 +34,7 @@ sloggers = "^0.3"
 strum = "^0.17"
 strum_macros = "^0.17"
 tempfile = "^3.1"
-time = "^0.1"
+time = "^0.2"
 toml = "^0.5"
 url = "^2.1"
 
