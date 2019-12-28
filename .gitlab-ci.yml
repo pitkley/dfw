@@ -110,7 +110,6 @@ build test binary for docker tests:
             --message-format=json \
             | ./jq -r 'select(.profile.test == true) | .executable') dfw-docker-test
     cache:
-        key: "docker-tests"
         paths:
         - dfw-docker-test
         policy: push
@@ -126,7 +125,6 @@ build test binary for docker tests:
         - master
     dependencies: [] # don't download artifacts from previous jobs
     cache:
-        key: "docker-tests"
         paths:
         - dfw-docker-test
         policy: pull
