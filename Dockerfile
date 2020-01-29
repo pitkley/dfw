@@ -21,10 +21,10 @@ WORKDIR /app
 
 COPY . /app
 
-RUN set -ex; \
-    cargo build --target x86_64-unknown-linux-musl --release; \
-    cargo test --target x86_64-unknown-linux-musl --release -- --nocapture; \
-    strip target/x86_64-unknown-linux-musl/release/dfw;
+RUN set -ex ;\
+    cargo build --target x86_64-unknown-linux-musl --release ;\
+    cargo test --target x86_64-unknown-linux-musl --release -- --nocapture ;\
+    :
 
 # Stage 1: final image
 FROM alpine
