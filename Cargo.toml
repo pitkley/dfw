@@ -32,7 +32,7 @@ shiplift = "^0.3"
 slog = { version = "^2", features = ["max_level_trace"] }
 sloggers = "^0.3"
 strum = "^0.18"
-strum_macros = "^0.17"
+strum_macros = "^0.18"
 tempfile = "^3.1"
 time = "^0.2"
 toml = "^0.5"
