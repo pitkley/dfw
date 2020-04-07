@@ -123,6 +123,7 @@ impl RuleBuilder {
     }
 }
 
+#[cfg(test)]
 mod test {
     use super::*;
 
