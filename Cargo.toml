@@ -30,7 +30,7 @@ serde = { version = "^1", features = ["derive"] }
 signal-hook = "^0.1"
 shiplift = "^0.3"
 slog = "^2"
-sloggers = "^0.3"
+sloggers = "^1.0"
 time = "^0.2"
 toml = "^0.5"
 url = "^2.1"
