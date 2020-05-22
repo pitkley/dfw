@@ -1245,11 +1245,7 @@ fn get_container_map(containers: &[Container]) -> Result<Option<Map<String, Cont
         }
     }
 
-    if container_map.is_empty() {
-        Ok(None)
-    } else {
-        Ok(Some(container_map))
-    }
+    Ok(Some(container_map))
 }
 
 fn get_network_map(networks: &[NetworkDetails]) -> Result<Option<Map<String, NetworkDetails>>> {
