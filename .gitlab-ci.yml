@@ -4,7 +4,7 @@ variables:
     DOCKER_TLS_CERTDIR: ''
     DOCKER_DRIVER: overlay2
     CARGO_HOME: "$CI_PROJECT_DIR/cargo"
-    CROSS_BUILD_IMAGE: "${CI_REGISTRY_IMAGE}/hack/cross:latest"
+    CROSS_BUILD_IMAGE: "ekidd/rust-musl-builder:stable"
     TESTER_BUILD_IMAGE: "${CI_REGISTRY_IMAGE}/hack/tester:latest"
 
 stages:
@@ -36,12 +36,6 @@ stages:
           "hack/docker/${BUILD_DIR}/"
         - docker push "${BUILD_IMAGE}"
 
-build and push cross image:
-    <<: *build-and-push-hack-image
-    variables:
-        BUILD_IMAGE: "$CROSS_BUILD_IMAGE"
-        BUILD_DIR: "cross"
-
 build and push tester image:
     <<: *build-and-push-hack-image
     variables:
@@ -50,14 +44,14 @@ build and push tester image:
 
 rustfmt:
     stage: preconditions
-    image: rust:stretch
+    image: rust:latest
     script:
         - rustup component add rustfmt
         - cargo fmt --all -- --check
 
 build and test dynamic binary on stable:
     stage: build
-    image: rust:stretch
+    image: rust:latest
     script:
         - cargo build --verbose
         - cargo test -- --nocapture
@@ -72,7 +66,7 @@ build and test dynamic binary on stable:
 
 build dynamic binary on nightly:
     stage: build
-    image: rustlang/rust:nightly-stretch
+    image: rustlang/rust:nightly
     script:
         - cargo build --verbose
     allow_failure: true
@@ -101,7 +95,7 @@ build static binary:
 
 build test binary for docker tests:
     stage: build
-    image: rust:stretch
+    image: rust:latest
     script:
         - wget -O jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
         - chmod +x jq
