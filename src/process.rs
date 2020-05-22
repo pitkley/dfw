@@ -100,7 +100,7 @@ where
 impl Process for DFW {
     fn process(&self, ctx: &ProcessContext) -> Result<Option<Vec<String>>> {
         info!(ctx.logger, "Starting processing";
-              o!("started_processing_at" => time::OffsetDateTime::now().format("%FT%T%z")));
+              o!("started_processing_at" => time::OffsetDateTime::now_utc().format("%FT%T%z")));
         let mut rules = vec![
             nftables::add_table(Family::Inet, "dfw"),
             nftables::flush_table(Family::Inet, "dfw"),
@@ -186,7 +186,7 @@ impl Process for DFW {
         }
 
         info!(ctx.logger, "Finished processing";
-             o!("finished_processing_at" => time::OffsetDateTime::now().format("%FT%T%z")));
+             o!("finished_processing_at" => time::OffsetDateTime::now_utc().format("%FT%T%z")));
 
         Ok(Some(rules))
     }

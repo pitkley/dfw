@@ -165,7 +165,7 @@ fn run<'a>(
 ) -> Result<()> {
     debug!(root_logger, "Application starting";
            o!("version" => crate_version!(),
-              "started_at" => time::OffsetDateTime::now().format("%FT%T%z")));
+              "started_at" => time::OffsetDateTime::now_utc().format("%FT%T%z")));
 
     let toml = load_config(&matches);
     if matches.is_present("check-config") {
@@ -272,7 +272,7 @@ fn run<'a>(
 
     info!(root_logger, "Application started";
           "version" => crate_version!(),
-          "started_at" => time::OffsetDateTime::now().format("%FT%T%z"));
+          "started_at" => time::OffsetDateTime::now_utc().format("%FT%T%z"));
 
     // Initial processing
     debug!(root_logger, "Start first processing");
@@ -284,7 +284,7 @@ fn run<'a>(
         info!(root_logger,
               "Run once specified (or load-interval is zero and events aren't monitored), exiting";
               o!("version" => crate_version!(),
-                 "exited_at" => time::OffsetDateTime::now().format("%FT%T%z")));
+                 "exited_at" => time::OffsetDateTime::now_utc().format("%FT%T%z")));
         return Ok(());
     }
 
@@ -352,7 +352,7 @@ fn run<'a>(
 
     info!(root_logger, "Application exiting";
           o!("version" => crate_version!(),
-             "exited_at" => time::OffsetDateTime::now().format("%FT%T%z")));
+             "exited_at" => time::OffsetDateTime::now_utc().format("%FT%T%z")));
 
     Ok(())
 }
