@@ -38,6 +38,7 @@ arg_enum! {
     #[derive(Debug)]
     enum FirewallBackend {
         Nftables,
+        Iptables,
     }
 }
 
@@ -544,6 +545,9 @@ fn main() {
     {
         FirewallBackend::Nftables => {
             run::<dfw::nftables::Nftables>(&matches, &r_signal, &root_logger)
+        }
+        FirewallBackend::Iptables => {
+            run::<dfw::iptables::Iptables>(&matches, &r_signal, &root_logger)
         }
     } {
         error!(root_logger, "Encountered error";

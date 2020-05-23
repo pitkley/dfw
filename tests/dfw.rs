@@ -12,6 +12,7 @@ mod common;
 mod logs;
 
 use common::*;
+use dfw::iptables::{Iptables, IptablesRuleDiscriminants};
 use dfw::nftables::Nftables;
 use dfw::process::Process;
 use dfw::types::*;
@@ -191,6 +192,55 @@ fn test_nftables(num: &str) {
     });
 }
 
+fn test_iptables(num: &str) {
+    test_backend(num, "iptables", |toml, dfw| {
+        // Run processing, verify that it succeeded
+        let result = Process::<Iptables>::process(toml, &dfw);
+        assert!(result.is_ok());
+        let option = result.unwrap();
+        assert!(option.is_some());
+        let rules = option.unwrap();
+
+        // Verify logs for iptables (IPv4)
+        let mut logs4 = Vec::new();
+        let rules4 = Iptables::get_rules(rules.clone(), IptablesRuleDiscriminants::V4);
+        for rule in rules4 {
+            logs4.push(LogLine {
+                command: rule,
+                regex: false,
+                eval: None,
+            });
+        }
+        let expected4 = load_loglines(
+            &resource(&format!(
+                "docker/iptables/{}/expected-iptables-restore-v4.txt",
+                num
+            ))
+            .unwrap(),
+        );
+        compare_loglines(&logs4, &expected4);
+
+        // Verify logs for ip6tables (IPv6)
+        let mut logs6 = Vec::new();
+        let rules6 = Iptables::get_rules(rules, IptablesRuleDiscriminants::V6);
+        for rule in rules6 {
+            logs6.push(LogLine {
+                command: rule,
+                regex: false,
+                eval: None,
+            });
+        }
+        let expected6 = load_loglines(
+            &resource(&format!(
+                "docker/iptables/{}/expected-iptables-restore-v6.txt",
+                num
+            ))
+            .unwrap(),
+        );
+        compare_loglines(&logs6, &expected6);
+    });
+}
+
 macro_rules! dfw_test {
     ( $name:ident $inner:ident $param:expr) => {
         #[test]
@@ -213,4 +263,11 @@ dfw_tests!(
     test_nftables_04 test_nftables "04";
     test_nftables_05 test_nftables "05";
     test_nftables_06 test_nftables "06";
+
+    test_iptables_01 test_iptables "01";
+    test_iptables_02 test_iptables "02";
+    test_iptables_03 test_iptables "03";
+    test_iptables_04 test_iptables "04";
+    test_iptables_05 test_iptables "05";
+    test_iptables_06 test_iptables "06";
 );

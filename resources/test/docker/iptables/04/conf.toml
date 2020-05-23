@@ -1,0 +1,12 @@
+[container_to_host]
+default_policy = "drop"
+
+[[container_to_host.rules]]
+network = "dfwtest04_default"
+verdict = "reject"
+
+[[container_to_host.rules]]
+network = "dfwtest04_default"
+src_container = "dfwtest04_a_1"
+matches = "-m state --state RELATED"
+verdict = "accept"

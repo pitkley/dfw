@@ -28,6 +28,7 @@
 // declare modules
 mod de;
 pub mod errors;
+pub mod iptables;
 pub mod nftables;
 pub mod process;
 pub mod types;
