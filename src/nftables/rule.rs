@@ -1,16 +1,20 @@
-//! TODO: write documentation
-
-#![allow(missing_docs)]
+// Copyright Pit Kleyersburg <pitkley@googlemail.com>
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified or distributed
+// except according to those terms.
 
 use crate::errors::*;
-use crate::nftables::RuleVerdict;
-use crate::process::DFW_MARK;
+use crate::nftables::DFW_MARK;
+use crate::types::RuleVerdict;
 use derive_builder::Builder;
 use failure::bail;
 
 #[derive(Debug, Clone, Builder)]
 #[builder(derive(Debug), pattern = "mutable", build_fn(skip))]
-pub struct Rule {
+pub(crate) struct Rule {
     #[builder(setter(into))]
     pub in_interface: String,
     #[builder(setter(into))]
@@ -40,7 +44,7 @@ pub struct Rule {
 }
 
 impl RuleBuilder {
-    pub fn build(&self) -> Result<String> {
+    pub(crate) fn build(&self) -> Result<String> {
         let mut args: Vec<String> = Vec::new();
 
         // Handle protocol matches

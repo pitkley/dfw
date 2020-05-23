@@ -9,19 +9,48 @@
 mod common;
 
 use common::resource;
-use dfw::nftables::{ChainPolicy, RuleVerdict};
 use dfw::types::*;
 use dfw::util::*;
+use dfw::{FirewallBackend, Process, ProcessContext};
+use serde::Deserialize;
+
+#[derive(Debug, Eq, PartialEq)]
+struct TestBackend;
+impl FirewallBackend for TestBackend
+where
+    DFW<Self>: Process<Self>,
+{
+    type Rule = String;
+    type Defaults = TestBackendDefaults;
+
+    fn apply(_rules: Vec<Self::Rule>, _ctx: &ProcessContext<Self>) -> dfw::errors::Result<()> {
+        unimplemented!()
+    }
+}
+
+impl Process<TestBackend> for DFW<TestBackend> {
+    fn process(
+        &self,
+        _ctx: &ProcessContext<TestBackend>,
+    ) -> Result<Option<Vec<String>>, failure::Error> {
+        unimplemented!()
+    }
+}
+
+#[derive(Debug, Deserialize, Eq, PartialEq)]
+struct TestBackendDefaults {
+    test: String,
+}
 
 #[test]
 fn parse_conf_file() {
-    let defaults = Defaults {
-        custom_tables: None,
+    let global_defaults = GlobalDefaults {
         external_network_interfaces: Some(vec!["eni".to_owned()]),
         default_docker_bridge_to_host_policy: ChainPolicy::Accept,
+        ..Default::default()
     };
-    let initialization = Initialization {
-        rules: Some(vec!["add table inet custom".to_owned()]),
+    let backend_defaults = TestBackendDefaults {
+        test: "custom backend defaults".to_owned(),
     };
     let container_to_container = ContainerToContainer {
         default_policy: ChainPolicy::Drop,
@@ -97,9 +126,9 @@ fn parse_conf_file() {
         }]),
     };
 
-    let expected: DFW = DFW {
-        defaults: Some(defaults),
-        initialization: Some(initialization),
+    let expected: DFW<TestBackend> = DFW {
+        global_defaults: Some(global_defaults),
+        backend_defaults: Some(backend_defaults),
         container_to_container: Some(container_to_container),
         container_to_wider_world: Some(container_to_wider_world),
         container_to_host: Some(container_to_host),
@@ -107,20 +136,20 @@ fn parse_conf_file() {
         container_dnat: Some(container_dnat),
     };
 
-    let actual: DFW = load_file(&resource("conf-file.toml").unwrap()).unwrap();
+    let actual = load_file(&resource("conf-file.toml").unwrap()).unwrap();
 
     assert_eq!(expected, actual);
 }
 
 #[test]
 fn parse_conf_path() {
-    let defaults = Defaults {
-        custom_tables: None,
+    let global_defaults = GlobalDefaults {
         external_network_interfaces: Some(vec!["eni".to_owned()]),
         default_docker_bridge_to_host_policy: ChainPolicy::Accept,
+        ..Default::default()
     };
-    let initialization = Initialization {
-        rules: Some(vec!["add table inet custom".to_owned()]),
+    let backend_defaults = TestBackendDefaults {
+        test: "custom backend defaults".to_owned(),
     };
     let container_to_container = ContainerToContainer {
         default_policy: ChainPolicy::Drop,
@@ -196,9 +225,9 @@ fn parse_conf_path() {
         }]),
     };
 
-    let expected: DFW = DFW {
-        defaults: Some(defaults),
-        initialization: Some(initialization),
+    let expected: DFW<TestBackend> = DFW {
+        global_defaults: Some(global_defaults),
+        backend_defaults: Some(backend_defaults),
         container_to_container: Some(container_to_container),
         container_to_wider_world: Some(container_to_wider_world),
         container_to_host: Some(container_to_host),
@@ -206,7 +235,7 @@ fn parse_conf_path() {
         container_dnat: Some(container_dnat),
     };
 
-    let actual: DFW = load_path(&resource("conf_path").unwrap()).unwrap();
+    let actual = load_path(&resource("conf_path").unwrap()).unwrap();
 
     assert_eq!(expected, actual);
 }
@@ -455,12 +484,12 @@ fn parse_expose_port_string_invalid_int2() {
 fn parse_external_network_interfaces_single() {
     let fragment = r#"external_network_interfaces = "eni""#;
 
-    let expected = Defaults {
-        custom_tables: None,
+    let expected = GlobalDefaults {
         external_network_interfaces: Some(vec!["eni".to_owned()]),
         default_docker_bridge_to_host_policy: ChainPolicy::Accept,
+        ..Default::default()
     };
-    let actual: Defaults = toml::from_str(fragment).unwrap();
+    let actual: GlobalDefaults = toml::from_str(fragment).unwrap();
 
     assert_eq!(expected, actual);
 }
@@ -469,12 +498,12 @@ fn parse_external_network_interfaces_single() {
 fn parse_external_network_interfaces_seq() {
     let fragment = r#"external_network_interfaces = ["eni1", "eni2"]"#;
 
-    let expected = Defaults {
-        custom_tables: None,
+    let expected = GlobalDefaults {
         external_network_interfaces: Some(vec!["eni1".to_owned(), "eni2".to_owned()]),
         default_docker_bridge_to_host_policy: ChainPolicy::Accept,
+        ..Default::default()
     };
-    let actual: Defaults = toml::from_str(fragment).unwrap();
+    let actual: GlobalDefaults = toml::from_str(fragment).unwrap();
 
     assert_eq!(expected, actual);
 }

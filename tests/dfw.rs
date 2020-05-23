@@ -12,6 +12,8 @@ mod common;
 mod logs;
 
 use common::*;
+use dfw::nftables::Nftables;
+use dfw::process::Process;
 use dfw::types::*;
 use dfw::util::{load_file, FutureExt};
 use dfw::*;
@@ -113,9 +115,18 @@ where
     }
 }
 
-fn test_nftables(num: &str) {
+fn test_backend<B: FirewallBackend, F: FnOnce(&DFW<B>, ProcessContext<B>) -> ()>(
+    num: &str,
+    resource_prefix: &str,
+    body: F,
+) where
+    F: UnwindSafe,
+    DFW<B>: Process<B>,
+{
     // Load toml
-    let toml: DFW = load_file(&resource(&format!("docker/{}/conf.toml", num)).unwrap()).unwrap();
+    let toml: DFW<B> =
+        load_file(&resource(&format!("docker/{}/{}/conf.toml", resource_prefix, num)).unwrap())
+            .unwrap();
 
     // Create no-op logger
     let logger = logger();
@@ -130,14 +141,18 @@ fn test_nftables(num: &str) {
     // Mark `docker` as `UnwindSafe`, since dependent type type `hyper::http::message::Protocol` is
     // not `UnwindSafe`.
     let docker = AssertUnwindSafe(docker);
+    let toml = AssertUnwindSafe(toml);
 
     with_compose_environment(
-        &resource(&format!("docker/{}/docker-compose.yml", num)).unwrap(),
+        &resource(&format!(
+            "docker/{}/{}/docker-compose.yml",
+            resource_prefix, num
+        ))
+        .unwrap(),
         &format!("dfwtest{}", num),
         || {
-            let toml2 = toml.clone();
             let dfw =
-                ProcessContext::new(&docker, &toml2, &PROCESSING_OPTIONS, &logger, true).unwrap();
+                ProcessContext::new(&docker, &toml, &PROCESSING_OPTIONS, &logger, true).unwrap();
 
             // Test if container is available
             let containers = docker.containers();
@@ -148,53 +163,54 @@ fn test_nftables(num: &str) {
             let inspect = inspect.unwrap();
             assert_eq!(inspect.id.is_empty(), false);
 
-            // Run processing, verify that it succeeded
-            let result = toml.process(&dfw);
-            assert!(result.is_ok());
-
-            let actual = result
-                .unwrap()
-                .unwrap()
-                .iter()
-                .map(|nft_command| LogLine {
-                    command: nft_command.to_owned(),
-                    regex: false,
-                    eval: None,
-                })
-                .collect::<Vec<_>>();
-            let expected =
-                load_loglines(&resource(&format!("docker/{}/expected-nftables.txt", num)).unwrap());
-            compare_loglines(&actual, &expected);
+            body(&toml, dfw);
         },
     );
 }
 
-#[test]
-fn test_nftables_01() {
-    test_nftables("01");
+fn test_nftables(num: &str) {
+    test_backend(num, "nftables", |toml, dfw| {
+        // Run processing, verify that it succeeded
+        let result = Process::<Nftables>::process(toml, &dfw);
+        assert!(result.is_ok());
+
+        let actual = result
+            .unwrap()
+            .unwrap()
+            .iter()
+            .map(|nft_command| LogLine {
+                command: nft_command.clone(),
+                regex: false,
+                eval: None,
+            })
+            .collect::<Vec<_>>();
+        let expected = load_loglines(
+            &resource(&format!("docker/nftables/{}/expected-nftables.txt", num)).unwrap(),
+        );
+        compare_loglines(&actual, &expected);
+    });
 }
 
-#[test]
-fn test_nftables_02() {
-    test_nftables("02");
+macro_rules! dfw_test {
+    ( $name:ident $inner:ident $param:expr) => {
+        #[test]
+        fn $name() {
+            $inner($param);
+        }
+    };
 }
 
-#[test]
-fn test_nftables_03() {
-    test_nftables("03");
+macro_rules! dfw_tests {
+    ( $( $name:ident $inner:ident $param:expr );+ $(;)* ) => {
+        $( dfw_test!( $name $inner $param ); )+
+    }
 }
 
-#[test]
-fn test_nftables_04() {
-    test_nftables("04");
-}
-
-#[test]
-fn test_nftables_05() {
-    test_nftables("05");
-}
-
-#[test]
-fn test_nftables_06() {
-    test_nftables("06");
-}
+dfw_tests!(
+    test_nftables_01 test_nftables "01";
+    test_nftables_02 test_nftables "02";
+    test_nftables_03 test_nftables "03";
+    test_nftables_04 test_nftables "04";
+    test_nftables_05 test_nftables "05";
+    test_nftables_06 test_nftables "06";
+);

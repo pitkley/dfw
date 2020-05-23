@@ -1,3 +1,2 @@
-[defaults]
+[global_defaults]
 external_network_interfaces = "eni"
-

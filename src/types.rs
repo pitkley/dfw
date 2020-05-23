@@ -13,11 +13,11 @@
 //! The following is an examplary TOML configuration, which will be parsed into this modules types.
 //!
 //! ```toml
-//! [defaults]
-//! custom_tables = { name = "filter", chains = ["input", "forward"]}
+//! [global_defaults]
 //! external_network_interfaces = "eth0"
 //!
-//! [initialization]
+//! [backend_defaults]
+//! custom_tables = { name = "filter", chains = ["input", "forward"]}
 //! rules = [
 //!     "add table inet custom",
 //! ]
@@ -57,10 +57,12 @@
 //! ```
 
 use crate::de::*;
-use crate::nftables::*;
+use crate::nftables;
+use crate::{FirewallBackend, Process};
 use derive_builder::Builder;
 use serde::Deserialize;
 use std::str::FromStr;
+use strum_macros::{Display, EnumString};
 
 const DEFAULT_PROTOCOL: &str = "tcp";
 
@@ -70,13 +72,17 @@ const DEFAULT_PROTOCOL: &str = "tcp";
 /// Every section is optional.
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
-pub struct DFW {
+pub struct DFW<B>
+where
+    B: FirewallBackend,
+    DFW<B>: Process<B>,
+{
     /// The `defaults` configuration section
-    #[serde(default)]
-    pub defaults: Option<Defaults>,
-    /// The `initialization` configuration section
-    #[serde(default)]
-    pub initialization: Option<Initialization>,
+    #[serde(default, alias = "defaults")]
+    pub global_defaults: Option<GlobalDefaults>,
+    /// The `backend_defaults` configuration section
+    #[serde(default, alias = "initialization")]
+    pub backend_defaults: Option<B::Defaults>,
     /// The `container_to_container` configuration section
     pub container_to_container: Option<ContainerToContainer>,
     /// The `container_to_wider_world` configuration section
@@ -92,35 +98,9 @@ pub struct DFW {
 /// The default configuration section, used by DFW for rule processing.
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash, Default)]
 #[serde(deny_unknown_fields)]
-pub struct Defaults {
-    /// Specify the names of custom nft-tables that should be partially managed.
-    ///
-    /// # Explanation
-    ///
-    /// If you want to use or already use an existing nftables table to manage rules independently
-    /// from DFW, it is important that two conditions are met:
-    ///
-    /// 1. The priority-values of the chains are _lower_ than the priority-values used by DFW.
-    /// 2. The default-policy of the any input or forward chains in the table are set to `accept`.
-    ///
-    /// While DFW cannot ensure that the first condition is met (since changing the priority of a
-    /// chain is not possible without recreating the chain), it can set the policies of your input
-    /// and output chains to `accept` for you.
-    ///
-    /// # Example
-    ///
-    /// ```toml
-    /// custom_tables = { name = "filter", chains = ["input", "forward"] }
-    /// custom_tables = [
-    ///     { name = "filter", chains = ["input", "forward"] },
-    ///     { name = "custom", chains = ["input", "forward"] }
-    /// ]
-    /// ```
-    #[serde(default, deserialize_with = "option_struct_or_seq_struct")]
-    pub custom_tables: Option<Vec<Table>>,
-
+pub struct GlobalDefaults {
     /// This defines the external network interfaces of the host to consider during building the
-    /// rules. The value can be non-existant, a string, or a sequence of strings.
+    /// rules. The value can be non-existent, a string, or a sequence of strings.
     ///
     /// # Example
     ///
@@ -139,38 +119,23 @@ pub struct Defaults {
     /// [container-to-host section]: struct.ContainerToHostRule.html
     #[serde(default)]
     pub default_docker_bridge_to_host_policy: ChainPolicy,
-}
 
-/// Reference to an nftables table, specifically to the input- and forward-chains within it.
-///
-/// This is used by DFW when managing other tables is required.
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash, Default)]
-#[serde(deny_unknown_fields)]
-pub struct Table {
-    /// Name of the custom table.
-    pub name: String,
-
-    /// Names of the input and forward chains defined within the custom table.
-    pub chains: Vec<String>,
-}
-
-/// The initialization section allows you to execute any commands against nftables.
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Default)]
-#[serde(deny_unknown_fields)]
-pub struct Initialization {
-    /// Initialization rules for nftables
+    /// # This field is **DEPRECATED!**
     ///
-    /// # Example
+    /// Provide the custom tables in the nftables backend-defaults section instead.
+    /// (This field will be removed with release 2.0.0.)
     ///
-    /// ```toml
-    /// [initialization]
-    /// rules = [
-    ///     "add table inet custom",
-    ///     "flush table inet custom",
-    ///     # ...
-    /// ]
-    /// ```
-    pub rules: Option<Vec<String>>,
+    /// Please consult the [firewall-backend documentation] if you want to know how to use this
+    /// field.
+    ///
+    /// [firewall-backend documentation]: ../nftables/types/struct.Defaults.html#structfield.custom_tables
+    #[deprecated(
+        since = "1.2.0",
+        note = "Provide the custom tables in the nftables backend-defaults section instead. This \
+                field will be removed with release 2.0.0."
+    )]
+    #[serde(default, deserialize_with = "option_struct_or_seq_struct")]
+    pub custom_tables: Option<Vec<nftables::types::Table>>,
 }
 
 /// The container-to-container section, defining how containers can communicate amongst each other.
@@ -622,4 +587,121 @@ pub struct ContainerDNATRule {
 
 fn default_expose_port_family() -> String {
     DEFAULT_PROTOCOL.to_owned()
+}
+
+/// Representation of chain policies.
+///
+/// ## Attribution
+///
+/// Parts of the documentation have been taken from
+/// <https://wiki.nftables.org/wiki-nftables/index.php/Configuring_chains>.
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, Display, EnumString)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "snake_case")]
+pub enum ChainPolicy {
+    /// The accept verdict means that the packet will keep traversing the network stack.
+    #[strum(to_string = "accept", serialize = "accept", serialize = "ACCEPT")]
+    #[serde(alias = "ACCEPT")]
+    Accept,
+    /// The drop verdict means that the packet is discarded if the packet reaches the end of the
+    /// base chain.
+    #[strum(to_string = "drop", serialize = "drop", serialize = "DROP")]
+    #[serde(alias = "DROP")]
+    Drop,
+}
+
+impl Default for ChainPolicy {
+    fn default() -> ChainPolicy {
+        ChainPolicy::Accept
+    }
+}
+
+impl slog::Value for ChainPolicy {
+    fn serialize(
+        &self,
+        record: &slog::Record,
+        key: slog::Key,
+        serializer: &mut dyn slog::Serializer,
+    ) -> slog::Result {
+        self.to_string().serialize(record, key, serializer)
+    }
+}
+
+/// Representation of rule policies.
+///
+/// ## Attribution
+///
+/// Parts of the documentation have been taken from
+/// <https://wiki.nftables.org/wiki-nftables/index.php/Configuring_chains>.
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, Display, EnumString)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "snake_case")]
+pub enum RuleVerdict {
+    /// The accept verdict means that the packet will keep traversing the network stack.
+    #[serde(alias = "ACCEPT")]
+    #[strum(to_string = "accept", serialize = "accept", serialize = "ACCEPT")]
+    Accept,
+    /// The drop verdict means that the packet is discarded if the packet reaches the end of the
+    /// base chain.
+    #[serde(alias = "DROP")]
+    #[strum(to_string = "drop", serialize = "drop", serialize = "DROP")]
+    Drop,
+    /// The reject verdict means that the packet is responded to with an ICMP message stating that
+    /// it was rejected.
+    #[serde(alias = "REJECT")]
+    #[strum(to_string = "reject", serialize = "reject", serialize = "REJECT")]
+    Reject,
+}
+
+impl Default for RuleVerdict {
+    fn default() -> RuleVerdict {
+        RuleVerdict::Accept
+    }
+}
+
+impl slog::Value for RuleVerdict {
+    fn serialize(
+        &self,
+        record: &slog::Record,
+        key: slog::Key,
+        serializer: &mut dyn slog::Serializer,
+    ) -> slog::Result {
+        self.to_string().serialize(record, key, serializer)
+    }
+}
+#[cfg(test)]
+mod test {
+    use super::{ChainPolicy, RuleVerdict};
+    use std::str::FromStr;
+
+    #[test]
+    fn chainpolicy_fromstr() {
+        assert_eq!(ChainPolicy::Accept, FromStr::from_str("accept").unwrap());
+        assert_eq!(ChainPolicy::Accept, FromStr::from_str("ACCEPT").unwrap());
+        assert_eq!(ChainPolicy::Drop, FromStr::from_str("drop").unwrap());
+        assert_eq!(ChainPolicy::Drop, FromStr::from_str("DROP").unwrap());
+    }
+
+    #[test]
+    fn chainpolicy_tostring() {
+        assert_eq!("accept", &ChainPolicy::Accept.to_string());
+        assert_eq!("drop", &ChainPolicy::Drop.to_string());
+    }
+
+    #[test]
+    fn ruleverdict_fromstr() {
+        assert_eq!(RuleVerdict::Accept, FromStr::from_str("accept").unwrap());
+        assert_eq!(RuleVerdict::Accept, FromStr::from_str("ACCEPT").unwrap());
+        assert_eq!(RuleVerdict::Drop, FromStr::from_str("drop").unwrap());
+        assert_eq!(RuleVerdict::Drop, FromStr::from_str("DROP").unwrap());
+        assert_eq!(RuleVerdict::Reject, FromStr::from_str("reject").unwrap());
+        assert_eq!(RuleVerdict::Reject, FromStr::from_str("REJECT").unwrap());
+    }
+
+    #[test]
+    fn ruleverdict_tostring() {
+        assert_eq!("accept", &RuleVerdict::Accept.to_string());
+        assert_eq!("drop", &RuleVerdict::Drop.to_string());
+        assert_eq!("reject", &RuleVerdict::Reject.to_string());
+    }
 }

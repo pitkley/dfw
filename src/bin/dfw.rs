@@ -12,7 +12,7 @@ use clap::{arg_enum, crate_authors, crate_version, value_t, App, Arg, ArgGroup, 
 use crossbeam_channel::{select, Receiver, Sender};
 use dfw::types::DFW;
 use dfw::util::*;
-use dfw::{ContainerFilter, ProcessContext, ProcessingOptions};
+use dfw::{ContainerFilter, Process, ProcessContext, ProcessingOptions};
 use failure::bail;
 use futures::Stream;
 use shiplift::builder::{EventFilter, EventFilterType, EventsOptions};
@@ -36,14 +36,25 @@ type Signal = libc::c_int;
 
 arg_enum! {
     #[derive(Debug)]
-    enum LoadMode {
-        Once,
-        Always
+    enum FirewallBackend {
+        Nftables,
     }
 }
 
-fn load_config(matches: &ArgMatches) -> Result<DFW> {
-    let toml: DFW = if matches.is_present("config-file") {
+arg_enum! {
+    #[derive(Debug)]
+    enum LoadMode {
+        Once,
+        Always,
+    }
+}
+
+fn load_config<B>(matches: &ArgMatches) -> Result<DFW<B>>
+where
+    B: dfw::FirewallBackend,
+    DFW<B>: Process<B>,
+{
+    let toml: DFW<B> = if matches.is_present("config-file") {
         load_file(matches.value_of("config-file").unwrap())?
     } else if matches.is_present("config-path") {
         load_path(matches.value_of("config-path").unwrap())?
@@ -159,15 +170,15 @@ fn spawn_event_monitor(
 
 #[allow(clippy::cognitive_complexity)]
 #[cfg(unix)]
-fn run<'a>(
+fn run<'a, B>(
     matches: &ArgMatches<'a>,
     r_signal: &Receiver<Signal>,
     root_logger: &Logger,
-) -> Result<()> {
-    debug!(root_logger, "Application starting";
-           o!("version" => crate_version!(),
-              "started_at" => time::OffsetDateTime::now_utc().format("%FT%T%z")));
-
+) -> Result<()>
+where
+    B: std::fmt::Debug + dfw::FirewallBackend,
+    DFW<B>: Process<B>,
+{
     let toml = load_config(&matches);
     if matches.is_present("check-config") {
         return toml.map(|_| ());
@@ -232,7 +243,7 @@ fn run<'a>(
         match value_t!(matches.value_of("load-mode"), LoadMode)? {
             LoadMode::Once => {
                 trace!(root_logger, "Creating process closure according to load mode";
-                   o!("load_mode" => "once"));
+                       o!("load_mode" => "once"));
                 Box::new(|| {
                     ProcessContext::new(
                         &docker,
@@ -247,12 +258,11 @@ fn run<'a>(
             }
             LoadMode::Always => {
                 trace!(root_logger, "Creating process closure according to load mode";
-                   o!("load_mode" => "always"));
+                       o!("load_mode" => "always"));
                 Box::new(|| {
                     let toml = load_config(&matches)?;
                     debug!(root_logger, "Reloaded configuration before processing";
-                       o!("config" => format!("{:#?}", toml)));
-
+                           o!("config" => format!("{:#?}", toml)));
                     ProcessContext::new(
                         &docker,
                         &toml,
@@ -373,6 +383,25 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
                 .help("Define the log level"),
         )
         .arg(
+            Arg::with_name("firewall-backend")
+                .takes_value(true)
+                .long("firewall-backend")
+                .value_name("BACKEND")
+                .possible_values(
+                    FirewallBackend::variants()
+                        .iter()
+                        .map(|s| s.to_ascii_lowercase())
+                        .collect::<Vec<_>>()
+                        .iter()
+                        .map(|s| &**s)
+                        .collect::<Vec<_>>()
+                        .as_slice(),
+                )
+                .default_value("nftables")
+                .case_insensitive(true)
+                .help("Select the firewall-backend to use"),
+        )
+        .arg(
             Arg::with_name("config-file")
                 .takes_value(true)
                 .short("c")
@@ -427,6 +456,7 @@ fn get_arg_matches<'a>() -> ArgMatches<'a> {
                         .as_slice(),
                 )
                 .default_value("once")
+                .case_insensitive(true)
                 .help("Define if the config-files get loaded once, or before every run"),
         )
         .arg(
@@ -505,7 +535,17 @@ fn main() {
         .build()
         .expect("Failed to setup logging");
 
-    if let Err(ref e) = run(&matches, &r_signal, &root_logger) {
+    debug!(root_logger, "Application starting";
+           o!("version" => crate_version!(),
+              "started_at" => time::OffsetDateTime::now_utc().format("%FT%T%z"),
+              "firewall_backend" => matches.value_of("firewall_backend")));
+    if let Err(ref e) = match value_t!(matches.value_of("firewall-backend"), FirewallBackend)
+        .expect("invalid firewall backend provided")
+    {
+        FirewallBackend::Nftables => {
+            run::<dfw::nftables::Nftables>(&matches, &r_signal, &root_logger)
+        }
+    } {
         error!(root_logger, "Encountered error";
                o!("error" => format!("{}", e),
                   "backtrace" => format!("{}", e.backtrace())));

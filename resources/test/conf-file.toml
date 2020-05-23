@@ -1,8 +1,8 @@
-[defaults]
+[global_defaults]
 external_network_interfaces = "eni"
 
-[initialization]
-rules = ["add table inet custom"]
+[backend_defaults]
+test = "custom backend defaults"
 
 [container_to_container]
 default_policy = "drop"
