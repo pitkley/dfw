@@ -49,6 +49,14 @@ rustfmt:
         - rustup component add rustfmt
         - cargo fmt --all -- --check
 
+check license headers:
+    stage: preconditions
+    image: alpine:latest
+    before_script:
+        - apk add --no-cache bash
+    script:
+        - hack/check-license-headers.sh
+
 build and test dynamic binary on stable:
     stage: build
     image: rust:latest
