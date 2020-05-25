@@ -507,3 +507,86 @@ fn parse_external_network_interfaces_seq() {
 
     assert_eq!(expected, actual);
 }
+
+/// These tests verify that certain features or configuration fields are available within the same
+/// major version. Additionally these tests are configured to fail if the major version is bumped,
+/// which ensures that we will be reminded to remove them and the deprecated items.
+#[cfg_attr(crate_major_version = "1", allow(deprecated))]
+#[cfg_attr(not(crate_major_version = "1"), should_panic)]
+#[test]
+fn ensure_backwards_compatibility_v1() {
+    // `defaults` needs to be valid in addition to `global_defaults`
+    toml::from_str::<DFW<TestBackend>>(
+        r#"
+        [defaults]
+        default_docker_bridge_to_host_policy = "accept"
+        "#,
+    )
+    .unwrap();
+
+    // `initialization` needs to be valid in addition to `backend_defaults`
+    toml::from_str::<DFW<TestBackend>>(
+        r#"
+        [initialization]
+        test = "custom backend defaults"
+        "#,
+    )
+    .unwrap();
+
+    // `action` needs to be valid in addition to `verdict`.
+    toml::from_str::<DFW<TestBackend>>(
+        r#"
+        [container_to_container]
+        default_policy = "accept"
+        [[container_to_container.rules]]
+        network = ""
+        action = "accept"
+
+        [container_to_wider_world]
+        default_policy = "accept"
+        [[container_to_wider_world.rules]]
+        action = "accept"
+
+        [container_to_host]
+        default_policy = "accept"
+        [[container_to_host.rules]]
+        network = ""
+        action = "accept"
+        "#,
+    )
+    .unwrap();
+
+    // `source_cidr` needs to be valid in addition to `source_cidr_v4`.
+    {
+        let dfw = toml::from_str::<DFW<TestBackend>>(
+            r#"
+        [[wider_world_to_container.rules]]
+        network = ""
+        dst_container = ""
+        expose_port = 0
+        source_cidr = "127.0.0.0/8"
+        "#,
+        )
+        .unwrap();
+        let rules = dfw.wider_world_to_container.unwrap().rules.unwrap();
+        let WiderWorldToContainerRule {
+            source_cidr_v4,
+            source_cidr_v6,
+            ..
+        } = rules.get(0).unwrap();
+        assert!(source_cidr_v4.is_some());
+        assert!(source_cidr_v6.is_none());
+    }
+
+    // GlobalDefaults::custom_tables needs to be present.
+    let _ = GlobalDefaults {
+        custom_tables: None,
+        ..Default::default()
+    };
+
+    // nftables::types::Defaults::rules needs to be present.
+    let _ = dfw::nftables::types::Defaults {
+        rules: None,
+        ..Default::default()
+    };
+}

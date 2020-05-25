@@ -47,6 +47,9 @@ itertools = "0.9.0"
 lazy_static = "^1"
 regex = "^1"
 
+[build-dependencies]
+version-compare = "^0.0.10"
+
 [[bin]]
 name = "dfw"
 path = "src/bin/dfw.rs"

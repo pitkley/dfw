@@ -523,11 +523,7 @@ pub struct WiderWorldToContainerRule {
     /// source_cidr_v6 = ["fe80::/10", "2001:db8::/32"]
     /// # "#).unwrap();
     /// ```
-    #[serde(
-        default,
-        deserialize_with = "option_string_or_seq_string",
-        alias = "source_cidr"
-    )]
+    #[serde(default, deserialize_with = "option_string_or_seq_string")]
     pub source_cidr_v6: Option<Vec<String>>,
 }
 
