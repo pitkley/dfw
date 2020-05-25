@@ -12,12 +12,18 @@
 //!
 //! The following is an examplary TOML configuration, which will be parsed into this modules types.
 //!
-//! ```toml
+//! ```
+//! # use dfw::nftables::Nftables;
+//! # use dfw::types::*;
+//! # use toml;
+//! # toml::from_str::<DFW<Nftables>>(r#"
 //! [global_defaults]
 //! external_network_interfaces = "eth0"
 //!
 //! [backend_defaults]
 //! custom_tables = { name = "filter", chains = ["input", "forward"]}
+//!
+//! [backend_defaults.initialization]
 //! rules = [
 //!     "add table inet custom",
 //! ]
@@ -54,6 +60,7 @@
 //! dst_network = "other_network"
 //! dst_container = "container_c"
 //! expose_port = { host_port = 8080, container_port = 80, family = "tcp" }
+//! # "#).unwrap();
 //! ```
 
 use crate::de::*;
@@ -104,9 +111,15 @@ pub struct GlobalDefaults {
     ///
     /// # Example
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<GlobalDefaults>(r#"
     /// external_network_interfaces = "eth0"
+    /// # "#).unwrap();
+    /// # toml::from_str::<GlobalDefaults>(r#"
     /// external_network_interfaces = ["eth0", "eth1"]
+    /// # "#).unwrap();
     /// ```
     #[serde(default, deserialize_with = "option_string_or_seq_string")]
     pub external_network_interfaces: Option<Vec<String>>,
@@ -168,11 +181,23 @@ pub struct ContainerToContainer {
     ///
     /// The easiest way to define the rules is using TOMLs [arrays of tables][toml-aot]:
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::nftables::Nftables;
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<DFW<Nftables>>(r#"
+    /// [container_to_container]
+    /// default_policy = "drop"
+    ///
     /// [[container_to_container.rules]]
-    /// # first rule here
+    /// ## first rule here
+    /// # network = ""
+    /// # verdict = "accept"
     /// [[container_to_container.rules]]
-    /// # second rule here
+    /// ## second rule here
+    /// # network = ""
+    /// # verdict = "accept"
+    /// # "#).unwrap();
     /// ```
     ///
     /// [toml-aot]:
@@ -212,11 +237,21 @@ pub struct ContainerToWiderWorld {
     ///
     /// The easiest way to define the rules is using TOMLs [arrays of tables][toml-aot]:
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::nftables::Nftables;
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<DFW<Nftables>>(r#"
+    /// [container_to_wider_world]
+    /// default_policy = "drop"
+    ///
     /// [[container_to_wider_world.rules]]
-    /// # first rule here
+    /// ## first rule here
+    /// # verdict = "accept"
     /// [[container_to_wider_world.rules]]
-    /// # second rule here
+    /// ## second rule here
+    /// # verdict = "accept"
+    /// # "#).unwrap();
     /// ```
     ///
     /// [toml-aot]:
@@ -254,11 +289,23 @@ pub struct ContainerToHost {
     ///
     /// The easiest way to define the rules is using TOMLs [arrays of tables][toml-aot]:
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::nftables::Nftables;
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<DFW<Nftables>>(r#"
+    /// [container_to_host]
+    /// default_policy = "drop"
+    ///
     /// [[container_to_host.rules]]
-    /// # first rule here
+    /// ## first rule here
+    /// # network = ""
+    /// # verdict = "accept"
     /// [[container_to_host.rules]]
-    /// # second rule here
+    /// ## second rule here
+    /// # network = ""
+    /// # verdict = "accept"
+    /// # "#).unwrap();
     /// ```
     ///
     /// [toml-aot]:
@@ -292,11 +339,22 @@ pub struct WiderWorldToContainer {
     ///
     /// The easiest way to define the rules is using TOMLs [arrays of tables][toml-aot]:
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::nftables::Nftables;
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<DFW<Nftables>>(r#"
     /// [[wider_world_to_container.rules]]
-    /// # first rule here
+    /// ## first rule here
+    /// # network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
     /// [[wider_world_to_container.rules]]
-    /// # second rule here
+    /// ## second rule here
+    /// # network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
+    /// # "#).unwrap();
     /// ```
     ///
     /// [toml-aot]:
@@ -334,23 +392,61 @@ pub struct WiderWorldToContainerRule {
     ///
     /// All of the following are legal TOML fragments:
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
     /// expose_port = 80
+    /// # "#).unwrap();
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
     /// expose_port = [80, 443]
+    /// # "#).unwrap();
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
     /// expose_port = "53/udp"
+    /// # "#).unwrap();
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
     /// expose_port = ["80/tcp", "53/udp"]
+    /// # "#).unwrap();
     ///
-    /// # The following four all result in the same definition
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// ## The following four all result in the same definition
+    /// # network = ""
+    /// # dst_container = ""
     /// expose_port = { host_port = 8080 }
+    /// # "#).unwrap();
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
     /// expose_port = { host_port = 8080, container_port = 8080 }
+    /// # "#).unwrap();
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
     /// expose_port = { host_port = 8080, family = "tcp" }
+    /// # "#).unwrap();
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
     /// expose_port = { host_port = 8080, container_port = 8080, family = "tcp" }
+    /// # "#).unwrap();
     ///
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
     /// expose_port = [
     ///     { host_port = 80 },
     ///     { host_port = 53, family = "udp" },
     ///     { host_port = 443, container_port = 8443 },
     /// ]
+    /// # "#).unwrap();
     /// ```
     #[serde(deserialize_with = "single_or_seq_string_or_struct")]
     pub expose_port: Vec<ExposePort>,
@@ -372,10 +468,22 @@ pub struct WiderWorldToContainerRule {
     ///
     /// All of the following are legal TOML fragments:
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
     /// source_cidr_v4 = "127.0.0.0/8"
+    /// # "#).unwrap();
     ///
-    /// source_cidr _v4= ["127.0.0.0/8", "192.0.2.1/32"]
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
+    /// source_cidr_v4 = ["127.0.0.0/8", "192.0.2.1/32"]
+    /// # "#).unwrap();
     /// ```
     #[serde(
         default,
@@ -398,10 +506,22 @@ pub struct WiderWorldToContainerRule {
     ///
     /// All of the following are legal TOML fragments:
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
     /// source_cidr_v6 = "fe80::/10"
+    /// # "#).unwrap();
     ///
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
     /// source_cidr_v6 = ["fe80::/10", "2001:db8::/32"]
+    /// # "#).unwrap();
     /// ```
     #[serde(
         default,
@@ -515,11 +635,22 @@ pub struct ContainerDNAT {
     ///
     /// The easiest way to define the rules is using TOMLs [arrays of tables][toml-aot]:
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::nftables::Nftables;
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<DFW<Nftables>>(r#"
     /// [[container_dnat.rules]]
-    /// # first rule here
+    /// ## first rule here
+    /// # dst_network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
     /// [[container_dnat.rules]]
-    /// # second rule here
+    /// ## second rule here
+    /// # dst_network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
+    /// # "#).unwrap();
     /// ```
     ///
     /// [toml-aot]:
@@ -563,23 +694,61 @@ pub struct ContainerDNATRule {
     ///
     /// All of the following are legal TOML fragments:
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<ContainerDNATRule>(r#"
+    /// # dst_network = ""
+    /// # dst_container = ""
     /// expose_port = 80
+    /// # "#).unwrap();
+    /// # toml::from_str::<ContainerDNATRule>(r#"
+    /// # dst_network = ""
+    /// # dst_container = ""
     /// expose_port = [80, 443]
+    /// # "#).unwrap();
+    /// # toml::from_str::<ContainerDNATRule>(r#"
+    /// # dst_network = ""
+    /// # dst_container = ""
     /// expose_port = "53/udp"
+    /// # "#).unwrap();
+    /// # toml::from_str::<ContainerDNATRule>(r#"
+    /// # dst_network = ""
+    /// # dst_container = ""
     /// expose_port = ["80/tcp", "53/udp"]
+    /// # "#).unwrap();
     ///
-    /// # The following four all result in the same definition
+    /// # toml::from_str::<ContainerDNATRule>(r#"
+    /// ## The following four all result in the same definition
+    /// # dst_network = ""
+    /// # dst_container = ""
     /// expose_port = { host_port = 8080 }
+    /// # "#).unwrap();
+    /// # toml::from_str::<ContainerDNATRule>(r#"
+    /// # dst_network = ""
+    /// # dst_container = ""
     /// expose_port = { host_port = 8080, container_port = 8080 }
+    /// # "#).unwrap();
+    /// # toml::from_str::<ContainerDNATRule>(r#"
+    /// # dst_network = ""
+    /// # dst_container = ""
     /// expose_port = { host_port = 8080, family = "tcp" }
+    /// # "#).unwrap();
+    /// # toml::from_str::<ContainerDNATRule>(r#"
+    /// # dst_network = ""
+    /// # dst_container = ""
     /// expose_port = { host_port = 8080, container_port = 8080, family = "tcp" }
+    /// # "#).unwrap();
     ///
+    /// # toml::from_str::<ContainerDNATRule>(r#"
+    /// # dst_network = ""
+    /// # dst_container = ""
     /// expose_port = [
     ///     { host_port = 80 },
     ///     { host_port = 53, family = "udp" },
     ///     { host_port = 443, container_port = 8443 },
     /// ]
+    /// # "#).unwrap();
     /// ```
     #[serde(deserialize_with = "single_or_seq_string_or_struct")]
     pub expose_port: Vec<ExposePort>,

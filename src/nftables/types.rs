@@ -48,12 +48,18 @@ pub struct Defaults {
     ///
     /// # Example
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::nftables::types::*;
+    /// # use toml;
+    /// # toml::from_str::<Defaults>(r#"
     /// custom_tables = { name = "filter", chains = ["input", "forward"] }
+    /// # "#).unwrap();
+    /// # toml::from_str::<Defaults>(r#"
     /// custom_tables = [
     ///     { name = "filter", chains = ["input", "forward"] },
     ///     { name = "custom", chains = ["input", "forward"] }
     /// ]
+    /// # "#).unwrap();
     /// ```
     #[serde(default, deserialize_with = "option_struct_or_seq_struct")]
     pub custom_tables: Option<Vec<Table>>,
@@ -62,13 +68,16 @@ pub struct Defaults {
     ///
     /// # Example
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::nftables::types::*;
+    /// # use toml;
+    /// # toml::from_str::<Defaults>(r#"
     /// [initialization]
     /// rules = [
     ///     "add table inet custom",
     ///     "flush table inet custom",
-    ///     # ...
     /// ]
+    /// # "#).unwrap();
     /// ```
     pub initialization: Option<Initialization>,
 
@@ -108,13 +117,16 @@ pub struct Initialization {
     ///
     /// # Example
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::nftables::types::*;
+    /// # use toml;
+    /// # toml::from_str::<Defaults>(r#"
     /// [initialization]
     /// rules = [
     ///     "add table inet custom",
     ///     "flush table inet custom",
-    ///     # ...
     /// ]
+    /// # "#).unwrap();
     /// ```
     pub rules: Option<Vec<String>>,
 }
