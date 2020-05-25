@@ -26,6 +26,7 @@
 #![deny(missing_docs)]
 
 // declare modules
+mod de;
 pub mod errors;
 pub mod nftables;
 pub mod process;
