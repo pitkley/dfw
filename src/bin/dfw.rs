@@ -10,19 +10,27 @@
 
 use clap::{arg_enum, crate_authors, crate_version, value_t, App, Arg, ArgGroup, ArgMatches};
 use crossbeam_channel::{select, Receiver, Sender};
-use dfw::types::DFW;
-use dfw::util::*;
-use dfw::{ContainerFilter, Process, ProcessContext, ProcessingOptions};
+use dfw::{
+    process::{ContainerFilter, Process, ProcessContext, ProcessingOptions},
+    types::DFW,
+    util::*,
+};
 use failure::bail;
 use futures::Stream;
-use shiplift::builder::{EventFilter, EventFilterType, EventsOptions};
-use shiplift::Docker;
+use shiplift::{
+    builder::{EventFilter, EventFilterType, EventsOptions},
+    Docker,
+};
 use slog::{debug, error, info, o, trace, Logger};
-use sloggers::terminal::{Destination, TerminalLoggerBuilder};
-use sloggers::types::Severity;
-use sloggers::Build;
-use std::thread;
-use std::time::{Duration, Instant};
+use sloggers::{
+    terminal::{Destination, TerminalLoggerBuilder},
+    types::Severity,
+    Build,
+};
+use std::{
+    thread,
+    time::{Duration, Instant},
+};
 
 mod errors {
     use failure::Error;

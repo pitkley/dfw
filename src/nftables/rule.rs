@@ -6,9 +6,7 @@
 // option. This file may not be copied, modified or distributed
 // except according to those terms.
 
-use crate::errors::*;
-use crate::nftables::DFW_MARK;
-use crate::types::RuleVerdict;
+use crate::{errors::*, nftables::DFW_MARK, types::RuleVerdict};
 use derive_builder::Builder;
 use failure::bail;
 

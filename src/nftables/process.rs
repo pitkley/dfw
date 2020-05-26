@@ -11,10 +11,7 @@ use super::{
     NF_PRIORITY_IP6_NAT_POSTROUTING_DFW, NF_PRIORITY_IP6_NAT_PREROUTING_DFW,
     NF_PRIORITY_IP_NAT_POSTROUTING_DFW, NF_PRIORITY_IP_NAT_PREROUTING_DFW,
 };
-use crate::errors::*;
-use crate::process::*;
-use crate::types::*;
-use crate::FirewallBackend;
+use crate::{errors::*, process::*, types::*, FirewallBackend};
 use failure::{format_err, ResultExt};
 use slog::{debug, info, o, trace, warn};
 use std::process::Command;

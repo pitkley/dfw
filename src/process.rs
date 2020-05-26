@@ -8,15 +8,13 @@
 
 //! This module holds the types related to configuration processing and rule creation.
 
-use crate::errors::*;
-use crate::types::*;
-use crate::util::FutureExt;
-use crate::FirewallBackend;
+use crate::{errors::*, types::*, util::FutureExt, FirewallBackend};
 use failure::{bail, format_err};
-use shiplift::builder::{ContainerFilter as ContainerFilterShiplift, ContainerListOptions};
-use shiplift::rep::Container;
-use shiplift::rep::{NetworkContainerDetails, NetworkDetails};
-use shiplift::Docker;
+use shiplift::{
+    builder::{ContainerFilter as ContainerFilterShiplift, ContainerListOptions},
+    rep::{Container, NetworkContainerDetails, NetworkDetails},
+    Docker,
+};
 use slog::{debug, o, trace, Logger};
 use std::collections::HashMap as Map;
 

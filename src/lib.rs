@@ -35,8 +35,7 @@ pub mod types;
 pub mod util;
 
 use errors::Result;
-// re-export process types
-pub use process::*;
+use process::{Process, ProcessContext};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 use types::DFW;

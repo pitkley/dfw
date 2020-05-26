@@ -8,12 +8,12 @@
 
 //! This module implements the nftables backend for DFW.
 
-use crate::errors::*;
-use crate::{FirewallBackend, ProcessContext};
+use crate::{errors::*, FirewallBackend, ProcessContext};
 use slog::{debug, info, o, trace};
-use std::io::prelude::*;
-use std::io::BufWriter;
-use std::process::Command;
+use std::{
+    io::{prelude::*, BufWriter},
+    process::Command,
+};
 use strum_macros::Display;
 
 mod process;

@@ -7,9 +7,7 @@
 // except according to those terms.
 
 use serde::de;
-use std::fmt;
-use std::marker::PhantomData;
-use std::str::FromStr;
+use std::{fmt, marker::PhantomData, str::FromStr};
 
 struct StringOrStruct<T>(PhantomData<T>);
 

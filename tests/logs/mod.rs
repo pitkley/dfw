@@ -8,11 +8,12 @@
 
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::collections::HashMap as Map;
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::BufReader;
-use std::str::FromStr;
+use std::{
+    collections::HashMap as Map,
+    fs::File,
+    io::{prelude::*, BufReader},
+    str::FromStr,
+};
 
 lazy_static! {
     static ref RE: Regex =

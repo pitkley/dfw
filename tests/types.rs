@@ -9,9 +9,12 @@
 mod common;
 
 use common::resource;
-use dfw::types::*;
-use dfw::util::*;
-use dfw::{FirewallBackend, Process, ProcessContext};
+use dfw::{
+    process::{Process, ProcessContext},
+    types::*,
+    util::*,
+    FirewallBackend,
+};
 use serde::Deserialize;
 
 #[derive(Debug, Eq, PartialEq)]

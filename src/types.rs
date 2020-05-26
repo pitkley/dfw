@@ -63,9 +63,7 @@
 //! # "#).unwrap();
 //! ```
 
-use crate::de::*;
-use crate::nftables;
-use crate::{FirewallBackend, Process};
+use crate::{de::*, nftables, FirewallBackend, Process};
 use derive_builder::Builder;
 use serde::Deserialize;
 use std::str::FromStr;

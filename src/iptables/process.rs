@@ -11,9 +11,7 @@ use super::{
     Iptables, IptablesRule, IptablesRuleDiscriminants, PolicyOrRule, DFW_FORWARD_CHAIN,
     DFW_INPUT_CHAIN, DFW_POSTROUTING_CHAIN, DFW_PREROUTING_CHAIN,
 };
-use crate::errors::*;
-use crate::process::*;
-use crate::{types::*, FirewallBackend};
+use crate::{errors::*, process::*, types::*, FirewallBackend};
 use failure::{format_err, ResultExt};
 use slog::{debug, info, o, trace};
 

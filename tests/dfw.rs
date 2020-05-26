@@ -12,19 +12,22 @@ mod common;
 mod logs;
 
 use common::*;
-use dfw::iptables::{Iptables, IptablesRuleDiscriminants};
-use dfw::nftables::Nftables;
-use dfw::process::Process;
-use dfw::types::*;
-use dfw::util::{load_file, FutureExt};
-use dfw::*;
+use dfw::{
+    iptables::{Iptables, IptablesRuleDiscriminants},
+    nftables::Nftables,
+    process::{ContainerFilter, Process, ProcessContext, ProcessingOptions},
+    types::*,
+    util::{load_file, FutureExt},
+    FirewallBackend,
+};
 use itertools::{EitherOrBoth, Itertools};
 use logs::*;
 use shiplift::Docker;
 use slog::{o, Drain, Fuse, Logger, OwnedKVList, Record};
-use std::panic;
-use std::panic::{AssertUnwindSafe, UnwindSafe};
-use std::process::Command;
+use std::{
+    panic::{self, AssertUnwindSafe, UnwindSafe},
+    process::Command,
+};
 
 static PROCESSING_OPTIONS: ProcessingOptions = ProcessingOptions {
     container_filter: ContainerFilter::Running,
