@@ -1,0 +1,6 @@
+[container_to_host]
+default_policy = "drop"
+
+[[container_to_host.rules]]
+network = "PROJECT_default"
+verdict = "reject"

@@ -1,0 +1,5 @@
+[[container_to_host.rules]]
+network = "PROJECT_default"
+src_container = "PROJECT_a_1"
+matches = "ct state related"
+verdict = "accept"

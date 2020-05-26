@@ -1,0 +1,6 @@
+[container_to_wider_world]
+default_policy = "drop"
+
+[[container_to_wider_world.rules]]
+network = "PROJECT_default"
+verdict = "reject"

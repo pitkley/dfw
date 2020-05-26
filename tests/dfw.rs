@@ -17,14 +17,18 @@ use dfw::{
     nftables::Nftables,
     process::{ContainerFilter, Process, ProcessContext, ProcessingOptions},
     types::*,
-    util::{load_file, FutureExt},
+    util::FutureExt,
     FirewallBackend,
 };
 use itertools::{EitherOrBoth, Itertools};
 use logs::*;
+use paste;
+use serde::de::DeserializeOwned;
 use shiplift::Docker;
 use slog::{o, Drain, Fuse, Logger, OwnedKVList, Record};
 use std::{
+    fs::File,
+    io::{prelude::*, BufReader},
     panic::{self, AssertUnwindSafe, UnwindSafe},
     process::Command,
 };
@@ -47,6 +51,22 @@ fn logger() -> Logger {
     let drain = Fuse(NoopDrain);
     let logger = Logger::root(drain, o!());
     logger
+}
+
+fn load_config_and_inject_project_name<T>(
+    files: &[&str],
+    project_name: &str,
+) -> Result<T, failure::Error>
+where
+    T: DeserializeOwned,
+{
+    let mut contents = String::new();
+    for file in files {
+        let mut file = BufReader::new(File::open(file)?);
+        file.read_to_string(&mut contents)?;
+    }
+    let contents = contents.replace("PROJECT_", &format!("{}_", project_name));
+    Ok(toml::from_str(&contents)?)
 }
 
 fn compare_loglines(actual: &Vec<LogLine>, expected: &Vec<LogLine>) {
@@ -120,7 +140,7 @@ where
 }
 
 fn test_backend<B: FirewallBackend, F: FnOnce(&DFW<B>, ProcessContext<B>) -> ()>(
-    num: &str,
+    path: &str,
     resource_prefix: &str,
     body: F,
 ) where
@@ -128,9 +148,20 @@ fn test_backend<B: FirewallBackend, F: FnOnce(&DFW<B>, ProcessContext<B>) -> ()>
     DFW<B>: Process<B>,
 {
     // Load toml
-    let toml: DFW<B> =
-        load_file(&resource(&format!("docker/{}/{}/conf.toml", resource_prefix, num)).unwrap())
-            .unwrap();
+    let project_name = format!(
+        "dfwtest{}",
+        path.chars()
+            .filter(char::is_ascii_alphanumeric)
+            .collect::<String>(),
+    );
+    let toml: DFW<B> = load_config_and_inject_project_name(
+        &[
+            &resource(&format!("docker/{}/conf.toml", path)).unwrap(),
+            &resource(&format!("docker/{}/{}/conf.toml", path, resource_prefix)).unwrap(),
+        ],
+        &project_name,
+    )
+    .unwrap();
 
     // Create no-op logger
     let logger = logger();
@@ -148,19 +179,15 @@ fn test_backend<B: FirewallBackend, F: FnOnce(&DFW<B>, ProcessContext<B>) -> ()>
     let toml = AssertUnwindSafe(toml);
 
     with_compose_environment(
-        &resource(&format!(
-            "docker/{}/{}/docker-compose.yml",
-            resource_prefix, num
-        ))
-        .unwrap(),
-        &format!("dfwtest{}", num),
+        &resource(&format!("docker/{}/docker-compose.yml", path)).unwrap(),
+        &project_name,
         || {
             let dfw =
                 ProcessContext::new(&docker, &toml, &PROCESSING_OPTIONS, &logger, true).unwrap();
 
             // Test if container is available
             let containers = docker.containers();
-            let container_name = format!("dfwtest{}_a_1", num);
+            let container_name = format!("{}_a_1", project_name);
             let container = containers.get(&container_name);
             let inspect = container.inspect().sync();
             assert!(inspect.is_ok());
@@ -172,11 +199,10 @@ fn test_backend<B: FirewallBackend, F: FnOnce(&DFW<B>, ProcessContext<B>) -> ()>
     );
 }
 
-fn test_nftables(num: &str) {
-    test_backend(num, "nftables", |toml, dfw| {
+fn test_nftables(path: &str) {
+    test_backend(path, "nftables", |toml, dfw| {
         // Run processing, verify that it succeeded
         let result = Process::<Nftables>::process(toml, &dfw);
-        assert!(result.is_ok());
 
         let actual = result
             .unwrap()
@@ -189,20 +215,24 @@ fn test_nftables(num: &str) {
             })
             .collect::<Vec<_>>();
         let expected = load_loglines(
-            &resource(&format!("docker/nftables/{}/expected-nftables.txt", num)).unwrap(),
+            &resource(&format!("docker/{}/nftables/expected-nftables.txt", path)).unwrap(),
         );
         compare_loglines(&actual, &expected);
     });
 }
 
-fn test_iptables(num: &str) {
-    test_backend(num, "iptables", |toml, dfw| {
+fn test_nftables_process_should_fail(path: &str) {
+    test_backend(path, "nftables", |toml, dfw| {
         // Run processing, verify that it succeeded
-        let result = Process::<Iptables>::process(toml, &dfw);
-        assert!(result.is_ok());
-        let option = result.unwrap();
-        assert!(option.is_some());
-        let rules = option.unwrap();
+        let result = Process::<Nftables>::process(toml, &dfw);
+        assert!(result.is_err());
+    });
+}
+
+fn test_iptables(path: &str) {
+    test_backend(path, "iptables", |toml, dfw| {
+        // Run processing, verify that it succeeded
+        let rules = Process::<Iptables>::process(toml, &dfw).unwrap().unwrap();
 
         // Verify logs for iptables (IPv4)
         let mut logs4 = Vec::new();
@@ -216,8 +246,8 @@ fn test_iptables(num: &str) {
         }
         let expected4 = load_loglines(
             &resource(&format!(
-                "docker/iptables/{}/expected-iptables-restore-v4.txt",
-                num
+                "docker/{}/iptables/expected-iptables-v4.txt",
+                path
             ))
             .unwrap(),
         );
@@ -235,8 +265,8 @@ fn test_iptables(num: &str) {
         }
         let expected6 = load_loglines(
             &resource(&format!(
-                "docker/iptables/{}/expected-iptables-restore-v6.txt",
-                num
+                "docker/{}/iptables/expected-iptables-v6.txt",
+                path
             ))
             .unwrap(),
         );
@@ -244,33 +274,128 @@ fn test_iptables(num: &str) {
     });
 }
 
+fn test_iptables_process_should_fail(path: &str) {
+    test_backend(path, "iptables", |toml, dfw| {
+        // Run processing, verify that it succeeded
+        let result = Process::<Iptables>::process(toml, &dfw);
+        assert!(result.is_err());
+    });
+}
+
 macro_rules! dfw_test {
-    ( $name:ident $inner:ident $param:expr) => {
-        #[test]
-        fn $name() {
-            $inner($param);
+    ( R F $backend:ident $name:tt $param:expr $(;)* ) => {
+        paste::item! {
+            #[test]
+            fn [<regressiontest_ $backend _ $name>]() {
+                [<test_ $backend _process_should_fail>](concat!("_regression-tests/", $param));
+            }
+        }
+    };
+    ( R F $backend:ident $param:expr $(;)* ) => {
+        paste::item! {
+            #[test]
+            fn [<regressiontest_ $backend _ $param>]() {
+                [<test_ $backend _process_should_fail>](concat!("_regression-tests/", $param));
+            }
+        }
+    };
+    ( R $backend:ident $name:tt $param:expr $(;)* ) => {
+        paste::item! {
+            #[test]
+            fn [<regressiontest_ $backend _ $name>]() {
+                [<test_ $backend>](concat!("_regression-tests/", $param));
+            }
+        }
+    };
+    ( R $backend:ident $param:expr $(;)* ) => {
+        paste::item! {
+            #[test]
+            fn [<regressiontest_ $backend _ $param>]() {
+                [<test_ $backend>](concat!("_regression-tests/", $param));
+            }
+        }
+    };
+    ( F $backend:ident $param:expr $(;)* ) => {
+        paste::item! {
+            #[test]
+            fn [<test_ $backend _ $param>]() {
+                [<test_ $backend _process_should_fail>]($param);
+            }
+        }
+    };
+    ( $backend:ident $param:expr $(;)* ) => {
+        paste::item! {
+            #[test]
+            fn [<test_ $backend _ $param>]() {
+                [<test_ $backend>]($param);
+            }
         }
     };
 }
-
 macro_rules! dfw_tests {
-    ( $( $name:ident $inner:ident $param:expr );+ $(;)* ) => {
-        $( dfw_test!( $name $inner $param ); )+
-    }
+    // If the remaining token-tree starts with a comma, ignore it and continue parsing the tail.
+    ( @internal ; $($tail:tt)* ) => {
+        dfw_tests!( @internal $($tail)*);
+    };
+    // If the remaining token-tree starts with a semicolon, ignore it and continue parsing the tail.
+    ( @internal , $($tail:tt)* ) => {
+        dfw_tests!( @internal $($tail)*);
+    };
+    // If the starting tokens are in the form `R F <tt> <tt>`, we reference a regression test that
+    // should fail (and have a certain name).
+    ( @internal R F $name:tt $param:tt $($tail:tt)* ) => {
+        dfw_test!( R F nftables $name $param );
+        dfw_test!( R F iptables $name $param );
+        dfw_tests!( @internal $($tail)* );
+    };
+    // If the starting tokens are in the form `R F <tt>`, we reference a regression test that should
+    // fail.
+    ( @internal R F $param:tt $($tail:tt)* ) => {
+        dfw_test!( R F nftables $param );
+        dfw_test!( R F iptables $param );
+        dfw_tests!( @internal $($tail)* );
+    };
+    // If the starting tokens are in the form `R <tt> <tt>`, we reference a regression test (with a
+    // certain name).
+    ( @internal R $name:tt $param:tt $($tail:tt)* ) => {
+        dfw_test!( R nftables $name $param );
+        dfw_test!( R iptables $name $param );
+        dfw_tests!( @internal $($tail)* );
+    };
+    // If the starting tokens are in the form `R <tt>`, we reference a regression test.
+    ( @internal R $param:tt $($tail:tt)* ) => {
+        dfw_test!( R nftables $param );
+        dfw_test!( R iptables $param );
+        dfw_tests!( @internal $($tail)* );
+    };
+    // If the starting tokens are in the form `F <tt>`, we reference a regular test that should
+    // fail.
+    ( @internal F $param:tt $($tail:tt)* ) => {
+        dfw_test!( F nftables $param );
+        dfw_test!( F iptables $param );
+        dfw_tests!( @internal $($tail)* );
+    };
+    // If the starting token is simply a `<tt>`, the previous rules didn't match and the have a
+    // regular test.
+    ( @internal $param:tt $($tail:tt)* ) => {
+        dfw_test!( nftables $param );
+        dfw_test!( iptables $param );
+        dfw_tests!( @internal $($tail)* );
+    };
+    // This rule matches once all tokens have been consumed.
+    ( @internal ) => {
+    };
+    // Start-rule.
+    ( $($tts:tt)* ) => {
+        dfw_tests!( @internal $($tts)* );
+    };
 }
 
 dfw_tests!(
-    test_nftables_01 test_nftables "01";
-    test_nftables_02 test_nftables "02";
-    test_nftables_03 test_nftables "03";
-    test_nftables_04 test_nftables "04";
-    test_nftables_05 test_nftables "05";
-    test_nftables_06 test_nftables "06";
-
-    test_iptables_01 test_iptables "01";
-    test_iptables_02 test_iptables "02";
-    test_iptables_03 test_iptables "03";
-    test_iptables_04 test_iptables "04";
-    test_iptables_05 test_iptables "05";
-    test_iptables_06 test_iptables "06";
+    "01";
+    "02";
+    "03";
+    "04";
+    "05";
+    "06";
 );
