@@ -1,0 +1,50 @@
+[global_defaults]
+# First we define the external network interfaces we want to listen to, i.e.
+# the network-interfaces from which traffic should be allowed. You can provide
+# a single interface with a simple string, or multiple by providing a list.
+external_network_interfaces = "eth0"
+#                              ^- INSERT YOUR DESIRED NETWORK INTERFACE HERE
+
+# Next we define the container-to-container (C2C) communication, i.e. if and
+# how containers are allowed to communicate amongst themselves.
+[container_to_container]
+# We first set a default policy for C2C communication which will determine if
+# containers will be allowed to communicate with other containers in the same
+# or other networks by default, or whether no traffic should be allowed. We
+# will drop all traffic by default and add an exception through a rule below.
+default_policy = "drop"
+
+# Now we define a rule to allow traffic between our containers. For our example
+# we want the reverse proxy to be able to talk to the webservers. We will thus
+# add a rule to allow this traffic.
+[[container_to_container.rules]]
+network = "dfwexample_default"
+src_container = "dfwexample_reverseproxy_1"
+verdict = "accept"
+
+# Note that we have only defined a network and a source-container. We could
+# have also defined a specific destination container if we wanted a finer, more
+# restrictive rule:
+#
+# [[container_to_container.rules]]
+# network = "dfwexample_default"
+# src_container = "dfwexample_reverseproxy_1"
+# dst_container = "dfwexample_foo_1"
+# verdict = "accept"
+
+# At this point the reverse proxy can communicate with the webservers, but we
+# can't communicate with the reverse proxy yet. To enable this we use the
+# wider-world-to-container (WW2C) configuration.
+[wider_world_to_container]
+# We'll define a rule that will route traffic that reaches the host on port 80
+# to the reverse proxy on port 80.
+[[wider_world_to_container.rules]]
+network = "dfwexample_default"
+dst_container = "dfwexample_reverseproxy_1"
+expose_port = 80
+
+# Note: the host-port, 80 in this case, will not be bound! DFW performs network
+# address translation on the firewall level which will not bind an address/the
+# port. This means that if you have a host-service on a port that DFW also
+# manages, you will not get an error and the host-bound service will not be
+# reachable anymore.

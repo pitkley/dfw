@@ -125,6 +125,8 @@ pub struct GlobalDefaults {
     /// This defines whether the default Docker bridge (usually `docker0`) is allowed to access host
     /// resources.
     ///
+    /// This field is optional and will be set to "accept" by default.
+    ///
     /// For non-default Docker bridges this is controlled within the [container-to-host section].
     ///
     /// [container-to-host section]: struct.ContainerToHostRule.html

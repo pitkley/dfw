@@ -1,0 +1,21 @@
+version: '2'
+services:
+    reverseproxy:
+        # We use Traefik as our reverse proxy for this example, mainly because
+        # the configuration is self-contained through the use of Docker labels.
+        image: traefik:2.2
+        volumes:
+        - /var/run/docker.sock:/var/run/docker.sock:ro
+        command:
+        # We configure Traefik to automatically discover Docker containers for
+        # us, although they shouldn't be proxied by default.
+        - "--providers.docker=true"
+        - "--providers.docker.exposedbydefault=false"
+
+    webserver:
+        # We use a simple whoami image for our webservers.
+        image: containous/whoami:latest
+        labels:
+        # By defining the traefik label below, we tell Traefik to proxy for this
+        # container.
+        - traefik.enable=true
