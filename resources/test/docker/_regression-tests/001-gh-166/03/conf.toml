@@ -1,0 +1,7 @@
+[container_to_wider_world]
+default_policy = "drop"
+
+[[container_to_wider_world.rules]]
+network = "non-existent-network"
+src_container = "PROJECT_a_1"
+verdict = "accept"
