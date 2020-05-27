@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["ContainerFilter","Option to filter the containers to be processed"]],"struct":[["ProcessDFW","Enclosing struct to manage rule processing."],["ProcessingOptions","Options to configure the processing procedure."]]});

@@ -1,0 +1,66 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `types` mod in crate `dfw`."><meta name="keywords" content="rust, rustlang, rust-lang, types"><title>dfw::types - Rust</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="shortcut icon" href="../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../dfw/index.html'><div class='logo-container'><img src='../../rust-logo.png' alt='logo'></div></a><p class='location'>Module types</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#structs">Structs</a></li></ul></div><p class='location'><a href='../index.html'>dfw</a></p><script>window.sidebarCurrent = {name: 'types', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class='fqn'><span class='out-of-band'><span id='render-detail'><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class='inner'>&#x2212;</span>]</a></span><a class='srclink' href='../../src/dfw/types.rs.html#9-693' title='goto source code'>[src]</a></span><span class='in-band'>Module <a href='../index.html'>dfw</a>::<wbr><a class="mod" href=''>types</a></span></h1><div class='docblock'><p>The types in this module make up the structure of the configuration-file(s).</p>
+<h1 id="example" class="section-header"><a href="#example">Example</a></h1>
+<p>The following is an examplary TOML configuration, which will be parsed into this modules types.</p>
+<pre><code class="language-toml">[defaults]
+external_network_interfaces = &quot;eth0&quot;
+
+[initialization]
+[initialization.v4]
+filter = [
+    &quot;-P INPUT DROP&quot;,
+]
+
+[container_to_container]
+default_policy = &quot;DROP&quot;
+
+[[container_to_container.rules]]
+network = &quot;common_network&quot;
+src_container = &quot;container_a&quot;
+dst_container = &quot;container_b&quot;
+action = &quot;ACCEPT&quot;
+
+[container_to_wider_world]
+default_policy = &quot;ACCEPT&quot;
+
+[[container_to_container.rules]]
+network = &quot;other_network&quot;
+src_container = &quot;container_c&quot;
+action = &quot;DROP&quot;
+
+[wider_world_to_container]
+
+[[wider_world_to_container.rules]]
+network = &quot;common_network&quot;
+dst_container = &quot;container_a&quot;
+expose_port = [80, 443]
+
+[container_dnat]
+
+[[container_dnat.rules]]
+src_network = &quot;common_network&quot;
+src_container = &quot;container_a&quot;
+dst_network = &quot;other_network&quot;
+dst_container = &quot;container_c&quot;
+expose_port = { host_port = 8080, container_port = 80, family = &quot;tcp&quot; }
+</code></pre>
+</div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table><tr class='module-item'><td><a class="struct" href="struct.ContainerDNAT.html" title='dfw::types::ContainerDNAT struct'>ContainerDNAT</a></td><td class='docblock-short'><p>The container-DNAT section, defining how containers can communicate with each other over
+non-common networks.</p>
+</td></tr><tr class='module-item'><td><a class="struct" href="struct.ContainerDNATRule.html" title='dfw::types::ContainerDNATRule struct'>ContainerDNATRule</a></td><td class='docblock-short'><p>Definition for a rule to be used in the container-DNAT section.</p>
+</td></tr><tr class='module-item'><td><a class="struct" href="struct.ContainerToContainer.html" title='dfw::types::ContainerToContainer struct'>ContainerToContainer</a></td><td class='docblock-short'><p>The container-to-container section, defining how containers can communicate amongst each other.</p>
+</td></tr><tr class='module-item'><td><a class="struct" href="struct.ContainerToContainerRule.html" title='dfw::types::ContainerToContainerRule struct'>ContainerToContainerRule</a></td><td class='docblock-short'><p>Definition for a rule to be used in the container-to-container section.</p>
+</td></tr><tr class='module-item'><td><a class="struct" href="struct.ContainerToHost.html" title='dfw::types::ContainerToHost struct'>ContainerToHost</a></td><td class='docblock-short'><p>The container-to-host section, defining how containers can communicate with the host.</p>
+</td></tr><tr class='module-item'><td><a class="struct" href="struct.ContainerToHostRule.html" title='dfw::types::ContainerToHostRule struct'>ContainerToHostRule</a></td><td class='docblock-short'><p>Definition for a rule to be used in the container-to-host section.</p>
+</td></tr><tr class='module-item'><td><a class="struct" href="struct.ContainerToWiderWorld.html" title='dfw::types::ContainerToWiderWorld struct'>ContainerToWiderWorld</a></td><td class='docblock-short'><p>The container-to-wider-world section, defining how containers can communicate with the wider
+world.</p>
+</td></tr><tr class='module-item'><td><a class="struct" href="struct.ContainerToWiderWorldRule.html" title='dfw::types::ContainerToWiderWorldRule struct'>ContainerToWiderWorldRule</a></td><td class='docblock-short'><p>Definition for a rule to be used in the container-to-wider-world section.</p>
+</td></tr><tr class='module-item'><td><a class="struct" href="struct.DFW.html" title='dfw::types::DFW struct'>DFW</a></td><td class='docblock-short'><p><code>DFW</code> is the parent type defining the complete configuration used by DFW to build up the
+firewall rules.</p>
+</td></tr><tr class='module-item'><td><a class="struct" href="struct.Defaults.html" title='dfw::types::Defaults struct'>Defaults</a></td><td class='docblock-short'><p>The default configuration section, used by DFW for rule processing.</p>
+</td></tr><tr class='module-item'><td><a class="struct" href="struct.ExposePort.html" title='dfw::types::ExposePort struct'>ExposePort</a></td><td class='docblock-short'><p>Struct to hold a port definition to expose on the host/between containers.</p>
+</td></tr><tr class='module-item'><td><a class="struct" href="struct.ExposePortBuilder.html" title='dfw::types::ExposePortBuilder struct'>ExposePortBuilder</a></td><td class='docblock-short'><p>Builder for <a href="struct.ExposePort.html"><code>ExposePort</code></a>.</p>
+</td></tr><tr class='module-item'><td><a class="struct" href="struct.Initialization.html" title='dfw::types::Initialization struct'>Initialization</a></td><td class='docblock-short'><p>The initialization section allows you to add custom rules to any table in both iptables and
+ip6tables.</p>
+</td></tr><tr class='module-item'><td><a class="struct" href="struct.WiderWorldToContainer.html" title='dfw::types::WiderWorldToContainer struct'>WiderWorldToContainer</a></td><td class='docblock-short'><p>The wider-world-to-container section, defining how containers can reached from the wider world.</p>
+</td></tr><tr class='module-item'><td><a class="struct" href="struct.WiderWorldToContainerRule.html" title='dfw::types::WiderWorldToContainerRule struct'>WiderWorldToContainerRule</a></td><td class='docblock-short'><p>Definition for a rule to be used in the wider-world-to-container section.</p>
+</td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "dfw";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script defer src="../../search-index.js"></script></body></html>
