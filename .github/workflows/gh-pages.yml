@@ -1,0 +1,97 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches:
+    - master
+    tags:
+    - '*'
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Checkout existing gh-pages branch
+      uses: actions/checkout@v2
+      with:
+        ref: gh-pages
+        path: target/gh-pages
+    - name: Retrieve cache
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-doc-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Get latest tag
+      id: tag
+      uses: jimschubert/query-tag-action@v1
+      with:
+        commit-ish: HEAD
+    - name: Get a pretty-printed version of the current branch or tag
+      id: branch-or-tag
+      run: |
+        REF="$(
+          git symbolic-ref -q --short HEAD \
+            || git describe --tags --exact-match
+        )"
+        if [ -z "${REF}" ]; then
+          echo "No ref available" >&2
+          exit 1
+        fi
+        echo "::set-output name=value::${REF}"
+
+    - name: Update index.html
+      run: |
+        URL="https://dfw.rs/${{ steps.tag.outputs.tag }}/dfw/index.html"
+
+        cat > target/gh-pages/index.html <<EOF
+        <!DOCTYPE HTML>
+        <html lang="en-US">
+            <head>
+                <meta charset="UTF-8">
+                <meta http-equiv="refresh" content="0; url=${URL}">
+                <script type="text/javascript">
+                    window.location.href = "${URL}"
+                </script>
+                <title>Page Redirection</title>
+            </head>
+            <body>
+                If you are not redirected automatically, follow this <a href="${URL}">link to the documentation</a>.
+            </body>
+        </html>
+        <!-- Source: https://stackoverflow.com/a/5411601/758165 -->
+        EOF
+
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+    - name: cargo doc
+      uses: actions-rs/cargo@v1
+      with:
+        command: doc
+        args: --no-deps
+    - name: Move generated docs to the correct location
+      run: mv target/doc "target/gh-pages/${{ steps.branch-or-tag.outputs.value }}"
+
+    - name: Deploy documentation to GitHub pages
+      if: success()
+      uses: crazy-max/ghaction-github-pages@v2
+      with:
+        target_branch: gh-pages
+        build_dir: target/gh-pages
+        keep_history: true
+        fqdn: dfw.rs
+        commit_message: Deploy documentation for ${{ steps.branch-or-tag.outputs.value }} to GitHub pages
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
