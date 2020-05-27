@@ -16,11 +16,6 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
-    - name: Checkout existing gh-pages branch
-      uses: actions/checkout@v2
-      with:
-        ref: gh-pages
-        path: target/gh-pages
     - name: Retrieve cache
       uses: actions/cache@v2
       with:
@@ -28,7 +23,13 @@ jobs:
           ~/.cargo/registry
           ~/.cargo/git
           target
+          !target/gh-pages
         key: ${{ runner.os }}-cargo-doc-${{ hashFiles('**/Cargo.lock') }}
+    - name: Checkout existing gh-pages branch
+      uses: actions/checkout@v2
+      with:
+        ref: gh-pages
+        path: target/gh-pages
 
     - name: Get latest tag
       id: tag
