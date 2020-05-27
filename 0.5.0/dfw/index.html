@@ -1,0 +1,142 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `dfw` crate."><meta name="keywords" content="rust, rustlang, rust-lang, dfw"><title>dfw - Rust</title><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../dark.css"><link rel="stylesheet" type="text/css" href="../light.css" id="themeStyle"><script src="../storage.js"></script><noscript><link rel="stylesheet" href="../noscript.css"></noscript><link rel="shortcut icon" href="../favicon.ico"><style type="text/css">#crate-search{background-image:url("../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../dfw/index.html'><div class='logo-container'><img src='../rust-logo.png' alt='logo'></div></a><p class='location'>Crate dfw</p><div class="sidebar-elems"><a id='all-types' href='all.html'><p>See all dfw's items</p></a><div class="block items"><ul><li><a href="#reexports">Re-exports</a></li><li><a href="#modules">Modules</a></li></ul></div><p class='location'></p><script>window.sidebarCurrent = {name: 'dfw', ty: 'mod', relpath: '../'};</script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../settings.html"><img src="../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class='fqn'><span class='out-of-band'><span id='render-detail'><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class='inner'>&#x2212;</span>]</a></span><a class='srclink' href='../src/dfw/lib.rs.html#9-185' title='goto source code'>[src]</a></span><span class='in-band'>Crate <a class="mod" href=''>dfw</a></span></h1><div class='docblock'><h1 id="dfw---docker-firewall-framework-in-rust" class="section-header"><a href="#dfw---docker-firewall-framework-in-rust">DFW - Docker Firewall Framework in Rust</a></h1>
+<p><code>dfw</code> is conceptually based on the <a href="https://github.com/irsl/dfwfw">Docker Firewall Framework, <code>dfwfw</code></a>. Its
+goal is to make firewall administration with Docker simpler, but also more extensive by trying
+to replace the Docker built-in firewall handling by direct interaction with iptables.</p>
+<p>This is accomplished by a flexible configuration which defines how the firewall should be built
+up. While DFW is running, Docker container events will be monitored and the rules rebuilt
+when necessary.</p>
+<p>See <a href="https://github.com/irsl/dfwfw/blob/master/README.md">DFWFW's README</a> for more insight. Most of what you will read there will be
+applicable to DFW.</p>
+<h2 id="configuration" class="section-header"><a href="#configuration">Configuration</a></h2>
+<p>The general configuration happens across six categories:</p>
+<ul>
+<li>
+<p><code>defaults</code></p>
+<p>This category defines global, default values to be used by DFW and the other categories.</p>
+</li>
+<li>
+<p><code>container_to_container</code></p>
+<p>This controls the communication between containers and across <a href="https://docs.docker.com/engine/userguide/networking/">Docker
+networks</a>.</p>
+</li>
+<li>
+<p><code>container_to_wider_world</code></p>
+<p>This controls if and how containers may access the wider world, i.e. what they can
+communicate across the <code>OUTPUT</code> chain on the host.</p>
+</li>
+<li>
+<p><code>container_to_host</code></p>
+<p>To restrict or allow access to the host, this section is used.</p>
+</li>
+<li>
+<p><code>wider_world_to_container</code></p>
+<p>This controls how the wider world, i.e. whatever comes in through the <code>INPUT</code> chain on the
+host, can communicate with a container or a Docker network.</p>
+</li>
+<li>
+<p><code>container_dnat</code></p>
+<p>This category allows you to define specific rules for destination network address
+translation, even or especially across Docker networks.</p>
+</li>
+</ul>
+<p>One category which DFWFW covers that is not (yet) implemented in DFW is
+<code>container_internals</code>, that is configuring iptables rules within containers.</p>
+<p>See the <a href="https://github.com/pitkley/dfw/tree/master/examples">examples</a> and <a href="types/index.html">configuration types</a> for a detailed description of
+every configuration section.</p>
+<h2 id="supported-docker-versions" class="section-header"><a href="#supported-docker-versions">Supported Docker versions</a></h2>
+<p>At least Docker 1.13.0 is required.</p>
+<p>DFW has been successfully tested under the following stable Docker versions:</p>
+<ul>
+<li>
+<p><code>1.13.1</code></p>
+</li>
+<li>
+<p><code>17.03.3-ce</code></p>
+</li>
+<li>
+<p><code>17.06.2-ce</code></p>
+</li>
+<li>
+<p><code>17.07.0-ce</code></p>
+</li>
+<li>
+<p><code>17.09.1-ce</code></p>
+</li>
+<li>
+<p><code>17.12.1-ce</code></p>
+</li>
+<li>
+<p><code>18.03.1-ce</code></p>
+</li>
+<li>
+<p><code>18.06.1-ce</code></p>
+</li>
+</ul>
+<h2 id="installation" class="section-header"><a href="#installation">Installation</a></h2>
+<p>While you can use Cargo to install <code>dfw</code> as a binary, using the Docker image is the preferred
+way to go, especially if you don't want to install Rust and Cargo on your host:</p>
+<pre><code class="language-console">$ docker pull pitkley/dfw
+$ docker run -d \
+      --name=dfw \
+      -v /var/run/docker.sock:/var/run/docker.sock:ro \
+      -v /path/to/your/config:/config \
+      --net host --cap-add=NET_ADMIN \
+      pitkley/dfw --config-path /config
+</code></pre>
+<p>This will download a lightweight image, coming in at under 6 MB, and subsequently run it using
+your configuration.</p>
+<h2 id="motivation-for-this-reimplementation" class="section-header"><a href="#motivation-for-this-reimplementation">Motivation for this reimplementation</a></h2>
+<p>I have reimplemented DFWFW in Rust for two reasons:</p>
+<ol>
+<li>
+<p>DFWFW had lost compatibility with the Docker API starting with release 17.04.0-ce, although
+this <a href="https://github.com/irsl/dfwfw/issues/13">has been fixed</a> in the meantime.</p>
+</li>
+<li>
+<p>The main reason for this reimplementation was that I found a real-life project to tackle with
+Rust. This project allowed me to delve into quite a few different aspects and facets of Rust
+and especially its eco-system, amongst others:</p>
+</li>
+</ol>
+<ul>
+<li>
+<p><a href="https://crates.io/crates/clap"><code>clap</code></a>, for parsing of command line arguments</p>
+</li>
+<li>
+<p><a href="https://crates.io/crates/chan"><code>chan</code></a>, for easy messaging and coordination between threads</p>
+</li>
+<li>
+<p><a href="https://crates.io/crates/error-chain"><code>error-chain</code></a>, for simplified application wide error handling</p>
+</li>
+<li>
+<p><a href="https://crates.io/crates/serde">Serde</a>, for deserialization of the TOML configuration</p>
+</li>
+<li>
+<p><a href="https://crates.io/crates/slog"><code>slog</code></a>, for structured logging</p>
+<p>Disregarding the obvious hair-pulling moments regarding ownership, borrowing and lifetimes,
+my experience with Rust and its brillant eco-system has been an absolute pleasure.</p>
+</li>
+</ul>
+<h2 id="license" class="section-header"><a href="#license">License</a></h2>
+<p>DFW is licensed under either of</p>
+<ul>
+<li>Apache License, Version 2.0, (<a href="LICENSE-APACHE">LICENSE-APACHE</a> or
+http://www.apache.org/licenses/LICENSE-2.0)</li>
+<li>MIT license (<a href="LICENSE-MIT">LICENSE-MIT</a> or
+http://opensource.org/licenses/MIT)</li>
+</ul>
+<p>at your option.</p>
+<h3 id="contribution" class="section-header"><a href="#contribution">Contribution</a></h3>
+<p>Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in DFW by you, as defined in the Apache-2.0 license, shall be
+dual licensed as above, without any additional terms or conditions.</p>
+</div><h2 id='reexports' class='section-header'><a href="#reexports">Re-exports</a></h2>
+<table><tr><td><code>pub use <a class="mod" href="../dfw/process/index.html" title="mod dfw::process">process</a>::*;</code></td></tr></table><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table><tr class='module-item'><td><a class="mod" href="errors/index.html" title='dfw::errors mod'>errors</a></td><td class='docblock-short'><p>Errors, using <a href="https://crates.io/crates/failure"><code>failure</code></a>.</p>
+</td></tr><tr class='module-item'><td><a class="mod" href="iptables/index.html" title='dfw::iptables mod'>iptables</a></td><td class='docblock-short'><p>This module holds the <a href="trait.IPTables.html"><code>IPTables</code></a> compatibility trait, allowing the use
+of multiple implementations for the <code>IPTables</code> type of the <a href="https://crates.io/crates/iptables"><code>rust-iptables</code></a>
+crate.</p>
+</td></tr><tr class='module-item'><td><a class="mod" href="process/index.html" title='dfw::process mod'>process</a></td><td class='docblock-short'><p>This module holds the types related to configuration processing and rule creation.</p>
+</td></tr><tr class='module-item'><td><a class="mod" href="types/index.html" title='dfw::types mod'>types</a></td><td class='docblock-short'><p>The types in this module make up the structure of the configuration-file(s).</p>
+</td></tr><tr class='module-item'><td><a class="mod" href="util/index.html" title='dfw::util mod'>util</a></td><td class='docblock-short'><p>Utilities module</p>
+</td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../";window.currentCrate = "dfw";</script><script src="../aliases.js"></script><script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>
