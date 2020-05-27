@@ -6,7 +6,6 @@
 // option. This file may not be copied, modified or distributed
 // except according to those terms.
 
-use eval;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashMap as Map;
@@ -60,10 +59,10 @@ impl PartialEq for LogLine {
 
                 // Evaluate the string
                 let e = eval::eval(&expansion);
-                return e.is_ok() && e.unwrap() == eval::to_value(true);
+                e.is_ok() && e.unwrap() == eval::to_value(true)
             } else {
                 // Nothing to evaluate, `is_match` was successful.
-                return true;
+                true
             }
         } else if other.regex {
             // We don't want to duplicate the regex handling, just ask `other` for the result.
@@ -110,7 +109,7 @@ impl FromStr for LogLine {
         Ok(LogLine {
             command,
             regex: expanded,
-            eval: eval,
+            eval,
         })
     }
 }
@@ -120,7 +119,6 @@ fn expand_command(command: &str) -> (String, bool) {
     (
         command
             .split(' ')
-            .into_iter()
             .map(|e| {
                 if !RE.is_match(e) && RE.find(e).is_none() {
                     // Segment of command is not in the form `$group_name=pattern`,
@@ -151,12 +149,12 @@ fn expand_command(command: &str) -> (String, bool) {
                 }
             })
             .collect::<Vec<_>>()
-            .join(" ")
-            .to_owned(),
+            .join(" "),
         expanded,
     )
 }
 
+#[allow(dead_code)]
 pub fn load_loglines(log_path: &str) -> Vec<LogLine> {
     let file = BufReader::new(File::open(log_path).unwrap());
     let mut v: Vec<LogLine> = Vec::new();

@@ -9,7 +9,6 @@
 //! This module abstracts various nftables concepts into native Rust types.
 
 use serde::Deserialize;
-use slog;
 use strum_macros::{Display, EnumString};
 
 /// Represenation of nftables table-families.
@@ -270,7 +269,7 @@ mod test {
     }
 
     #[test]
-    fn RuleVerdict_fromstr() {
+    fn rule_verdict_fromstr() {
         assert_eq!(RuleVerdict::Accept, FromStr::from_str("accept").unwrap());
         assert_eq!(RuleVerdict::Accept, FromStr::from_str("ACCEPT").unwrap());
         assert_eq!(RuleVerdict::Drop, FromStr::from_str("drop").unwrap());
@@ -280,7 +279,7 @@ mod test {
     }
 
     #[test]
-    fn RuleVerdict_tostring() {
+    fn rule_verdict_tostring() {
         assert_eq!("accept", &RuleVerdict::Accept.to_string());
         assert_eq!("drop", &RuleVerdict::Drop.to_string());
         assert_eq!("reject", &RuleVerdict::Reject.to_string());

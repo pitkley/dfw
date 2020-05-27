@@ -18,7 +18,6 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 use tokio::runtime::Runtime;
-use toml;
 
 lazy_static! {
     static ref RUNTIME: Runtime = Runtime::new().unwrap();

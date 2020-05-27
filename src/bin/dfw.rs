@@ -157,6 +157,7 @@ fn spawn_event_monitor(
     })
 }
 
+#[allow(clippy::cognitive_complexity)]
 #[cfg(unix)]
 fn run<'a>(
     matches: &ArgMatches<'a>,
