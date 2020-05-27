@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches:
+    - master
+    - staging
+    - trying
+  pull_request:
+    branches:
+    - master
+
+jobs:
+  rustfmt:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+        components: rustfmt
+
+    - name: cargo fmt
+      uses: actions-rs/cargo@v1
+      with:
+        command: fmt
+        args: --all -- --check
+
+  clippy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+        components: clippy
+
+    - name: cargo clippy
+      # TODO: reenable the "offical" clippy-check once this PR is merged: https://github.com/actions-rs/clippy-check/pull/65
+      # uses: actions-rs/clippy-check@v1
+      uses: brace-rs/clippy-check@b75a09651cc90c3921c41888815fe6a7a0b0adae
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        args: --workspace --lib --bins --tests --all-targets -- -Dwarnings
+
+  build-and-test:
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.continue-on-error }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        rust:
+        - stable
+        - beta
+        - # MSRV
+          1.38.0
+        target:
+        - ""
+        continue-on-error:
+        - false
+
+        include:
+        - rust: stable
+          target: "x86_64-unknown-linux-musl"
+          continue-on-error: false
+        - rust: nightly
+          target: ""
+          continue-on-error: true
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Retrieve cache
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-ci-${{ hashFiles('**/Cargo.lock') }}
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: ${{ matrix.rust }}
+        override: true
+
+    - name: cargo build
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+      env:
+        TARGET: ${{ matrix.target }}
+    - name: cargo test
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: -- --nocapture
+      env:
+        TARGET: ${{ matrix.target }}

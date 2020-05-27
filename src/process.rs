@@ -24,8 +24,6 @@ use std::collections::HashMap as Map;
 use std::io::prelude::*;
 use std::io::BufWriter;
 use std::process::Command;
-use tempfile;
-use time;
 
 const NF_IP_PRI_NAT_DST: i16 = -100;
 const NF_IP_PRI_FILTER: i16 = 0;

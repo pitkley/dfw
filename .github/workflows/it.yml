@@ -1,0 +1,99 @@
+name: Integration tests
+
+on:
+  push:
+    branches:
+    - master
+    - staging
+    - trying
+  pull_request:
+    branches:
+    - master
+
+jobs:
+  build-test-binary:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Retrieve cache
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-it-${{ hashFiles('**/Cargo.lock') }}
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+    - name: Build the test-binary
+      run: |
+        cp $(
+          cargo test \
+            --features docker-tests \
+            --test dfw \
+            --no-run \
+            --message-format=json \
+          | jq -r 'select(.profile.test == true) | .executable'
+        ) dfw-docker-test
+    - name: Store the test-binary as an artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: dfw-docker-test
+        path: dfw-docker-test
+
+  test-on-docker:
+    needs:
+    - build-test-binary
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dind-image:
+        - docker:19.03-dind
+        - docker:18.09-dind
+        - docker:18.06-dind
+        - docker:18.03-dind
+        - docker:17.12-dind
+        - docker:17.09-dind
+        - docker:17.07-dind
+        - docker:17.06-dind
+        - docker:1.13-dind
+
+    services:
+      dind:
+        image: ${{ matrix.dind-image }}
+        ports:
+        - 2375/tcp
+        env:
+          DOCKER_TLS_CERTDIR: ""
+        options: --privileged
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Retrieve the test-binary
+      uses: actions/download-artifact@v2
+      with:
+        name: dfw-docker-test
+    - name: Ensure Docker is available
+      run: |
+        while ! nc -z localhost ${{ job.services.dind.ports[2375] }}; do
+          sleep 1
+        done
+
+        env DOCKER_HOST="tcp://127.0.0.1:${{ job.services.dind.ports[2375] }}" \
+          docker info
+      timeout-minutes: 1
+    - name: Run the test-binary
+      env:
+        RUST_TEST_THREADS: 1
+        DOCKER_HOST: "http://127.0.0.1:${{ job.services.dind.ports[2375] }}"
+      run: |
+        chmod +x ./dfw-docker-test
+        ./dfw-docker-test --nocapture
