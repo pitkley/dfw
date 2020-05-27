@@ -20,6 +20,7 @@ jobs:
           ~/.cargo/registry
           ~/.cargo/git
           target
+          !target/gh-pages
         key: ${{ runner.os }}-cargo-ci-${{ hashFiles('**/Cargo.lock') }}
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
