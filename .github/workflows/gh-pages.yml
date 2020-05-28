@@ -23,13 +23,12 @@ jobs:
           ~/.cargo/registry
           ~/.cargo/git
           target
-          !target/gh-pages
         key: ${{ runner.os }}-cargo-doc-${{ hashFiles('**/Cargo.lock') }}
     - name: Checkout existing gh-pages branch
       uses: actions/checkout@v2
       with:
         ref: gh-pages
-        path: target/gh-pages
+        path: gh-pages
 
     - name: Get latest tag
       id: tag
@@ -49,11 +48,11 @@ jobs:
         fi
         echo "::set-output name=value::${REF}"
 
-    - name: Update index.html
+    - name: Create/update index.html
       run: |
         URL="https://dfw.rs/${{ steps.tag.outputs.tag }}/dfw/index.html"
 
-        cat > target/gh-pages/index.html <<EOF
+        cat > gh-pages/index.html <<EOF
         <!DOCTYPE HTML>
         <html lang="en-US">
             <head>
@@ -70,9 +69,10 @@ jobs:
         </html>
         <!-- Source: https://stackoverflow.com/a/5411601/758165 -->
         EOF
-    - name: Create symlink for `/latest` to latest tag
+    - name: Create/update symlink for `/latest` to latest tag
       run: |
-        ln -sf "${{ steps.tag.outputs.tag }}" latest
+        rm gh-pages/latest || :
+        ln -sf "${{ steps.tag.outputs.tag }}" gh-pages/latest
 
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
@@ -87,17 +87,12 @@ jobs:
         args: --no-deps
     - name: Move generated docs to the correct location
       run: |
-        rm -rf "target/gh-pages/${{ steps.branch-or-tag.outputs.value }}" || :
-        mv target/doc "target/gh-pages/${{ steps.branch-or-tag.outputs.value }}"
+        rm -rf "gh-pages/${{ steps.branch-or-tag.outputs.value }}" || :
+        mv target/doc "gh-pages/${{ steps.branch-or-tag.outputs.value }}"
 
     - name: Deploy documentation to GitHub pages
       if: success()
-      uses: crazy-max/ghaction-github-pages@v2
-      with:
-        target_branch: gh-pages
-        build_dir: target/gh-pages
-        keep_history: true
-        fqdn: dfw.rs
-        commit_message: Deploy documentation for ${{ steps.branch-or-tag.outputs.value }} to GitHub pages
+      working-directory: ./gh-pages
+      run: ../hack/deploy-github-pages.sh
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        COMMIT_MESSAGE: "Deploy documentation for ${{ steps.branch-or-tag.outputs.value }} to GitHub pages"
