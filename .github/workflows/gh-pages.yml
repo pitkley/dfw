@@ -48,27 +48,6 @@ jobs:
         fi
         echo "::set-output name=value::${REF}"
 
-    - name: Create/update index.html
-      run: |
-        URL="https://dfw.rs/${{ steps.tag.outputs.tag }}/dfw/index.html"
-
-        cat > gh-pages/index.html <<EOF
-        <!DOCTYPE HTML>
-        <html lang="en-US">
-            <head>
-                <meta charset="UTF-8">
-                <meta http-equiv="refresh" content="0; url=${URL}">
-                <script type="text/javascript">
-                    window.location.href = "${URL}"
-                </script>
-                <title>Page Redirection</title>
-            </head>
-            <body>
-                If you are not redirected automatically, follow this <a href="${URL}">link to the documentation</a>.
-            </body>
-        </html>
-        <!-- Source: https://stackoverflow.com/a/5411601/758165 -->
-        EOF
     - name: Create/update symlink for `/latest` to latest tag
       run: |
         rm gh-pages/latest || :
