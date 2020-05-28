@@ -70,6 +70,9 @@ jobs:
         </html>
         <!-- Source: https://stackoverflow.com/a/5411601/758165 -->
         EOF
+    - name: Create symlink for `/latest` to latest tag
+      run: |
+        ln -sf "${{ steps.tag.outputs.tag }}" latest
 
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
