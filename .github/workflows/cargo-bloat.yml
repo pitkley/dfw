@@ -21,7 +21,6 @@ jobs:
           ~/.cargo/registry
           ~/.cargo/git
           target
-          !target/gh-pages
         key: ${{ runner.os }}-cargo-bloat-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Install Rust toolchain
