@@ -1,0 +1,9 @@
+[backend_defaults]
+custom_tables = { name = "filter", chains = ["input", "forward"] }
+
+[backend_defaults.initialization]
+rules = [
+    "add table inet custom",
+    "flush table inet custom",
+    "add chain inet custom input { type filter hook input priority 0 ; policy accept }",
+]

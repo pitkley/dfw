@@ -11,6 +11,16 @@ on:
     - master
 
 jobs:
+  check-license-headers:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Check license headers
+      run: |
+        ./hack/check-license-headers.sh
+
   rustfmt:
     runs-on: ubuntu-latest
 

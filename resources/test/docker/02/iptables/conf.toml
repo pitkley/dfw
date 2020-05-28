@@ -1,0 +1,6 @@
+[[container_to_container.rules]]
+network = "PROJECT_default"
+src_container = "PROJECT_a_1"
+dst_container = "PROJECT_b_1"
+matches = "-m state --state RELATED"
+verdict = "accept"

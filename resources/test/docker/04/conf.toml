@@ -2,11 +2,5 @@
 default_policy = "drop"
 
 [[container_to_host.rules]]
-network = "dfwtest04_default"
+network = "PROJECT_default"
 verdict = "reject"
-
-[[container_to_host.rules]]
-network = "dfwtest04_default"
-src_container = "dfwtest04_a_1"
-matches = "ct state related"
-verdict = "accept"

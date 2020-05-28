@@ -1,10 +1,2 @@
-[defaults]
-custom_tables = { name = "filter", chains = ["input", "forward"] }
+[global_defaults]
 external_network_interfaces = "eni"
-
-[initialization]
-rules = [
-    "add table inet custom",
-    "flush table inet custom",
-    "add chain inet custom input { type filter hook input priority 0 ; policy accept }",
-]

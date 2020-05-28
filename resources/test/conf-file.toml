@@ -1,8 +1,8 @@
-[defaults]
+[global_defaults]
 external_network_interfaces = "eni"
 
-[initialization]
-rules = ["add table inet custom"]
+[backend_defaults]
+test = "custom backend defaults"
 
 [container_to_container]
 default_policy = "drop"
@@ -40,6 +40,7 @@ network = "network"
 dst_container = "dst_container"
 expose_port = 80
 external_network_interface = "eni"
+expose_via_ipv6 = false
 
 [[wider_world_to_container.rules]]
 network = "network"

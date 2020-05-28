@@ -1,4 +1,4 @@
-// Copyright 2017 - 2019 Pit Kleyersburg <pitkley@googlemail.com>
+// Copyright Pit Kleyersburg <pitkley@googlemail.com>
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -14,9 +14,10 @@ use futures::{sync::oneshot::spawn, Future};
 use glob::glob;
 use lazy_static::lazy_static;
 use serde::de::DeserializeOwned;
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::BufReader;
+use std::{
+    fs::File,
+    io::{prelude::*, BufReader},
+};
 use tokio::runtime::Runtime;
 
 lazy_static! {

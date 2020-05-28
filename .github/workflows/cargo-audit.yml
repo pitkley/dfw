@@ -1,10 +1,6 @@
 name: cargo-audit
 
 on:
-  push:
-    paths:
-    - '**/Cargo.toml'
-    - '**/Cargo.lock'
   pull_request:
     paths:
     - '**/Cargo.toml'
@@ -17,6 +13,8 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
     - name: cargo audit
-      uses: actions-rs/audit-check@v1
+      # TODO: reenable the "offical" audit-check once its core-version is upgraded to a version that contains this PR:
+      # uses: actions-rs/audit-check@v1
+      uses: pitkley/actions-rs-audit-check@temp/use-own-core
       with:
         token: ${{ secrets.GITHUB_TOKEN }}

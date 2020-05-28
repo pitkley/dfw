@@ -1,4 +1,4 @@
-// Copyright 2017 - 2019 Pit Kleyersburg <pitkley@googlemail.com>
+// Copyright Pit Kleyersburg <pitkley@googlemail.com>
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -12,12 +12,18 @@
 //!
 //! The following is an examplary TOML configuration, which will be parsed into this modules types.
 //!
-//! ```toml
-//! [defaults]
-//! custom_tables = { name = "filter", chains = ["input", "forward"]}
+//! ```
+//! # use dfw::nftables::Nftables;
+//! # use dfw::types::*;
+//! # use toml;
+//! # toml::from_str::<DFW<Nftables>>(r#"
+//! [global_defaults]
 //! external_network_interfaces = "eth0"
 //!
-//! [initialization]
+//! [backend_defaults]
+//! custom_tables = { name = "filter", chains = ["input", "forward"]}
+//!
+//! [backend_defaults.initialization]
 //! rules = [
 //!     "add table inet custom",
 //! ]
@@ -54,14 +60,14 @@
 //! dst_network = "other_network"
 //! dst_container = "container_c"
 //! expose_port = { host_port = 8080, container_port = 80, family = "tcp" }
+//! # "#).unwrap();
 //! ```
 
-use crate::nftables::*;
+use crate::{de::*, nftables, FirewallBackend, Process};
 use derive_builder::Builder;
-use serde::{de, Deserialize};
-use std::fmt;
-use std::marker::PhantomData;
+use serde::Deserialize;
 use std::str::FromStr;
+use strum_macros::{Display, EnumString};
 
 const DEFAULT_PROTOCOL: &str = "tcp";
 
@@ -71,13 +77,17 @@ const DEFAULT_PROTOCOL: &str = "tcp";
 /// Every section is optional.
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
-pub struct DFW {
+pub struct DFW<B>
+where
+    B: FirewallBackend,
+    DFW<B>: Process<B>,
+{
     /// The `defaults` configuration section
-    #[serde(default)]
-    pub defaults: Option<Defaults>,
-    /// The `initialization` configuration section
-    #[serde(default)]
-    pub initialization: Option<Initialization>,
+    #[serde(default, alias = "defaults")]
+    pub global_defaults: Option<GlobalDefaults>,
+    /// The `backend_defaults` configuration section
+    #[serde(default, alias = "initialization")]
+    pub backend_defaults: Option<B::Defaults>,
     /// The `container_to_container` configuration section
     pub container_to_container: Option<ContainerToContainer>,
     /// The `container_to_wider_world` configuration section
@@ -93,41 +103,21 @@ pub struct DFW {
 /// The default configuration section, used by DFW for rule processing.
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash, Default)]
 #[serde(deny_unknown_fields)]
-pub struct Defaults {
-    /// Specify the names of custom nft-tables that should be partially managed.
-    ///
-    /// # Explanation
-    ///
-    /// If you want to use or already use an existing nftables table to manage rules independently
-    /// from DFW, it is important that two conditions are met:
-    ///
-    /// 1. The priority-values of the chains are _lower_ than the priority-values used by DFW.
-    /// 2. The default-policy of the any input or forward chains in the table are set to `accept`.
-    ///
-    /// While DFW cannot ensure that the first condition is met (since changing the priority of a
-    /// chain is not possible without recreating the chain), it can set the policies of your input
-    /// and output chains to `accept` for you.
-    ///
-    /// # Example
-    ///
-    /// ```toml
-    /// custom_tables = { name = "filter", chains = ["input", "forward"] }
-    /// custom_tables = [
-    ///     { name = "filter", chains = ["input", "forward"] },
-    ///     { name = "custom", chains = ["input", "forward"] }
-    /// ]
-    /// ```
-    #[serde(default, deserialize_with = "option_struct_or_seq_struct")]
-    pub custom_tables: Option<Vec<Table>>,
-
+pub struct GlobalDefaults {
     /// This defines the external network interfaces of the host to consider during building the
-    /// rules. The value can be non-existant, a string, or a sequence of strings.
+    /// rules. The value can be non-existent, a string, or a sequence of strings.
     ///
     /// # Example
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<GlobalDefaults>(r#"
     /// external_network_interfaces = "eth0"
+    /// # "#).unwrap();
+    /// # toml::from_str::<GlobalDefaults>(r#"
     /// external_network_interfaces = ["eth0", "eth1"]
+    /// # "#).unwrap();
     /// ```
     #[serde(default, deserialize_with = "option_string_or_seq_string")]
     pub external_network_interfaces: Option<Vec<String>>,
@@ -135,43 +125,30 @@ pub struct Defaults {
     /// This defines whether the default Docker bridge (usually `docker0`) is allowed to access host
     /// resources.
     ///
+    /// This field is optional and will be set to "accept" by default.
+    ///
     /// For non-default Docker bridges this is controlled within the [container-to-host section].
     ///
     /// [container-to-host section]: struct.ContainerToHostRule.html
     #[serde(default)]
     pub default_docker_bridge_to_host_policy: ChainPolicy,
-}
 
-/// Reference to an nftables table, specifically to the input- and forward-chains within it.
-///
-/// This is used by DFW when managing other tables is required.
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash, Default)]
-#[serde(deny_unknown_fields)]
-pub struct Table {
-    /// Name of the custom table.
-    pub name: String,
-
-    /// Names of the input and forward chains defined within the custom table.
-    pub chains: Vec<String>,
-}
-
-/// The initialization section allows you to execute any commands against nftables.
-#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Default)]
-#[serde(deny_unknown_fields)]
-pub struct Initialization {
-    /// Initialization rules for nftables
+    /// # This field is **DEPRECATED!**
     ///
-    /// # Example
+    /// Provide the custom tables in the nftables backend-defaults section instead.
+    /// (This field will be removed with release 2.0.0.)
     ///
-    /// ```toml
-    /// [initialization]
-    /// rules = [
-    ///     "add table inet custom",
-    ///     "flush table inet custom",
-    ///     # ...
-    /// ]
-    /// ```
-    pub rules: Option<Vec<String>>,
+    /// Please consult the [firewall-backend documentation] if you want to know how to use this
+    /// field.
+    ///
+    /// [firewall-backend documentation]: ../nftables/types/struct.Defaults.html#structfield.custom_tables
+    #[deprecated(
+        since = "1.2.0",
+        note = "Provide the custom tables in the nftables backend-defaults section instead. This \
+                field will be removed with release 2.0.0."
+    )]
+    #[serde(default, deserialize_with = "option_struct_or_seq_struct")]
+    pub custom_tables: Option<Vec<nftables::types::Table>>,
 }
 
 /// The container-to-container section, defining how containers can communicate amongst each other.
@@ -204,11 +181,23 @@ pub struct ContainerToContainer {
     ///
     /// The easiest way to define the rules is using TOMLs [arrays of tables][toml-aot]:
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::nftables::Nftables;
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<DFW<Nftables>>(r#"
+    /// [container_to_container]
+    /// default_policy = "drop"
+    ///
     /// [[container_to_container.rules]]
-    /// # first rule here
+    /// ## first rule here
+    /// # network = ""
+    /// # verdict = "accept"
     /// [[container_to_container.rules]]
-    /// # second rule here
+    /// ## second rule here
+    /// # network = ""
+    /// # verdict = "accept"
+    /// # "#).unwrap();
     /// ```
     ///
     /// [toml-aot]:
@@ -248,11 +237,21 @@ pub struct ContainerToWiderWorld {
     ///
     /// The easiest way to define the rules is using TOMLs [arrays of tables][toml-aot]:
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::nftables::Nftables;
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<DFW<Nftables>>(r#"
+    /// [container_to_wider_world]
+    /// default_policy = "drop"
+    ///
     /// [[container_to_wider_world.rules]]
-    /// # first rule here
+    /// ## first rule here
+    /// # verdict = "accept"
     /// [[container_to_wider_world.rules]]
-    /// # second rule here
+    /// ## second rule here
+    /// # verdict = "accept"
+    /// # "#).unwrap();
     /// ```
     ///
     /// [toml-aot]:
@@ -290,11 +289,23 @@ pub struct ContainerToHost {
     ///
     /// The easiest way to define the rules is using TOMLs [arrays of tables][toml-aot]:
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::nftables::Nftables;
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<DFW<Nftables>>(r#"
+    /// [container_to_host]
+    /// default_policy = "drop"
+    ///
     /// [[container_to_host.rules]]
-    /// # first rule here
+    /// ## first rule here
+    /// # network = ""
+    /// # verdict = "accept"
     /// [[container_to_host.rules]]
-    /// # second rule here
+    /// ## second rule here
+    /// # network = ""
+    /// # verdict = "accept"
+    /// # "#).unwrap();
     /// ```
     ///
     /// [toml-aot]:
@@ -328,11 +339,22 @@ pub struct WiderWorldToContainer {
     ///
     /// The easiest way to define the rules is using TOMLs [arrays of tables][toml-aot]:
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::nftables::Nftables;
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<DFW<Nftables>>(r#"
     /// [[wider_world_to_container.rules]]
-    /// # first rule here
+    /// ## first rule here
+    /// # network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
     /// [[wider_world_to_container.rules]]
-    /// # second rule here
+    /// ## second rule here
+    /// # network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
+    /// # "#).unwrap();
     /// ```
     ///
     /// [toml-aot]:
@@ -370,29 +392,91 @@ pub struct WiderWorldToContainerRule {
     ///
     /// All of the following are legal TOML fragments:
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
     /// expose_port = 80
+    /// # "#).unwrap();
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
     /// expose_port = [80, 443]
+    /// # "#).unwrap();
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
     /// expose_port = "53/udp"
+    /// # "#).unwrap();
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
     /// expose_port = ["80/tcp", "53/udp"]
+    /// # "#).unwrap();
     ///
-    /// # The following four all result in the same definition
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// ## The following four all result in the same definition
+    /// # network = ""
+    /// # dst_container = ""
     /// expose_port = { host_port = 8080 }
+    /// # "#).unwrap();
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
     /// expose_port = { host_port = 8080, container_port = 8080 }
+    /// # "#).unwrap();
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
     /// expose_port = { host_port = 8080, family = "tcp" }
+    /// # "#).unwrap();
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
     /// expose_port = { host_port = 8080, container_port = 8080, family = "tcp" }
+    /// # "#).unwrap();
     ///
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
     /// expose_port = [
     ///     { host_port = 80 },
     ///     { host_port = 53, family = "udp" },
     ///     { host_port = 443, container_port = 8443 },
     /// ]
+    /// # "#).unwrap();
     /// ```
     #[serde(deserialize_with = "single_or_seq_string_or_struct")]
     pub expose_port: Vec<ExposePort>,
 
     /// Specific external network interface to target.
     pub external_network_interface: Option<String>,
+
+    /// Configure if the container should be exposed via IPv6, too. _(Default: true)_.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
+    /// expose_via_ipv6 = false
+    /// # "#).unwrap();
+    ///
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
+    /// expose_via_ipv6 = false
+    /// # "#).unwrap();
+    /// ```
+    #[serde(default = "default_wwtcr_expose_via_ipv6")]
+    pub expose_via_ipv6: bool,
 
     /// Source CIDRs (IPv4) to which incoming traffic should be restricted.
     ///
@@ -408,10 +492,22 @@ pub struct WiderWorldToContainerRule {
     ///
     /// All of the following are legal TOML fragments:
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
     /// source_cidr_v4 = "127.0.0.0/8"
+    /// # "#).unwrap();
     ///
-    /// source_cidr _v4= ["127.0.0.0/8", "192.0.2.1/32"]
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
+    /// source_cidr_v4 = ["127.0.0.0/8", "192.0.2.1/32"]
+    /// # "#).unwrap();
     /// ```
     #[serde(
         default,
@@ -434,17 +530,29 @@ pub struct WiderWorldToContainerRule {
     ///
     /// All of the following are legal TOML fragments:
     ///
-    /// ```toml
-    /// source_cidr_v6 = "fe80::/10"
-    ///
-    /// source_cidr_v6 = ["fe80::/10", "2001:db8::/32"]
     /// ```
-    #[serde(
-        default,
-        deserialize_with = "option_string_or_seq_string",
-        alias = "source_cidr"
-    )]
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
+    /// source_cidr_v6 = "fe80::/10"
+    /// # "#).unwrap();
+    ///
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
+    /// source_cidr_v6 = ["fe80::/10", "2001:db8::/32"]
+    /// # "#).unwrap();
+    /// ```
+    #[serde(default, deserialize_with = "option_string_or_seq_string")]
     pub source_cidr_v6: Option<Vec<String>>,
+}
+
+fn default_wwtcr_expose_via_ipv6() -> bool {
+    true
 }
 
 /// Struct to hold a port definition to expose on the host/between containers.
@@ -551,11 +659,22 @@ pub struct ContainerDNAT {
     ///
     /// The easiest way to define the rules is using TOMLs [arrays of tables][toml-aot]:
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::nftables::Nftables;
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<DFW<Nftables>>(r#"
     /// [[container_dnat.rules]]
-    /// # first rule here
+    /// ## first rule here
+    /// # dst_network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
     /// [[container_dnat.rules]]
-    /// # second rule here
+    /// ## second rule here
+    /// # dst_network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
+    /// # "#).unwrap();
     /// ```
     ///
     /// [toml-aot]:
@@ -599,23 +718,61 @@ pub struct ContainerDNATRule {
     ///
     /// All of the following are legal TOML fragments:
     ///
-    /// ```toml
+    /// ```
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<ContainerDNATRule>(r#"
+    /// # dst_network = ""
+    /// # dst_container = ""
     /// expose_port = 80
+    /// # "#).unwrap();
+    /// # toml::from_str::<ContainerDNATRule>(r#"
+    /// # dst_network = ""
+    /// # dst_container = ""
     /// expose_port = [80, 443]
+    /// # "#).unwrap();
+    /// # toml::from_str::<ContainerDNATRule>(r#"
+    /// # dst_network = ""
+    /// # dst_container = ""
     /// expose_port = "53/udp"
+    /// # "#).unwrap();
+    /// # toml::from_str::<ContainerDNATRule>(r#"
+    /// # dst_network = ""
+    /// # dst_container = ""
     /// expose_port = ["80/tcp", "53/udp"]
+    /// # "#).unwrap();
     ///
-    /// # The following four all result in the same definition
+    /// # toml::from_str::<ContainerDNATRule>(r#"
+    /// ## The following four all result in the same definition
+    /// # dst_network = ""
+    /// # dst_container = ""
     /// expose_port = { host_port = 8080 }
+    /// # "#).unwrap();
+    /// # toml::from_str::<ContainerDNATRule>(r#"
+    /// # dst_network = ""
+    /// # dst_container = ""
     /// expose_port = { host_port = 8080, container_port = 8080 }
+    /// # "#).unwrap();
+    /// # toml::from_str::<ContainerDNATRule>(r#"
+    /// # dst_network = ""
+    /// # dst_container = ""
     /// expose_port = { host_port = 8080, family = "tcp" }
+    /// # "#).unwrap();
+    /// # toml::from_str::<ContainerDNATRule>(r#"
+    /// # dst_network = ""
+    /// # dst_container = ""
     /// expose_port = { host_port = 8080, container_port = 8080, family = "tcp" }
+    /// # "#).unwrap();
     ///
+    /// # toml::from_str::<ContainerDNATRule>(r#"
+    /// # dst_network = ""
+    /// # dst_container = ""
     /// expose_port = [
     ///     { host_port = 80 },
     ///     { host_port = 53, family = "udp" },
     ///     { host_port = 443, container_port = 8443 },
     /// ]
+    /// # "#).unwrap();
     /// ```
     #[serde(deserialize_with = "single_or_seq_string_or_struct")]
     pub expose_port: Vec<ExposePort>,
@@ -625,204 +782,119 @@ fn default_expose_port_family() -> String {
     DEFAULT_PROTOCOL.to_owned()
 }
 
-struct StringOrStruct<T>(PhantomData<T>);
+/// Representation of chain policies.
+///
+/// ## Attribution
+///
+/// Parts of the documentation have been taken from
+/// <https://wiki.nftables.org/wiki-nftables/index.php/Configuring_chains>.
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, Display, EnumString)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "snake_case")]
+pub enum ChainPolicy {
+    /// The accept verdict means that the packet will keep traversing the network stack.
+    #[strum(to_string = "accept", serialize = "accept", serialize = "ACCEPT")]
+    #[serde(alias = "ACCEPT")]
+    Accept,
+    /// The drop verdict means that the packet is discarded if the packet reaches the end of the
+    /// base chain.
+    #[strum(to_string = "drop", serialize = "drop", serialize = "DROP")]
+    #[serde(alias = "DROP")]
+    Drop,
+}
 
-impl<'de, T> de::Visitor<'de> for StringOrStruct<T>
-where
-    T: de::Deserialize<'de> + FromStr<Err = String>,
-{
-    type Value = T;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("integer, string or map")
-    }
-
-    fn visit_i64<E>(self, value: i64) -> Result<T, E>
-    where
-        E: de::Error,
-    {
-        FromStr::from_str(&value.to_string()).map_err(de::Error::custom)
-    }
-
-    fn visit_str<E>(self, value: &str) -> Result<T, E>
-    where
-        E: de::Error,
-    {
-        FromStr::from_str(value).map_err(de::Error::custom)
-    }
-
-    fn visit_map<M>(self, visitor: M) -> Result<T, M::Error>
-    where
-        M: de::MapAccess<'de>,
-    {
-        de::Deserialize::deserialize(de::value::MapAccessDeserializer::new(visitor))
+impl Default for ChainPolicy {
+    fn default() -> ChainPolicy {
+        ChainPolicy::Accept
     }
 }
 
-// Thanks to @dtolnay for the support:
-//   https://github.com/serde-rs/serde/issues/901#issuecomment-297070279
-impl<'de, T> de::DeserializeSeed<'de> for StringOrStruct<T>
-where
-    T: de::Deserialize<'de> + FromStr<Err = String>,
-{
-    type Value = T;
-
-    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        deserializer.deserialize_any(self)
+impl slog::Value for ChainPolicy {
+    fn serialize(
+        &self,
+        record: &slog::Record,
+        key: slog::Key,
+        serializer: &mut dyn slog::Serializer,
+    ) -> slog::Result {
+        self.to_string().serialize(record, key, serializer)
     }
 }
 
-#[allow(dead_code)]
-fn string_or_struct<'de, T, D>(deserializer: D) -> Result<T, D::Error>
-where
-    T: de::Deserialize<'de> + FromStr<Err = String>,
-    D: de::Deserializer<'de>,
-{
-    deserializer.deserialize_any(StringOrStruct(PhantomData))
+/// Representation of rule policies.
+///
+/// ## Attribution
+///
+/// Parts of the documentation have been taken from
+/// <https://wiki.nftables.org/wiki-nftables/index.php/Configuring_chains>.
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, Display, EnumString)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "snake_case")]
+pub enum RuleVerdict {
+    /// The accept verdict means that the packet will keep traversing the network stack.
+    #[serde(alias = "ACCEPT")]
+    #[strum(to_string = "accept", serialize = "accept", serialize = "ACCEPT")]
+    Accept,
+    /// The drop verdict means that the packet is discarded if the packet reaches the end of the
+    /// base chain.
+    #[serde(alias = "DROP")]
+    #[strum(to_string = "drop", serialize = "drop", serialize = "DROP")]
+    Drop,
+    /// The reject verdict means that the packet is responded to with an ICMP message stating that
+    /// it was rejected.
+    #[serde(alias = "REJECT")]
+    #[strum(to_string = "reject", serialize = "reject", serialize = "REJECT")]
+    Reject,
 }
 
-struct SingleOrSeqStringOrStruct<T>(PhantomData<T>);
-
-impl<'de, T> de::Visitor<'de> for SingleOrSeqStringOrStruct<T>
-where
-    T: de::Deserialize<'de> + FromStr<Err = String>,
-{
-    type Value = Vec<T>;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str(
-            "sequence of integers, strings or maps \
-             or a single integer, string or map",
-        )
-    }
-
-    fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        FromStr::from_str(&value.to_string())
-            .map(|e| vec![e])
-            .map_err(de::Error::custom)
-    }
-
-    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        FromStr::from_str(value)
-            .map(|e| vec![e])
-            .map_err(de::Error::custom)
-    }
-
-    fn visit_map<M>(self, visitor: M) -> Result<Self::Value, M::Error>
-    where
-        M: de::MapAccess<'de>,
-    {
-        de::Deserialize::deserialize(de::value::MapAccessDeserializer::new(visitor))
-            .map(|e| vec![e])
-    }
-
-    fn visit_seq<S>(self, mut seq: S) -> Result<Self::Value, S::Error>
-    where
-        S: de::SeqAccess<'de>,
-    {
-        let mut vec = Vec::new();
-        while let Some(element) = seq.next_element_seed(StringOrStruct(PhantomData))? {
-            vec.push(element);
-        }
-        Ok(vec)
+impl Default for RuleVerdict {
+    fn default() -> RuleVerdict {
+        RuleVerdict::Accept
     }
 }
 
-fn single_or_seq_string_or_struct<'de, T, D>(deserializer: D) -> Result<Vec<T>, D::Error>
-where
-    T: de::Deserialize<'de> + FromStr<Err = String>,
-    D: de::Deserializer<'de>,
-{
-    deserializer.deserialize_any(SingleOrSeqStringOrStruct(PhantomData))
+impl slog::Value for RuleVerdict {
+    fn serialize(
+        &self,
+        record: &slog::Record,
+        key: slog::Key,
+        serializer: &mut dyn slog::Serializer,
+    ) -> slog::Result {
+        self.to_string().serialize(record, key, serializer)
+    }
 }
+#[cfg(test)]
+mod test {
+    use super::{ChainPolicy, RuleVerdict};
+    use std::str::FromStr;
 
-fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
-where
-    D: de::Deserializer<'de>,
-{
-    struct StringOrSeqString(PhantomData<Vec<String>>);
-
-    impl<'de> de::Visitor<'de> for StringOrSeqString {
-        type Value = Vec<String>;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("string or sequence of strings")
-        }
-
-        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            Ok(vec![value.to_owned()])
-        }
-
-        fn visit_seq<S>(self, visitor: S) -> Result<Self::Value, S::Error>
-        where
-            S: de::SeqAccess<'de>,
-        {
-            de::Deserialize::deserialize(de::value::SeqAccessDeserializer::new(visitor))
-        }
+    #[test]
+    fn chainpolicy_fromstr() {
+        assert_eq!(ChainPolicy::Accept, FromStr::from_str("accept").unwrap());
+        assert_eq!(ChainPolicy::Accept, FromStr::from_str("ACCEPT").unwrap());
+        assert_eq!(ChainPolicy::Drop, FromStr::from_str("drop").unwrap());
+        assert_eq!(ChainPolicy::Drop, FromStr::from_str("DROP").unwrap());
     }
 
-    deserializer.deserialize_any(StringOrSeqString(PhantomData))
-}
-
-fn option_string_or_seq_string<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
-where
-    D: de::Deserializer<'de>,
-{
-    string_or_seq_string(deserializer).map(Some)
-}
-
-fn struct_or_seq_struct<'de, T, D>(deserializer: D) -> Result<Vec<T>, D::Error>
-where
-    T: de::Deserialize<'de>,
-    D: de::Deserializer<'de>,
-{
-    struct StructOrSeqStruct<T>(PhantomData<Vec<T>>);
-
-    impl<'de, T> de::Visitor<'de> for StructOrSeqStruct<T>
-    where
-        T: de::Deserialize<'de>,
-    {
-        type Value = Vec<T>;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("map or sequence of maps")
-        }
-
-        fn visit_map<M>(self, visitor: M) -> Result<Self::Value, M::Error>
-        where
-            M: de::MapAccess<'de>,
-        {
-            de::Deserialize::deserialize(de::value::MapAccessDeserializer::new(visitor))
-                .map(|e| vec![e])
-        }
-
-        fn visit_seq<S>(self, visitor: S) -> Result<Self::Value, S::Error>
-        where
-            S: de::SeqAccess<'de>,
-        {
-            de::Deserialize::deserialize(de::value::SeqAccessDeserializer::new(visitor))
-        }
+    #[test]
+    fn chainpolicy_tostring() {
+        assert_eq!("accept", &ChainPolicy::Accept.to_string());
+        assert_eq!("drop", &ChainPolicy::Drop.to_string());
     }
 
-    deserializer.deserialize_any(StructOrSeqStruct(PhantomData))
-}
+    #[test]
+    fn ruleverdict_fromstr() {
+        assert_eq!(RuleVerdict::Accept, FromStr::from_str("accept").unwrap());
+        assert_eq!(RuleVerdict::Accept, FromStr::from_str("ACCEPT").unwrap());
+        assert_eq!(RuleVerdict::Drop, FromStr::from_str("drop").unwrap());
+        assert_eq!(RuleVerdict::Drop, FromStr::from_str("DROP").unwrap());
+        assert_eq!(RuleVerdict::Reject, FromStr::from_str("reject").unwrap());
+        assert_eq!(RuleVerdict::Reject, FromStr::from_str("REJECT").unwrap());
+    }
 
-fn option_struct_or_seq_struct<'de, T, D>(deserializer: D) -> Result<Option<Vec<T>>, D::Error>
-where
-    T: de::Deserialize<'de>,
-    D: de::Deserializer<'de>,
-{
-    struct_or_seq_struct(deserializer).map(Some)
+    #[test]
+    fn ruleverdict_tostring() {
+        assert_eq!("accept", &RuleVerdict::Accept.to_string());
+        assert_eq!("drop", &RuleVerdict::Drop.to_string());
+        assert_eq!("reject", &RuleVerdict::Reject.to_string());
+    }
 }

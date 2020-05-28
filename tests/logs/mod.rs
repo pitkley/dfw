@@ -1,4 +1,4 @@
-// Copyright 2017 - 2019 Pit Kleyersburg <pitkley@googlemail.com>
+// Copyright Pit Kleyersburg <pitkley@googlemail.com>
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -8,11 +8,12 @@
 
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::collections::HashMap as Map;
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::BufReader;
-use std::str::FromStr;
+use std::{
+    collections::HashMap as Map,
+    fs::File,
+    io::{prelude::*, BufReader},
+    str::FromStr,
+};
 
 lazy_static! {
     static ref RE: Regex =

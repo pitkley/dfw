@@ -1,4 +1,4 @@
-// Copyright 2017 - 2019 Pit Kleyersburg <pitkley@googlemail.com>
+// Copyright Pit Kleyersburg <pitkley@googlemail.com>
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -26,12 +26,32 @@
 #![deny(missing_docs)]
 
 // declare modules
+mod de;
 pub mod errors;
+pub mod iptables;
 pub mod nftables;
 pub mod process;
-pub mod rule;
 pub mod types;
 pub mod util;
 
-// re-export process types
-pub use process::*;
+use errors::Result;
+use process::{Process, ProcessContext};
+use serde::de::DeserializeOwned;
+use std::fmt::Debug;
+use types::DFW;
+
+/// This trait is used to distinguish between different firewall backends.
+///
+/// To add a new firewall-backend create an empty struct implementing this trait.
+pub trait FirewallBackend: Sized
+where
+    DFW<Self>: Process<Self>,
+{
+    /// Associated type identifying the rule-type returned.
+    type Rule;
+    /// Associated type representing the firewall backend defaults/configuration.
+    type Defaults: Debug + DeserializeOwned;
+
+    /// Apply the processed rules.
+    fn apply(rules: Vec<Self::Rule>, ctx: &ProcessContext<Self>) -> Result<()>;
+}

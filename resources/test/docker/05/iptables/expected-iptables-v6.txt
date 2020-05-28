@@ -1,0 +1,23 @@
+*filter
+:DFWRS_FORWARD - [0:0]
+:DFWRS_INPUT - [0:0]
+-F DFWRS_FORWARD
+-A DFWRS_FORWARD -m state --state INVALID -j DROP
+-A DFWRS_FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
+-F DFWRS_INPUT
+-A DFWRS_INPUT -m state --state INVALID -j DROP
+-A DFWRS_INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+-A DFWRS_INPUT -i eni -p tcp --dport 80 -j ACCEPT
+-A DFWRS_INPUT -i eni -p tcp --dport 80 -j ACCEPT
+-A DFWRS_INPUT -i eni -p udp --dport 53 -j ACCEPT
+-A DFWRS_INPUT -p tcp --dport 443 -j ACCEPT
+-A DFWRS_INPUT -s 2001:db8::1/128 -i eni -p tcp --dport 22 -j ACCEPT
+-A DFWRS_INPUT -s 2001:db8::2/128 -i eni -p tcp --dport 25 -j ACCEPT
+-A DFWRS_INPUT -s 2001:db8::3/128 -i eni -p tcp --dport 25 -j ACCEPT
+COMMIT
+*nat
+:DFWRS_POSTROUTING - [0:0]
+:DFWRS_PREROUTING - [0:0]
+-F DFWRS_POSTROUTING
+-F DFWRS_PREROUTING
+COMMIT
