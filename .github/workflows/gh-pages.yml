@@ -47,8 +47,17 @@ jobs:
           exit 1
         fi
         echo "::set-output name=value::${REF}"
+    - name: Identify if tag is a prerelease
+      id: tag-prerelease
+      run: |
+        if [[ "${{ steps.branch-or-tage.outputs.value }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "::set-output name=value::false"
+        else
+          echo "::set-output name=value::true"
+        fi
 
     - name: Create/update symlink for `/latest` to latest tag
+      if: ${{ steps.tag-prerelease.outputs.value == 'false' }}
       run: |
         rm gh-pages/latest || :
         ln -sf "${{ steps.tag.outputs.tag }}" gh-pages/latest
