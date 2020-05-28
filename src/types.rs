@@ -452,6 +452,30 @@ pub struct WiderWorldToContainerRule {
     /// Specific external network interface to target.
     pub external_network_interface: Option<String>,
 
+    /// Configure if the container should be exposed via IPv6, too. _(Default: true)_.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
+    /// expose_via_ipv6 = false
+    /// # "#).unwrap();
+    ///
+    /// # toml::from_str::<WiderWorldToContainerRule>(r#"
+    /// # network = ""
+    /// # dst_container = ""
+    /// # expose_port = 0
+    /// expose_via_ipv6 = false
+    /// # "#).unwrap();
+    /// ```
+    #[serde(default = "default_wwtcr_expose_via_ipv6")]
+    pub expose_via_ipv6: bool,
+
     /// Source CIDRs (IPv4) to which incoming traffic should be restricted.
     ///
     /// This can be:
@@ -523,6 +547,10 @@ pub struct WiderWorldToContainerRule {
     /// ```
     #[serde(default, deserialize_with = "option_string_or_seq_string")]
     pub source_cidr_v6: Option<Vec<String>>,
+}
+
+fn default_wwtcr_expose_via_ipv6() -> bool {
+    true
 }
 
 /// Struct to hold a port definition to expose on the host/between containers.

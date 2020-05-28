@@ -95,6 +95,7 @@ fn parse_conf_file() {
                     family: "tcp".to_owned(),
                 }],
                 external_network_interface: Some("eni".to_owned()),
+                expose_via_ipv6: false,
                 source_cidr_v4: None,
                 source_cidr_v6: None,
             },
@@ -107,6 +108,7 @@ fn parse_conf_file() {
                     family: "tcp".to_owned(),
                 }],
                 external_network_interface: Some("eni".to_owned()),
+                expose_via_ipv6: true,
                 source_cidr_v4: Some(vec!["192.0.2.1/32".to_owned(), "192.0.2.2/32".to_owned()]),
                 source_cidr_v6: Some(vec![
                     "2001:db8::1/128".to_owned(),
@@ -194,6 +196,7 @@ fn parse_conf_path() {
                     family: "tcp".to_owned(),
                 }],
                 external_network_interface: Some("eni".to_owned()),
+                expose_via_ipv6: false,
                 source_cidr_v4: None,
                 source_cidr_v6: None,
             },
@@ -206,6 +209,7 @@ fn parse_conf_path() {
                     family: "tcp".to_owned(),
                 }],
                 external_network_interface: Some("eni".to_owned()),
+                expose_via_ipv6: true,
                 source_cidr_v4: Some(vec!["192.0.2.1/32".to_owned(), "192.0.2.2/32".to_owned()]),
                 source_cidr_v6: Some(vec![
                     "2001:db8::1/128".to_owned(),
@@ -260,6 +264,7 @@ fn parse_expose_port_single_int() {
             family: "tcp".to_owned(),
         }],
         external_network_interface: None,
+        expose_via_ipv6: true,
         source_cidr_v4: None,
         source_cidr_v6: None,
     };
@@ -292,6 +297,7 @@ fn parse_expose_port_seq_int() {
             },
         ],
         external_network_interface: None,
+        expose_via_ipv6: true,
         source_cidr_v4: None,
         source_cidr_v6: None,
     };
@@ -321,6 +327,7 @@ fn parse_expose_port_single_string() {
                 family: family.to_owned(),
             }],
             external_network_interface: None,
+            expose_via_ipv6: true,
             source_cidr_v4: None,
             source_cidr_v6: None,
         };
@@ -359,6 +366,7 @@ fn parse_expose_port_seq_string() {
             },
         ],
         external_network_interface: None,
+        expose_via_ipv6: true,
         source_cidr_v4: None,
         source_cidr_v6: None,
     };
@@ -391,6 +399,7 @@ fn parse_expose_port_single_struct() {
                 family: "tcp".to_owned(),
             }],
             external_network_interface: None,
+            expose_via_ipv6: true,
             source_cidr_v4: None,
             source_cidr_v6: None,
         };
@@ -439,6 +448,7 @@ fn parse_expose_port_seq_struct() {
             },
         ],
         external_network_interface: None,
+        expose_via_ipv6: true,
         source_cidr_v4: None,
         source_cidr_v6: None,
     };

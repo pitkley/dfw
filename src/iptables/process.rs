@@ -614,6 +614,7 @@ impl Process<Iptables> for WiderWorldToContainer {
 }
 
 impl Process<Iptables> for WiderWorldToContainerRule {
+    #[allow(clippy::cognitive_complexity)]
     fn process(&self, ctx: &ProcessContext<Iptables>) -> Result<Option<Vec<IptablesRule>>> {
         trace!(ctx.logger, "Process rule";
                o!("part" => "wider_world_to_container_rule",
@@ -623,6 +624,7 @@ impl Process<Iptables> for WiderWorldToContainerRule {
         for expose_port in &self.expose_port {
             let mut ipt_forward_rule = Rule::new("filter", DFW_FORWARD_CHAIN);
             let mut ipt_dnat_rule = Rule::new("nat", DFW_PREROUTING_CHAIN);
+            let mut ipt6_input_rule = Rule::new("filter", DFW_INPUT_CHAIN);
 
             let network = match ctx.network_map.get(&self.network) {
                 Some(network) => network,
@@ -672,6 +674,7 @@ impl Process<Iptables> for WiderWorldToContainerRule {
                         .ok_or_else(|| format_err!("IPv4 address is empty"))?,
                     destination_port
                 ));
+                ipt6_input_rule.destination_port(&destination_port);
             } else {
                 // Network for container has to exist
                 continue;
@@ -680,8 +683,10 @@ impl Process<Iptables> for WiderWorldToContainerRule {
             // Set correct protocol
             ipt_forward_rule.protocol(&expose_port.family);
             ipt_dnat_rule.protocol(&expose_port.family);
+            ipt6_input_rule.protocol(&expose_port.family);
 
             ipt_forward_rule.jump("ACCEPT");
+            ipt6_input_rule.jump("ACCEPT");
 
             // Try to build the rule without the out_interface defined to see if any of the
             // other mandatory fields has been populated.
@@ -706,6 +711,7 @@ impl Process<Iptables> for WiderWorldToContainerRule {
 
                 ipt_forward_rule.in_interface(primary_external_network_interface);
                 ipt_dnat_rule.in_interface(primary_external_network_interface);
+                ipt6_input_rule.in_interface(primary_external_network_interface);
             } else {
                 // The DNAT rule requires the external interface
                 continue;
@@ -768,6 +774,37 @@ impl Process<Iptables> for WiderWorldToContainerRule {
                     &forward_rule,
                 ));
                 rules.push(append_built_rule(IptablesRuleDiscriminants::V4, &dnat_rule));
+            }
+            if self.expose_via_ipv6 {
+                if let Some(source_cidrs) = &self.source_cidr_v6 {
+                    for additional_input_rule in source_cidrs
+                        .iter()
+                        .map(|source_cidr| {
+                            let mut input_rule = ipt6_input_rule.clone();
+                            input_rule.source(source_cidr);
+                            input_rule
+                        })
+                        .map(|input_rule| input_rule.build())
+                        .collect::<Result<Vec<_>>>()?
+                    {
+                        debug!(ctx.logger, "Add IPv6 INPUT rule";
+                               o!("part" => "wider_world_to_container",
+                                   "rule" => &additional_input_rule.rule));
+                        rules.push(append_built_rule(
+                            IptablesRuleDiscriminants::V6,
+                            &additional_input_rule,
+                        ));
+                    }
+                } else {
+                    let input_rule = ipt6_input_rule.build()?;
+                    debug!(ctx.logger, "Add IPv6 INPUT rule";
+                           o!("part" => "wider_world_to_container",
+                               "rule" => &input_rule.rule));
+                    rules.push(append_built_rule(
+                        IptablesRuleDiscriminants::V6,
+                        &input_rule,
+                    ));
+                }
             }
         }
 

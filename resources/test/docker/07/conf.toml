@@ -1,0 +1,29 @@
+[global_defaults]
+external_network_interfaces = "eni"
+
+[wider_world_to_container]
+[[wider_world_to_container.rules]]
+network = "PROJECT_default"
+dst_container = "PROJECT_a_1"
+expose_port = "1010/tcp"
+
+[[wider_world_to_container.rules]]
+network = "PROJECT_default"
+dst_container = "PROJECT_a_1"
+expose_port = "2010/tcp"
+expose_via_ipv6 = false
+
+[[wider_world_to_container.rules]]
+network = "PROJECT_default"
+dst_container = "PROJECT_a_1"
+expose_port = "1020/tcp"
+source_cidr_v4 = ["192.0.2.2/32", "192.0.2.3/32"]
+source_cidr_v6 = ["2001:db8::2/128", "2001:db8::3/128"]
+
+[[wider_world_to_container.rules]]
+network = "PROJECT_default"
+dst_container = "PROJECT_a_1"
+expose_port = "2020/tcp"
+expose_via_ipv6 = false
+source_cidr_v4 = ["192.0.2.2/32", "192.0.2.3/32"]
+source_cidr_v6 = ["2001:db8::2/128", "2001:db8::3/128"]

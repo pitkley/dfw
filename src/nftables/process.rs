@@ -884,13 +884,15 @@ impl Process<Nftables> for WiderWorldToContainerRule {
                     nft_dnat_rule.clone(),
                 )?;
             }
-            if let Some(source_cidrs_v6) = &self.source_cidr_v6 {
-                self.apply_source_cidrs_v6(
-                    ctx,
-                    &mut rules,
-                    source_cidrs_v6,
-                    nft_mark_rule.clone(),
-                )?;
+            if self.expose_via_ipv6 {
+                if let Some(source_cidrs_v6) = &self.source_cidr_v6 {
+                    self.apply_source_cidrs_v6(
+                        ctx,
+                        &mut rules,
+                        source_cidrs_v6,
+                        nft_mark_rule.clone(),
+                    )?;
+                }
             }
 
             // If no source CIDRs were specified, we create the default rules that allow all
@@ -911,7 +913,9 @@ impl Process<Nftables> for WiderWorldToContainerRule {
                 // Apply the rule
                 rules.push(add_rule(Family::Inet, "dfw", "forward", &forward_rule));
                 rules.push(add_rule(Family::Ip, "dfw", "prerouting", &dnat_rule));
-                rules.push(add_rule(Family::Ip6, "dfw", "prerouting", &mark_rule));
+                if self.expose_via_ipv6 {
+                    rules.push(add_rule(Family::Ip6, "dfw", "prerouting", &mark_rule));
+                }
             }
         }
 
