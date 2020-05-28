@@ -826,8 +826,80 @@
 <span id="826">826</span>
 <span id="827">827</span>
 <span id="828">828</span>
+<span id="829">829</span>
+<span id="830">830</span>
+<span id="831">831</span>
+<span id="832">832</span>
+<span id="833">833</span>
+<span id="834">834</span>
+<span id="835">835</span>
+<span id="836">836</span>
+<span id="837">837</span>
+<span id="838">838</span>
+<span id="839">839</span>
+<span id="840">840</span>
+<span id="841">841</span>
+<span id="842">842</span>
+<span id="843">843</span>
+<span id="844">844</span>
+<span id="845">845</span>
+<span id="846">846</span>
+<span id="847">847</span>
+<span id="848">848</span>
+<span id="849">849</span>
+<span id="850">850</span>
+<span id="851">851</span>
+<span id="852">852</span>
+<span id="853">853</span>
+<span id="854">854</span>
+<span id="855">855</span>
+<span id="856">856</span>
+<span id="857">857</span>
+<span id="858">858</span>
+<span id="859">859</span>
+<span id="860">860</span>
+<span id="861">861</span>
+<span id="862">862</span>
+<span id="863">863</span>
+<span id="864">864</span>
+<span id="865">865</span>
+<span id="866">866</span>
+<span id="867">867</span>
+<span id="868">868</span>
+<span id="869">869</span>
+<span id="870">870</span>
+<span id="871">871</span>
+<span id="872">872</span>
+<span id="873">873</span>
+<span id="874">874</span>
+<span id="875">875</span>
+<span id="876">876</span>
+<span id="877">877</span>
+<span id="878">878</span>
+<span id="879">879</span>
+<span id="880">880</span>
+<span id="881">881</span>
+<span id="882">882</span>
+<span id="883">883</span>
+<span id="884">884</span>
+<span id="885">885</span>
+<span id="886">886</span>
+<span id="887">887</span>
+<span id="888">888</span>
+<span id="889">889</span>
+<span id="890">890</span>
+<span id="891">891</span>
+<span id="892">892</span>
+<span id="893">893</span>
+<span id="894">894</span>
+<span id="895">895</span>
+<span id="896">896</span>
+<span id="897">897</span>
+<span id="898">898</span>
+<span id="899">899</span>
+<span id="900">900</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="comment">// Copyright 2017 - 2019 Pit Kleyersburg &lt;pitkley@googlemail.com&gt;</span>
+<span class="comment">// Copyright Pit Kleyersburg &lt;pitkley@googlemail.com&gt;</span>
 <span class="comment">//</span>
 <span class="comment">// Licensed under the Apache License, Version 2.0 &lt;LICENSE-APACHE or</span>
 <span class="comment">// http://www.apache.org/licenses/LICENSE-2.0&gt; or the MIT license</span>
@@ -841,12 +913,18 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! The following is an examplary TOML configuration, which will be parsed into this modules types.</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! ```toml</span>
-<span class="doccomment">//! [defaults]</span>
-<span class="doccomment">//! custom_tables = { name = &quot;filter&quot;, chains = [&quot;input&quot;, &quot;forward&quot;]}</span>
+<span class="doccomment">//! ```</span>
+<span class="doccomment">//! # use dfw::nftables::Nftables;</span>
+<span class="doccomment">//! # use dfw::types::*;</span>
+<span class="doccomment">//! # use toml;</span>
+<span class="doccomment">//! # toml::from_str::&lt;DFW&lt;Nftables&gt;&gt;(r#&quot;</span>
+<span class="doccomment">//! [global_defaults]</span>
 <span class="doccomment">//! external_network_interfaces = &quot;eth0&quot;</span>
 <span class="doccomment">//!</span>
-<span class="doccomment">//! [initialization]</span>
+<span class="doccomment">//! [backend_defaults]</span>
+<span class="doccomment">//! custom_tables = { name = &quot;filter&quot;, chains = [&quot;input&quot;, &quot;forward&quot;]}</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! [backend_defaults.initialization]</span>
 <span class="doccomment">//! rules = [</span>
 <span class="doccomment">//!     &quot;add table inet custom&quot;,</span>
 <span class="doccomment">//! ]</span>
@@ -883,14 +961,14 @@
 <span class="doccomment">//! dst_network = &quot;other_network&quot;</span>
 <span class="doccomment">//! dst_container = &quot;container_c&quot;</span>
 <span class="doccomment">//! expose_port = { host_port = 8080, container_port = 80, family = &quot;tcp&quot; }</span>
+<span class="doccomment">//! # &quot;#).unwrap();</span>
 <span class="doccomment">//! ```</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">nftables</span>::<span class="kw-2">*</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">de</span>::<span class="kw-2">*</span>, <span class="ident">nftables</span>, <span class="ident">FirewallBackend</span>, <span class="ident">Process</span>};
 <span class="kw">use</span> <span class="ident">derive_builder</span>::<span class="ident">Builder</span>;
-<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">de</span>, <span class="ident">Deserialize</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">fmt</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">marker</span>::<span class="ident">PhantomData</span>;
+<span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">Deserialize</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
+<span class="kw">use</span> <span class="ident">strum_macros</span>::{<span class="ident">Display</span>, <span class="ident">EnumString</span>};
 
 <span class="kw">const</span> <span class="ident">DEFAULT_PROTOCOL</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;tcp&quot;</span>;
 
@@ -900,13 +978,17 @@
 <span class="doccomment">/// Every section is optional.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DFW</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DFW</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">B</span>: <span class="ident">FirewallBackend</span>,
+    <span class="ident">DFW</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>: <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>,
+{
     <span class="doccomment">/// The `defaults` configuration section</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">defaults</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Defaults</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The `initialization` configuration section</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">initialization</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Initialization</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">alias</span> <span class="op">=</span> <span class="string">&quot;defaults&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">global_defaults</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">GlobalDefaults</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// The `backend_defaults` configuration section</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">alias</span> <span class="op">=</span> <span class="string">&quot;initialization&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">backend_defaults</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">B</span>::<span class="ident">Defaults</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The `container_to_container` configuration section</span>
     <span class="kw">pub</span> <span class="ident">container_to_container</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ContainerToContainer</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The `container_to_wider_world` configuration section</span>
@@ -922,41 +1004,21 @@
 <span class="doccomment">/// The default configuration section, used by DFW for rule processing.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">Default</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Defaults</span> {
-    <span class="doccomment">/// Specify the names of custom nft-tables that should be partially managed.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Explanation</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If you want to use or already use an existing nftables table to manage rules independently</span>
-    <span class="doccomment">/// from DFW, it is important that two conditions are met:</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// 1. The priority-values of the chains are _lower_ than the priority-values used by DFW.</span>
-    <span class="doccomment">/// 2. The default-policy of the any input or forward chains in the table are set to `accept`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// While DFW cannot ensure that the first condition is met (since changing the priority of a</span>
-    <span class="doccomment">/// chain is not possible without recreating the chain), it can set the policies of your input</span>
-    <span class="doccomment">/// and output chains to `accept` for you.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Example</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// ```toml</span>
-    <span class="doccomment">/// custom_tables = { name = &quot;filter&quot;, chains = [&quot;input&quot;, &quot;forward&quot;] }</span>
-    <span class="doccomment">/// custom_tables = [</span>
-    <span class="doccomment">///     { name = &quot;filter&quot;, chains = [&quot;input&quot;, &quot;forward&quot;] },</span>
-    <span class="doccomment">///     { name = &quot;custom&quot;, chains = [&quot;input&quot;, &quot;forward&quot;] }</span>
-    <span class="doccomment">/// ]</span>
-    <span class="doccomment">/// ```</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">deserialize_with</span> <span class="op">=</span> <span class="string">&quot;option_struct_or_seq_struct&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">custom_tables</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Table</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GlobalDefaults</span> {
     <span class="doccomment">/// This defines the external network interfaces of the host to consider during building the</span>
-    <span class="doccomment">/// rules. The value can be non-existant, a string, or a sequence of strings.</span>
+    <span class="doccomment">/// rules. The value can be non-existent, a string, or a sequence of strings.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # Example</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// ```toml</span>
+    <span class="doccomment">/// ```</span>
+    <span class="doccomment">/// # use dfw::types::*;</span>
+    <span class="doccomment">/// # use toml;</span>
+    <span class="doccomment">/// # toml::from_str::&lt;GlobalDefaults&gt;(r#&quot;</span>
     <span class="doccomment">/// external_network_interfaces = &quot;eth0&quot;</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
+    <span class="doccomment">/// # toml::from_str::&lt;GlobalDefaults&gt;(r#&quot;</span>
     <span class="doccomment">/// external_network_interfaces = [&quot;eth0&quot;, &quot;eth1&quot;]</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
     <span class="doccomment">/// ```</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">deserialize_with</span> <span class="op">=</span> <span class="string">&quot;option_string_or_seq_string&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">external_network_interfaces</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>,
@@ -964,43 +1026,30 @@
     <span class="doccomment">/// This defines whether the default Docker bridge (usually `docker0`) is allowed to access host</span>
     <span class="doccomment">/// resources.</span>
     <span class="doccomment">///</span>
+    <span class="doccomment">/// This field is optional and will be set to &quot;accept&quot; by default.</span>
+    <span class="doccomment">///</span>
     <span class="doccomment">/// For non-default Docker bridges this is controlled within the [container-to-host section].</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [container-to-host section]: struct.ContainerToHostRule.html</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
     <span class="kw">pub</span> <span class="ident">default_docker_bridge_to_host_policy</span>: <span class="ident">ChainPolicy</span>,
-}
 
-<span class="doccomment">/// Reference to an nftables table, specifically to the input- and forward-chains within it.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This is used by DFW when managing other tables is required.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">Default</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Table</span> {
-    <span class="doccomment">/// Name of the custom table.</span>
-    <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
-
-    <span class="doccomment">/// Names of the input and forward chains defined within the custom table.</span>
-    <span class="kw">pub</span> <span class="ident">chains</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-}
-
-<span class="doccomment">/// The initialization section allows you to execute any commands against nftables.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Default</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Initialization</span> {
-    <span class="doccomment">/// Initialization rules for nftables</span>
+    <span class="doccomment">/// # This field is **DEPRECATED!**</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// # Example</span>
+    <span class="doccomment">/// Provide the custom tables in the nftables backend-defaults section instead.</span>
+    <span class="doccomment">/// (This field will be removed with release 2.0.0.)</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// ```toml</span>
-    <span class="doccomment">/// [initialization]</span>
-    <span class="doccomment">/// rules = [</span>
-    <span class="doccomment">///     &quot;add table inet custom&quot;,</span>
-    <span class="doccomment">///     &quot;flush table inet custom&quot;,</span>
-    <span class="doccomment">///     # ...</span>
-    <span class="doccomment">/// ]</span>
-    <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="ident">rules</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Please consult the [firewall-backend documentation] if you want to know how to use this</span>
+    <span class="doccomment">/// field.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// [firewall-backend documentation]: ../nftables/types/struct.Defaults.html#structfield.custom_tables</span>
+    <span class="attribute">#[<span class="ident">deprecated</span>(
+        <span class="ident">since</span> <span class="op">=</span> <span class="string">&quot;1.2.0&quot;</span>,
+        <span class="ident">note</span> <span class="op">=</span> <span class="string">&quot;Provide the custom tables in the nftables backend-defaults section instead. This \
+                field will be removed with release 2.0.0.&quot;</span>
+    )]</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">deserialize_with</span> <span class="op">=</span> <span class="string">&quot;option_struct_or_seq_struct&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">custom_tables</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">nftables</span>::<span class="ident">types</span>::<span class="ident">Table</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// The container-to-container section, defining how containers can communicate amongst each other.</span>
@@ -1033,11 +1082,23 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// The easiest way to define the rules is using TOMLs [arrays of tables][toml-aot]:</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// ```toml</span>
+    <span class="doccomment">/// ```</span>
+    <span class="doccomment">/// # use dfw::nftables::Nftables;</span>
+    <span class="doccomment">/// # use dfw::types::*;</span>
+    <span class="doccomment">/// # use toml;</span>
+    <span class="doccomment">/// # toml::from_str::&lt;DFW&lt;Nftables&gt;&gt;(r#&quot;</span>
+    <span class="doccomment">/// [container_to_container]</span>
+    <span class="doccomment">/// default_policy = &quot;drop&quot;</span>
+    <span class="doccomment">///</span>
     <span class="doccomment">/// [[container_to_container.rules]]</span>
-    <span class="doccomment">/// # first rule here</span>
+    <span class="doccomment">/// ## first rule here</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # verdict = &quot;accept&quot;</span>
     <span class="doccomment">/// [[container_to_container.rules]]</span>
-    <span class="doccomment">/// # second rule here</span>
+    <span class="doccomment">/// ## second rule here</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # verdict = &quot;accept&quot;</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [toml-aot]:</span>
@@ -1077,11 +1138,21 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// The easiest way to define the rules is using TOMLs [arrays of tables][toml-aot]:</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// ```toml</span>
+    <span class="doccomment">/// ```</span>
+    <span class="doccomment">/// # use dfw::nftables::Nftables;</span>
+    <span class="doccomment">/// # use dfw::types::*;</span>
+    <span class="doccomment">/// # use toml;</span>
+    <span class="doccomment">/// # toml::from_str::&lt;DFW&lt;Nftables&gt;&gt;(r#&quot;</span>
+    <span class="doccomment">/// [container_to_wider_world]</span>
+    <span class="doccomment">/// default_policy = &quot;drop&quot;</span>
+    <span class="doccomment">///</span>
     <span class="doccomment">/// [[container_to_wider_world.rules]]</span>
-    <span class="doccomment">/// # first rule here</span>
+    <span class="doccomment">/// ## first rule here</span>
+    <span class="doccomment">/// # verdict = &quot;accept&quot;</span>
     <span class="doccomment">/// [[container_to_wider_world.rules]]</span>
-    <span class="doccomment">/// # second rule here</span>
+    <span class="doccomment">/// ## second rule here</span>
+    <span class="doccomment">/// # verdict = &quot;accept&quot;</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [toml-aot]:</span>
@@ -1119,11 +1190,23 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// The easiest way to define the rules is using TOMLs [arrays of tables][toml-aot]:</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// ```toml</span>
+    <span class="doccomment">/// ```</span>
+    <span class="doccomment">/// # use dfw::nftables::Nftables;</span>
+    <span class="doccomment">/// # use dfw::types::*;</span>
+    <span class="doccomment">/// # use toml;</span>
+    <span class="doccomment">/// # toml::from_str::&lt;DFW&lt;Nftables&gt;&gt;(r#&quot;</span>
+    <span class="doccomment">/// [container_to_host]</span>
+    <span class="doccomment">/// default_policy = &quot;drop&quot;</span>
+    <span class="doccomment">///</span>
     <span class="doccomment">/// [[container_to_host.rules]]</span>
-    <span class="doccomment">/// # first rule here</span>
+    <span class="doccomment">/// ## first rule here</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # verdict = &quot;accept&quot;</span>
     <span class="doccomment">/// [[container_to_host.rules]]</span>
-    <span class="doccomment">/// # second rule here</span>
+    <span class="doccomment">/// ## second rule here</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # verdict = &quot;accept&quot;</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [toml-aot]:</span>
@@ -1157,11 +1240,22 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// The easiest way to define the rules is using TOMLs [arrays of tables][toml-aot]:</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// ```toml</span>
+    <span class="doccomment">/// ```</span>
+    <span class="doccomment">/// # use dfw::nftables::Nftables;</span>
+    <span class="doccomment">/// # use dfw::types::*;</span>
+    <span class="doccomment">/// # use toml;</span>
+    <span class="doccomment">/// # toml::from_str::&lt;DFW&lt;Nftables&gt;&gt;(r#&quot;</span>
     <span class="doccomment">/// [[wider_world_to_container.rules]]</span>
-    <span class="doccomment">/// # first rule here</span>
+    <span class="doccomment">/// ## first rule here</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
+    <span class="doccomment">/// # expose_port = 0</span>
     <span class="doccomment">/// [[wider_world_to_container.rules]]</span>
-    <span class="doccomment">/// # second rule here</span>
+    <span class="doccomment">/// ## second rule here</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
+    <span class="doccomment">/// # expose_port = 0</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [toml-aot]:</span>
@@ -1199,29 +1293,91 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// All of the following are legal TOML fragments:</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// ```toml</span>
+    <span class="doccomment">/// ```</span>
+    <span class="doccomment">/// # use dfw::types::*;</span>
+    <span class="doccomment">/// # use toml;</span>
+    <span class="doccomment">/// # toml::from_str::&lt;WiderWorldToContainerRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
     <span class="doccomment">/// expose_port = 80</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
+    <span class="doccomment">/// # toml::from_str::&lt;WiderWorldToContainerRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
     <span class="doccomment">/// expose_port = [80, 443]</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
+    <span class="doccomment">/// # toml::from_str::&lt;WiderWorldToContainerRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
     <span class="doccomment">/// expose_port = &quot;53/udp&quot;</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
+    <span class="doccomment">/// # toml::from_str::&lt;WiderWorldToContainerRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
     <span class="doccomment">/// expose_port = [&quot;80/tcp&quot;, &quot;53/udp&quot;]</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// # The following four all result in the same definition</span>
+    <span class="doccomment">/// # toml::from_str::&lt;WiderWorldToContainerRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// ## The following four all result in the same definition</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
     <span class="doccomment">/// expose_port = { host_port = 8080 }</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
+    <span class="doccomment">/// # toml::from_str::&lt;WiderWorldToContainerRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
     <span class="doccomment">/// expose_port = { host_port = 8080, container_port = 8080 }</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
+    <span class="doccomment">/// # toml::from_str::&lt;WiderWorldToContainerRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
     <span class="doccomment">/// expose_port = { host_port = 8080, family = &quot;tcp&quot; }</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
+    <span class="doccomment">/// # toml::from_str::&lt;WiderWorldToContainerRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
     <span class="doccomment">/// expose_port = { host_port = 8080, container_port = 8080, family = &quot;tcp&quot; }</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
     <span class="doccomment">///</span>
+    <span class="doccomment">/// # toml::from_str::&lt;WiderWorldToContainerRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
     <span class="doccomment">/// expose_port = [</span>
     <span class="doccomment">///     { host_port = 80 },</span>
     <span class="doccomment">///     { host_port = 53, family = &quot;udp&quot; },</span>
     <span class="doccomment">///     { host_port = 443, container_port = 8443 },</span>
     <span class="doccomment">/// ]</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
     <span class="doccomment">/// ```</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deserialize_with</span> <span class="op">=</span> <span class="string">&quot;single_or_seq_string_or_struct&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">expose_port</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ExposePort</span><span class="op">&gt;</span>,
 
     <span class="doccomment">/// Specific external network interface to target.</span>
     <span class="kw">pub</span> <span class="ident">external_network_interface</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+
+    <span class="doccomment">/// Configure if the container should be exposed via IPv6, too. _(Default: true)_.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// # Example</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// ```</span>
+    <span class="doccomment">/// # use dfw::types::*;</span>
+    <span class="doccomment">/// # use toml;</span>
+    <span class="doccomment">/// # toml::from_str::&lt;WiderWorldToContainerRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
+    <span class="doccomment">/// # expose_port = 0</span>
+    <span class="doccomment">/// expose_via_ipv6 = false</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// # toml::from_str::&lt;WiderWorldToContainerRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
+    <span class="doccomment">/// # expose_port = 0</span>
+    <span class="doccomment">/// expose_via_ipv6 = false</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
+    <span class="doccomment">/// ```</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span> <span class="op">=</span> <span class="string">&quot;default_wwtcr_expose_via_ipv6&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">expose_via_ipv6</span>: <span class="ident">bool</span>,
 
     <span class="doccomment">/// Source CIDRs (IPv4) to which incoming traffic should be restricted.</span>
     <span class="doccomment">///</span>
@@ -1237,10 +1393,22 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// All of the following are legal TOML fragments:</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// ```toml</span>
+    <span class="doccomment">/// ```</span>
+    <span class="doccomment">/// # use dfw::types::*;</span>
+    <span class="doccomment">/// # use toml;</span>
+    <span class="doccomment">/// # toml::from_str::&lt;WiderWorldToContainerRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
+    <span class="doccomment">/// # expose_port = 0</span>
     <span class="doccomment">/// source_cidr_v4 = &quot;127.0.0.0/8&quot;</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// source_cidr _v4= [&quot;127.0.0.0/8&quot;, &quot;192.0.2.1/32&quot;]</span>
+    <span class="doccomment">/// # toml::from_str::&lt;WiderWorldToContainerRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
+    <span class="doccomment">/// # expose_port = 0</span>
+    <span class="doccomment">/// source_cidr_v4 = [&quot;127.0.0.0/8&quot;, &quot;192.0.2.1/32&quot;]</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
     <span class="doccomment">/// ```</span>
     <span class="attribute">#[<span class="ident">serde</span>(
         <span class="ident">default</span>,
@@ -1263,17 +1431,29 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// All of the following are legal TOML fragments:</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// ```toml</span>
-    <span class="doccomment">/// source_cidr_v6 = &quot;fe80::/10&quot;</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// source_cidr_v6 = [&quot;fe80::/10&quot;, &quot;2001:db8::/32&quot;]</span>
     <span class="doccomment">/// ```</span>
-    <span class="attribute">#[<span class="ident">serde</span>(
-        <span class="ident">default</span>,
-        <span class="ident">deserialize_with</span> <span class="op">=</span> <span class="string">&quot;option_string_or_seq_string&quot;</span>,
-        <span class="ident">alias</span> <span class="op">=</span> <span class="string">&quot;source_cidr&quot;</span>
-    )]</span>
+    <span class="doccomment">/// # use dfw::types::*;</span>
+    <span class="doccomment">/// # use toml;</span>
+    <span class="doccomment">/// # toml::from_str::&lt;WiderWorldToContainerRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
+    <span class="doccomment">/// # expose_port = 0</span>
+    <span class="doccomment">/// source_cidr_v6 = &quot;fe80::/10&quot;</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// # toml::from_str::&lt;WiderWorldToContainerRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
+    <span class="doccomment">/// # expose_port = 0</span>
+    <span class="doccomment">/// source_cidr_v6 = [&quot;fe80::/10&quot;, &quot;2001:db8::/32&quot;]</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
+    <span class="doccomment">/// ```</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">deserialize_with</span> <span class="op">=</span> <span class="string">&quot;option_string_or_seq_string&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">source_cidr_v6</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">fn</span> <span class="ident">default_wwtcr_expose_via_ipv6</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    <span class="bool-val">true</span>
 }
 
 <span class="doccomment">/// Struct to hold a port definition to expose on the host/between containers.</span>
@@ -1380,11 +1560,22 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// The easiest way to define the rules is using TOMLs [arrays of tables][toml-aot]:</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// ```toml</span>
+    <span class="doccomment">/// ```</span>
+    <span class="doccomment">/// # use dfw::nftables::Nftables;</span>
+    <span class="doccomment">/// # use dfw::types::*;</span>
+    <span class="doccomment">/// # use toml;</span>
+    <span class="doccomment">/// # toml::from_str::&lt;DFW&lt;Nftables&gt;&gt;(r#&quot;</span>
     <span class="doccomment">/// [[container_dnat.rules]]</span>
-    <span class="doccomment">/// # first rule here</span>
+    <span class="doccomment">/// ## first rule here</span>
+    <span class="doccomment">/// # dst_network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
+    <span class="doccomment">/// # expose_port = 0</span>
     <span class="doccomment">/// [[container_dnat.rules]]</span>
-    <span class="doccomment">/// # second rule here</span>
+    <span class="doccomment">/// ## second rule here</span>
+    <span class="doccomment">/// # dst_network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
+    <span class="doccomment">/// # expose_port = 0</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
     <span class="doccomment">/// ```</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [toml-aot]:</span>
@@ -1428,23 +1619,61 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// All of the following are legal TOML fragments:</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// ```toml</span>
+    <span class="doccomment">/// ```</span>
+    <span class="doccomment">/// # use dfw::types::*;</span>
+    <span class="doccomment">/// # use toml;</span>
+    <span class="doccomment">/// # toml::from_str::&lt;ContainerDNATRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # dst_network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
     <span class="doccomment">/// expose_port = 80</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
+    <span class="doccomment">/// # toml::from_str::&lt;ContainerDNATRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # dst_network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
     <span class="doccomment">/// expose_port = [80, 443]</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
+    <span class="doccomment">/// # toml::from_str::&lt;ContainerDNATRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # dst_network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
     <span class="doccomment">/// expose_port = &quot;53/udp&quot;</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
+    <span class="doccomment">/// # toml::from_str::&lt;ContainerDNATRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # dst_network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
     <span class="doccomment">/// expose_port = [&quot;80/tcp&quot;, &quot;53/udp&quot;]</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// # The following four all result in the same definition</span>
+    <span class="doccomment">/// # toml::from_str::&lt;ContainerDNATRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// ## The following four all result in the same definition</span>
+    <span class="doccomment">/// # dst_network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
     <span class="doccomment">/// expose_port = { host_port = 8080 }</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
+    <span class="doccomment">/// # toml::from_str::&lt;ContainerDNATRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # dst_network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
     <span class="doccomment">/// expose_port = { host_port = 8080, container_port = 8080 }</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
+    <span class="doccomment">/// # toml::from_str::&lt;ContainerDNATRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # dst_network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
     <span class="doccomment">/// expose_port = { host_port = 8080, family = &quot;tcp&quot; }</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
+    <span class="doccomment">/// # toml::from_str::&lt;ContainerDNATRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # dst_network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
     <span class="doccomment">/// expose_port = { host_port = 8080, container_port = 8080, family = &quot;tcp&quot; }</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
     <span class="doccomment">///</span>
+    <span class="doccomment">/// # toml::from_str::&lt;ContainerDNATRule&gt;(r#&quot;</span>
+    <span class="doccomment">/// # dst_network = &quot;&quot;</span>
+    <span class="doccomment">/// # dst_container = &quot;&quot;</span>
     <span class="doccomment">/// expose_port = [</span>
     <span class="doccomment">///     { host_port = 80 },</span>
     <span class="doccomment">///     { host_port = 53, family = &quot;udp&quot; },</span>
     <span class="doccomment">///     { host_port = 443, container_port = 8443 },</span>
     <span class="doccomment">/// ]</span>
+    <span class="doccomment">/// # &quot;#).unwrap();</span>
     <span class="doccomment">/// ```</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deserialize_with</span> <span class="op">=</span> <span class="string">&quot;single_or_seq_string_or_struct&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">expose_port</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ExposePort</span><span class="op">&gt;</span>,
@@ -1454,206 +1683,121 @@
     <span class="ident">DEFAULT_PROTOCOL</span>.<span class="ident">to_owned</span>()
 }
 
-<span class="kw">struct</span> <span class="ident">StringOrStruct</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>);
+<span class="doccomment">/// Representation of chain policies.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// ## Attribution</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Parts of the documentation have been taken from</span>
+<span class="doccomment">/// &lt;https://wiki.nftables.org/wiki-nftables/index.php/Configuring_chains&gt;.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">Display</span>, <span class="ident">EnumString</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;lowercase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">strum</span>(<span class="ident">serialize_all</span> <span class="op">=</span> <span class="string">&quot;snake_case&quot;</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ChainPolicy</span> {
+    <span class="doccomment">/// The accept verdict means that the packet will keep traversing the network stack.</span>
+    <span class="attribute">#[<span class="ident">strum</span>(<span class="ident">to_string</span> <span class="op">=</span> <span class="string">&quot;accept&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;accept&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;ACCEPT&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">alias</span> <span class="op">=</span> <span class="string">&quot;ACCEPT&quot;</span>)]</span>
+    <span class="ident">Accept</span>,
+    <span class="doccomment">/// The drop verdict means that the packet is discarded if the packet reaches the end of the</span>
+    <span class="doccomment">/// base chain.</span>
+    <span class="attribute">#[<span class="ident">strum</span>(<span class="ident">to_string</span> <span class="op">=</span> <span class="string">&quot;drop&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;drop&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;DROP&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">alias</span> <span class="op">=</span> <span class="string">&quot;DROP&quot;</span>)]</span>
+    <span class="ident">Drop</span>,
+}
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="ident">de</span>::<span class="ident">Visitor</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StringOrStruct</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">de</span>::<span class="ident">Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">FromStr</span><span class="op">&lt;</span><span class="prelude-val">Err</span> <span class="op">=</span> <span class="ident">String</span><span class="op">&gt;</span>,
-{
-    <span class="kw">type</span> <span class="ident">Value</span> <span class="op">=</span> <span class="ident">T</span>;
-
-    <span class="kw">fn</span> <span class="ident">expecting</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">formatter</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
-        <span class="ident">formatter</span>.<span class="ident">write_str</span>(<span class="string">&quot;integer, string or map&quot;</span>)
-    }
-
-    <span class="kw">fn</span> <span class="ident">visit_i64</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">value</span>: <span class="ident">i64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">E</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">E</span>: <span class="ident">de</span>::<span class="ident">Error</span>,
-    {
-        <span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">value</span>.<span class="ident">to_string</span>()).<span class="ident">map_err</span>(<span class="ident">de</span>::<span class="ident">Error</span>::<span class="ident">custom</span>)
-    }
-
-    <span class="kw">fn</span> <span class="ident">visit_str</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">value</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">E</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">E</span>: <span class="ident">de</span>::<span class="ident">Error</span>,
-    {
-        <span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="ident">value</span>).<span class="ident">map_err</span>(<span class="ident">de</span>::<span class="ident">Error</span>::<span class="ident">custom</span>)
-    }
-
-    <span class="kw">fn</span> <span class="ident">visit_map</span><span class="op">&lt;</span><span class="ident">M</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">visitor</span>: <span class="ident">M</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">M</span>::<span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">M</span>: <span class="ident">de</span>::<span class="ident">MapAccess</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
-    {
-        <span class="ident">de</span>::<span class="ident">Deserialize</span>::<span class="ident">deserialize</span>(<span class="ident">de</span>::<span class="ident">value</span>::<span class="ident">MapAccessDeserializer</span>::<span class="ident">new</span>(<span class="ident">visitor</span>))
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">ChainPolicy</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ChainPolicy</span> {
+        <span class="ident">ChainPolicy</span>::<span class="ident">Accept</span>
     }
 }
 
-<span class="comment">// Thanks to @dtolnay for the support:</span>
-<span class="comment">//   https://github.com/serde-rs/serde/issues/901#issuecomment-297070279</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="ident">de</span>::<span class="ident">DeserializeSeed</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StringOrStruct</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">de</span>::<span class="ident">Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">FromStr</span><span class="op">&lt;</span><span class="prelude-val">Err</span> <span class="op">=</span> <span class="ident">String</span><span class="op">&gt;</span>,
-{
-    <span class="kw">type</span> <span class="ident">Value</span> <span class="op">=</span> <span class="ident">T</span>;
-
-    <span class="kw">fn</span> <span class="ident">deserialize</span><span class="op">&lt;</span><span class="ident">D</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">deserializer</span>: <span class="ident">D</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Value</span>, <span class="ident">D</span>::<span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">D</span>: <span class="ident">de</span>::<span class="ident">Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
-    {
-        <span class="ident">deserializer</span>.<span class="ident">deserialize_any</span>(<span class="self">self</span>)
+<span class="kw">impl</span> <span class="ident">slog</span>::<span class="ident">Value</span> <span class="kw">for</span> <span class="ident">ChainPolicy</span> {
+    <span class="kw">fn</span> <span class="ident">serialize</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">record</span>: <span class="kw-2">&amp;</span><span class="ident">slog</span>::<span class="ident">Record</span>,
+        <span class="ident">key</span>: <span class="ident">slog</span>::<span class="ident">Key</span>,
+        <span class="ident">serializer</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">slog</span>::<span class="ident">Serializer</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">slog</span>::<span class="prelude-ty">Result</span> {
+        <span class="self">self</span>.<span class="ident">to_string</span>().<span class="ident">serialize</span>(<span class="ident">record</span>, <span class="ident">key</span>, <span class="ident">serializer</span>)
     }
 }
 
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-<span class="kw">fn</span> <span class="ident">string_or_struct</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span>, <span class="ident">T</span>, <span class="ident">D</span><span class="op">&gt;</span>(<span class="ident">deserializer</span>: <span class="ident">D</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">D</span>::<span class="ident">Error</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">de</span>::<span class="ident">Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">FromStr</span><span class="op">&lt;</span><span class="prelude-val">Err</span> <span class="op">=</span> <span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="ident">D</span>: <span class="ident">de</span>::<span class="ident">Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
-{
-    <span class="ident">deserializer</span>.<span class="ident">deserialize_any</span>(<span class="ident">StringOrStruct</span>(<span class="ident">PhantomData</span>))
+<span class="doccomment">/// Representation of rule policies.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// ## Attribution</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Parts of the documentation have been taken from</span>
+<span class="doccomment">/// &lt;https://wiki.nftables.org/wiki-nftables/index.php/Configuring_chains&gt;.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">Display</span>, <span class="ident">EnumString</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;lowercase&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">strum</span>(<span class="ident">serialize_all</span> <span class="op">=</span> <span class="string">&quot;snake_case&quot;</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">RuleVerdict</span> {
+    <span class="doccomment">/// The accept verdict means that the packet will keep traversing the network stack.</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">alias</span> <span class="op">=</span> <span class="string">&quot;ACCEPT&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">strum</span>(<span class="ident">to_string</span> <span class="op">=</span> <span class="string">&quot;accept&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;accept&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;ACCEPT&quot;</span>)]</span>
+    <span class="ident">Accept</span>,
+    <span class="doccomment">/// The drop verdict means that the packet is discarded if the packet reaches the end of the</span>
+    <span class="doccomment">/// base chain.</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">alias</span> <span class="op">=</span> <span class="string">&quot;DROP&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">strum</span>(<span class="ident">to_string</span> <span class="op">=</span> <span class="string">&quot;drop&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;drop&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;DROP&quot;</span>)]</span>
+    <span class="ident">Drop</span>,
+    <span class="doccomment">/// The reject verdict means that the packet is responded to with an ICMP message stating that</span>
+    <span class="doccomment">/// it was rejected.</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">alias</span> <span class="op">=</span> <span class="string">&quot;REJECT&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">strum</span>(<span class="ident">to_string</span> <span class="op">=</span> <span class="string">&quot;reject&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;reject&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;REJECT&quot;</span>)]</span>
+    <span class="ident">Reject</span>,
 }
 
-<span class="kw">struct</span> <span class="ident">SingleOrSeqStringOrStruct</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>);
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="ident">de</span>::<span class="ident">Visitor</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">SingleOrSeqStringOrStruct</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">de</span>::<span class="ident">Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">FromStr</span><span class="op">&lt;</span><span class="prelude-val">Err</span> <span class="op">=</span> <span class="ident">String</span><span class="op">&gt;</span>,
-{
-    <span class="kw">type</span> <span class="ident">Value</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
-
-    <span class="kw">fn</span> <span class="ident">expecting</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">formatter</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
-        <span class="ident">formatter</span>.<span class="ident">write_str</span>(
-            <span class="string">&quot;sequence of integers, strings or maps \
-             or a single integer, string or map&quot;</span>,
-        )
-    }
-
-    <span class="kw">fn</span> <span class="ident">visit_i64</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">value</span>: <span class="ident">i64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Value</span>, <span class="ident">E</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">E</span>: <span class="ident">de</span>::<span class="ident">Error</span>,
-    {
-        <span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">value</span>.<span class="ident">to_string</span>())
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">e</span>])
-            .<span class="ident">map_err</span>(<span class="ident">de</span>::<span class="ident">Error</span>::<span class="ident">custom</span>)
-    }
-
-    <span class="kw">fn</span> <span class="ident">visit_str</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">value</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Value</span>, <span class="ident">E</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">E</span>: <span class="ident">de</span>::<span class="ident">Error</span>,
-    {
-        <span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="ident">value</span>)
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">e</span>])
-            .<span class="ident">map_err</span>(<span class="ident">de</span>::<span class="ident">Error</span>::<span class="ident">custom</span>)
-    }
-
-    <span class="kw">fn</span> <span class="ident">visit_map</span><span class="op">&lt;</span><span class="ident">M</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">visitor</span>: <span class="ident">M</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Value</span>, <span class="ident">M</span>::<span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">M</span>: <span class="ident">de</span>::<span class="ident">MapAccess</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
-    {
-        <span class="ident">de</span>::<span class="ident">Deserialize</span>::<span class="ident">deserialize</span>(<span class="ident">de</span>::<span class="ident">value</span>::<span class="ident">MapAccessDeserializer</span>::<span class="ident">new</span>(<span class="ident">visitor</span>))
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">e</span>])
-    }
-
-    <span class="kw">fn</span> <span class="ident">visit_seq</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">seq</span>: <span class="ident">S</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Value</span>, <span class="ident">S</span>::<span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">S</span>: <span class="ident">de</span>::<span class="ident">SeqAccess</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
-    {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">vec</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
-        <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">element</span>) <span class="op">=</span> <span class="ident">seq</span>.<span class="ident">next_element_seed</span>(<span class="ident">StringOrStruct</span>(<span class="ident">PhantomData</span>))<span class="question-mark">?</span> {
-            <span class="ident">vec</span>.<span class="ident">push</span>(<span class="ident">element</span>);
-        }
-        <span class="prelude-val">Ok</span>(<span class="ident">vec</span>)
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">RuleVerdict</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RuleVerdict</span> {
+        <span class="ident">RuleVerdict</span>::<span class="ident">Accept</span>
     }
 }
 
-<span class="kw">fn</span> <span class="ident">single_or_seq_string_or_struct</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span>, <span class="ident">T</span>, <span class="ident">D</span><span class="op">&gt;</span>(<span class="ident">deserializer</span>: <span class="ident">D</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">D</span>::<span class="ident">Error</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">de</span>::<span class="ident">Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">FromStr</span><span class="op">&lt;</span><span class="prelude-val">Err</span> <span class="op">=</span> <span class="ident">String</span><span class="op">&gt;</span>,
-    <span class="ident">D</span>: <span class="ident">de</span>::<span class="ident">Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
-{
-    <span class="ident">deserializer</span>.<span class="ident">deserialize_any</span>(<span class="ident">SingleOrSeqStringOrStruct</span>(<span class="ident">PhantomData</span>))
+<span class="kw">impl</span> <span class="ident">slog</span>::<span class="ident">Value</span> <span class="kw">for</span> <span class="ident">RuleVerdict</span> {
+    <span class="kw">fn</span> <span class="ident">serialize</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">record</span>: <span class="kw-2">&amp;</span><span class="ident">slog</span>::<span class="ident">Record</span>,
+        <span class="ident">key</span>: <span class="ident">slog</span>::<span class="ident">Key</span>,
+        <span class="ident">serializer</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">slog</span>::<span class="ident">Serializer</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">slog</span>::<span class="prelude-ty">Result</span> {
+        <span class="self">self</span>.<span class="ident">to_string</span>().<span class="ident">serialize</span>(<span class="ident">record</span>, <span class="ident">key</span>, <span class="ident">serializer</span>)
+    }
 }
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="kw">mod</span> <span class="ident">test</span> {
+    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">ChainPolicy</span>, <span class="ident">RuleVerdict</span>};
+    <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
 
-<span class="kw">fn</span> <span class="ident">string_or_seq_string</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span>, <span class="ident">D</span><span class="op">&gt;</span>(<span class="ident">deserializer</span>: <span class="ident">D</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>, <span class="ident">D</span>::<span class="ident">Error</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">D</span>: <span class="ident">de</span>::<span class="ident">Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
-{
-    <span class="kw">struct</span> <span class="ident">StringOrSeqString</span>(<span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>);
-
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="ident">de</span>::<span class="ident">Visitor</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StringOrSeqString</span> {
-        <span class="kw">type</span> <span class="ident">Value</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>;
-
-        <span class="kw">fn</span> <span class="ident">expecting</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">formatter</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
-            <span class="ident">formatter</span>.<span class="ident">write_str</span>(<span class="string">&quot;string or sequence of strings&quot;</span>)
-        }
-
-        <span class="kw">fn</span> <span class="ident">visit_str</span><span class="op">&lt;</span><span class="ident">E</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">value</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Value</span>, <span class="ident">E</span><span class="op">&gt;</span>
-        <span class="kw">where</span>
-            <span class="ident">E</span>: <span class="ident">de</span>::<span class="ident">Error</span>,
-        {
-            <span class="prelude-val">Ok</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">value</span>.<span class="ident">to_owned</span>()])
-        }
-
-        <span class="kw">fn</span> <span class="ident">visit_seq</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">visitor</span>: <span class="ident">S</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Value</span>, <span class="ident">S</span>::<span class="ident">Error</span><span class="op">&gt;</span>
-        <span class="kw">where</span>
-            <span class="ident">S</span>: <span class="ident">de</span>::<span class="ident">SeqAccess</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
-        {
-            <span class="ident">de</span>::<span class="ident">Deserialize</span>::<span class="ident">deserialize</span>(<span class="ident">de</span>::<span class="ident">value</span>::<span class="ident">SeqAccessDeserializer</span>::<span class="ident">new</span>(<span class="ident">visitor</span>))
-        }
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">chainpolicy_fromstr</span>() {
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">ChainPolicy</span>::<span class="ident">Accept</span>, <span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="string">&quot;accept&quot;</span>).<span class="ident">unwrap</span>());
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">ChainPolicy</span>::<span class="ident">Accept</span>, <span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="string">&quot;ACCEPT&quot;</span>).<span class="ident">unwrap</span>());
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">ChainPolicy</span>::<span class="ident">Drop</span>, <span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="string">&quot;drop&quot;</span>).<span class="ident">unwrap</span>());
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">ChainPolicy</span>::<span class="ident">Drop</span>, <span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="string">&quot;DROP&quot;</span>).<span class="ident">unwrap</span>());
     }
 
-    <span class="ident">deserializer</span>.<span class="ident">deserialize_any</span>(<span class="ident">StringOrSeqString</span>(<span class="ident">PhantomData</span>))
-}
-
-<span class="kw">fn</span> <span class="ident">option_string_or_seq_string</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span>, <span class="ident">D</span><span class="op">&gt;</span>(<span class="ident">deserializer</span>: <span class="ident">D</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">D</span>::<span class="ident">Error</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">D</span>: <span class="ident">de</span>::<span class="ident">Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
-{
-    <span class="ident">string_or_seq_string</span>(<span class="ident">deserializer</span>).<span class="ident">map</span>(<span class="prelude-val">Some</span>)
-}
-
-<span class="kw">fn</span> <span class="ident">struct_or_seq_struct</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span>, <span class="ident">T</span>, <span class="ident">D</span><span class="op">&gt;</span>(<span class="ident">deserializer</span>: <span class="ident">D</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">D</span>::<span class="ident">Error</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">de</span>::<span class="ident">Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
-    <span class="ident">D</span>: <span class="ident">de</span>::<span class="ident">Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
-{
-    <span class="kw">struct</span> <span class="ident">StructOrSeqStruct</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>);
-
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="ident">de</span>::<span class="ident">Visitor</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StructOrSeqStruct</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">T</span>: <span class="ident">de</span>::<span class="ident">Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
-    {
-        <span class="kw">type</span> <span class="ident">Value</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
-
-        <span class="kw">fn</span> <span class="ident">expecting</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">formatter</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
-            <span class="ident">formatter</span>.<span class="ident">write_str</span>(<span class="string">&quot;map or sequence of maps&quot;</span>)
-        }
-
-        <span class="kw">fn</span> <span class="ident">visit_map</span><span class="op">&lt;</span><span class="ident">M</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">visitor</span>: <span class="ident">M</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Value</span>, <span class="ident">M</span>::<span class="ident">Error</span><span class="op">&gt;</span>
-        <span class="kw">where</span>
-            <span class="ident">M</span>: <span class="ident">de</span>::<span class="ident">MapAccess</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
-        {
-            <span class="ident">de</span>::<span class="ident">Deserialize</span>::<span class="ident">deserialize</span>(<span class="ident">de</span>::<span class="ident">value</span>::<span class="ident">MapAccessDeserializer</span>::<span class="ident">new</span>(<span class="ident">visitor</span>))
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">e</span>])
-        }
-
-        <span class="kw">fn</span> <span class="ident">visit_seq</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">visitor</span>: <span class="ident">S</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Value</span>, <span class="ident">S</span>::<span class="ident">Error</span><span class="op">&gt;</span>
-        <span class="kw">where</span>
-            <span class="ident">S</span>: <span class="ident">de</span>::<span class="ident">SeqAccess</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
-        {
-            <span class="ident">de</span>::<span class="ident">Deserialize</span>::<span class="ident">deserialize</span>(<span class="ident">de</span>::<span class="ident">value</span>::<span class="ident">SeqAccessDeserializer</span>::<span class="ident">new</span>(<span class="ident">visitor</span>))
-        }
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">chainpolicy_tostring</span>() {
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="string">&quot;accept&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">ChainPolicy</span>::<span class="ident">Accept</span>.<span class="ident">to_string</span>());
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="string">&quot;drop&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">ChainPolicy</span>::<span class="ident">Drop</span>.<span class="ident">to_string</span>());
     }
 
-    <span class="ident">deserializer</span>.<span class="ident">deserialize_any</span>(<span class="ident">StructOrSeqStruct</span>(<span class="ident">PhantomData</span>))
-}
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">ruleverdict_fromstr</span>() {
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">RuleVerdict</span>::<span class="ident">Accept</span>, <span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="string">&quot;accept&quot;</span>).<span class="ident">unwrap</span>());
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">RuleVerdict</span>::<span class="ident">Accept</span>, <span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="string">&quot;ACCEPT&quot;</span>).<span class="ident">unwrap</span>());
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">RuleVerdict</span>::<span class="ident">Drop</span>, <span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="string">&quot;drop&quot;</span>).<span class="ident">unwrap</span>());
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">RuleVerdict</span>::<span class="ident">Drop</span>, <span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="string">&quot;DROP&quot;</span>).<span class="ident">unwrap</span>());
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">RuleVerdict</span>::<span class="ident">Reject</span>, <span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="string">&quot;reject&quot;</span>).<span class="ident">unwrap</span>());
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">RuleVerdict</span>::<span class="ident">Reject</span>, <span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="string">&quot;REJECT&quot;</span>).<span class="ident">unwrap</span>());
+    }
 
-<span class="kw">fn</span> <span class="ident">option_struct_or_seq_struct</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span>, <span class="ident">T</span>, <span class="ident">D</span><span class="op">&gt;</span>(<span class="ident">deserializer</span>: <span class="ident">D</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">D</span>::<span class="ident">Error</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">T</span>: <span class="ident">de</span>::<span class="ident">Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
-    <span class="ident">D</span>: <span class="ident">de</span>::<span class="ident">Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
-{
-    <span class="ident">struct_or_seq_struct</span>(<span class="ident">deserializer</span>).<span class="ident">map</span>(<span class="prelude-val">Some</span>)
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">ruleverdict_tostring</span>() {
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="string">&quot;accept&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">RuleVerdict</span>::<span class="ident">Accept</span>.<span class="ident">to_string</span>());
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="string">&quot;drop&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">RuleVerdict</span>::<span class="ident">Drop</span>.<span class="ident">to_string</span>());
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="string">&quot;reject&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">RuleVerdict</span>::<span class="ident">Reject</span>.<span class="ident">to_string</span>());
+    }
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "dfw";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
