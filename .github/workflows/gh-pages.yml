@@ -86,7 +86,9 @@ jobs:
         command: doc
         args: --no-deps
     - name: Move generated docs to the correct location
-      run: mv target/doc "target/gh-pages/${{ steps.branch-or-tag.outputs.value }}"
+      run: |
+        rm -rf "target/gh-pages/${{ steps.branch-or-tag.outputs.value }}" || :
+        mv target/doc "target/gh-pages/${{ steps.branch-or-tag.outputs.value }}"
 
     - name: Deploy documentation to GitHub pages
       if: success()
