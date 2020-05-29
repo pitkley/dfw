@@ -15,4 +15,5 @@ status = [
     "rustfmt",
     "clippy",
     "check-license-headers",
+    "yamllint",
 ]

@@ -1,0 +1,15 @@
+extends: default
+
+rules:
+  comments: disable
+  comments-indentation: disable
+  document-start: disable
+  indentation:
+    spaces: 2
+    indent-sequences: false
+  line-length:
+    max: 999
+    level: warning
+  truthy:
+    ignore: |
+      .github/workflows/*.yml
