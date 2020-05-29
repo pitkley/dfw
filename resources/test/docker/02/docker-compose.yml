@@ -1,9 +1,8 @@
 version: '2'
 
 services:
-    a:
-        image: nginx:alpine
+  a:
+    image: nginx:alpine
 
-    b:
-        image: nginx:alpine
-
+  b:
+    image: nginx:alpine
