@@ -63,6 +63,15 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         args: --workspace --lib --bins --tests --all-targets -- -Dwarnings
 
+  yamllint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: yamllint
+      uses: ibiqlik/action-yamllint@v1.0.0
+
   build-and-test:
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.continue-on-error }}
