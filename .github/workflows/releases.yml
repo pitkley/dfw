@@ -40,12 +40,19 @@ jobs:
         sha256sum target/release/dfw > target/release/dfw.sha256
 
     - name: Identify if tag is a prerelease
-      id: tag-prerelease
+      id: tag
       run: |
-        if [[ "${{ github.ref }}" =~ ^refs/tags/[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "::set-output name=value::false"
+        if [[ "${{ github.ref }}" =~ ^refs/tags/(.+)$ ]]; then
+          echo "::set-output name=value::${BASH_REMATCH[1]}"
         else
-          echo "::set-output name=value::true"
+          echo "::error ::Expected a tag"
+          exit 1
+        fi
+
+        if [[ "${{ github.ref }}" =~ ^refs/tags/[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "::set-output name=is-prerelease::false"
+        else
+          echo "::set-output name=is-prerelease::true"
         fi
     - name: Prepare release
       id: prepare-release
@@ -56,7 +63,28 @@ jobs:
         tag_name: ${{ github.ref }}
         release_name: v${{ github.ref }}
         draft: true
-        prerelease: ${{ steps.tag-prerelease.outputs.value }}
+        prerelease: ${{ steps.tag.outputs.is-prerelease }}
+        body: |
+          # Summary
+
+          TODO!
+
+          ## Installation
+
+          While you can use Cargo to install `dfw` as a binary, using the Docker image is the preferred way to go, especially if you don't want to install Rust and Cargo on your host:
+
+          ```console
+          $ docker pull pitkley/dfw:${{ steps.tag.outputs.value }}
+          $ docker run -d \
+                --name=dfw \
+                --restart=unless-stopped \
+                -v /var/run/docker.sock:/var/run/docker.sock:ro \
+                -v /path/to/your/config:/config \
+                --net host --cap-add=NET_ADMIN \
+                pitkley/dfw:${{ steps.tag.outputs.value }} --config-path /config
+          ```
+
+          This will download a lightweight image, coming in at under 10 MB, and subsequently run it using your configuration.
 
     - name: Upload static DFW binary
       uses: actions/upload-release-asset@v1
