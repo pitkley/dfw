@@ -7,8 +7,11 @@
 * Reintegrate the iptables-backend.
 * Make exposing containers via IPv6 configurable.
 * Ensure consistent behaviour regardless of whether `[global_defaults]` has been specified or not.
+* Don't exit DFW if there are no containers running ([#243], thanks to @Georgiy-Tugai).
 
 <sub>Internal changes: dependency updates, move CI entirely to GitHub Actions.</sub>
+
+[#243](https://github.com/pitkley/dfw/pull/243)
 
 ## 1.1.0 - Bugfix, dependency updates (c9dc9ba)
 
