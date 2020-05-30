@@ -1098,6 +1098,17 @@
 <span id="1098">1098</span>
 <span id="1099">1099</span>
 <span id="1100">1100</span>
+<span id="1101">1101</span>
+<span id="1102">1102</span>
+<span id="1103">1103</span>
+<span id="1104">1104</span>
+<span id="1105">1105</span>
+<span id="1106">1106</span>
+<span id="1107">1107</span>
+<span id="1108">1108</span>
+<span id="1109">1109</span>
+<span id="1110">1110</span>
+<span id="1111">1111</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright Pit Kleyersburg &lt;pitkley@googlemail.com&gt;</span>
 <span class="comment">//</span>
@@ -1192,7 +1203,18 @@
             ),
         ];
         <span class="kw">for</span> <span class="ident">sub_rules</span> <span class="kw">in</span> <span class="macro">vec</span><span class="macro">!</span>[
-            <span class="self">self</span>.<span class="ident">backend_defaults</span>.<span class="ident">process</span>(<span class="ident">ctx</span>)<span class="question-mark">?</span>,
+            <span class="self">self</span>.<span class="ident">backend_defaults</span>
+                .<span class="ident">clone</span>()
+                .<span class="ident">or_else</span>(<span class="op">|</span><span class="op">|</span> {
+                    <span class="comment">// NOTE: this is only required to retain backwards compatibility for version</span>
+                    <span class="comment">// &lt;1.2. This can be removed in major-version 2 (hence the conditional</span>
+                    <span class="comment">// compile-error).</span>
+                    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">crate_major_version</span> <span class="op">=</span> <span class="string">&quot;1&quot;</span>))]</span>
+                    <span class="macro">compile_error</span><span class="macro">!</span>(<span class="string">&quot;remove this workaround with version 2&quot;</span>);
+
+                    <span class="prelude-val">Some</span>(<span class="ident">Default</span>::<span class="ident">default</span>())
+                })
+                .<span class="ident">process</span>(<span class="ident">ctx</span>)<span class="question-mark">?</span>,
             <span class="self">self</span>.<span class="ident">global_defaults</span>.<span class="ident">process</span>(<span class="ident">ctx</span>)<span class="question-mark">?</span>,
             <span class="self">self</span>.<span class="ident">container_to_container</span>.<span class="ident">process</span>(<span class="ident">ctx</span>)<span class="question-mark">?</span>,
             <span class="self">self</span>.<span class="ident">container_to_wider_world</span>.<span class="ident">process</span>(<span class="ident">ctx</span>)<span class="question-mark">?</span>,
@@ -1223,22 +1245,26 @@
             .<span class="ident">clone</span>()
             .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">initialization</span><span class="op">|</span> <span class="ident">initialization</span>.<span class="ident">rules</span>)
             .<span class="ident">or_else</span>(<span class="op">|</span><span class="op">|</span> {
-                <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">deprecated</span>)]</span>
-                <span class="self">self</span>.<span class="ident">rules</span>.<span class="ident">clone</span>().<span class="ident">filter</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-                    <span class="macro">warn</span><span class="macro">!</span>(
-                        <span class="ident">ctx</span>.<span class="ident">logger</span>,
-                        <span class="string">&quot;You are using the deprecated `backend_defaults.rules` field in your \
-                         configuration! This field has been replaced by the \
-                         `backend_defaults.initialization.rules` field. The value format of the \
-                         field has stayed unchanged, which means that moving the field to the new \
-                         section is sufficient to fix this warning.&quot;</span>;
-                        <span class="macro">o</span><span class="macro">!</span>(<span class="string">&quot;deprecated_field&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;backend_defaults.rules&quot;</span>,
-                           <span class="string">&quot;deprecated_since&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;1.2.0&quot;</span>,
-                           <span class="string">&quot;planned_removal_in&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;2.0.0&quot;</span>,
-                           <span class="string">&quot;new_field&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;backend_defaults.initialization.rules&quot;</span>,
-                           <span class="string">&quot;field_value_format_changed&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>));
-                    <span class="bool-val">true</span>
-                })
+                <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">crate_major_version</span> <span class="op">=</span> <span class="string">&quot;1&quot;</span>, <span class="ident">allow</span>(<span class="ident">deprecated</span>))]</span>
+                <span class="ident">ctx</span>.<span class="ident">dfw</span>
+                    .<span class="ident">initialization</span>
+                    .<span class="ident">as_ref</span>()
+                    .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">initialization</span><span class="op">|</span> <span class="ident">initialization</span>.<span class="ident">rules</span>.<span class="ident">clone</span>())
+                    .<span class="ident">filter</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
+                        <span class="macro">warn</span><span class="macro">!</span>(
+                            <span class="ident">ctx</span>.<span class="ident">logger</span>,
+                            <span class="string">&quot;You are using the deprecated `initialization.rules` field in your \
+                                configuration! This field has been replaced by the \
+                                `backend_defaults.initialization.rules` field. The value format of the \
+                                field has stayed unchanged, which means that moving the field to the new \
+                                section is sufficient to fix this warning.&quot;</span>;
+                            <span class="macro">o</span><span class="macro">!</span>(<span class="string">&quot;deprecated_field&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;initialization.rules&quot;</span>,
+                                <span class="string">&quot;deprecated_since&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;1.2.0&quot;</span>,
+                                <span class="string">&quot;planned_removal_in&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;2.0.0&quot;</span>,
+                                <span class="string">&quot;new_field&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;backend_defaults.initialization.rules&quot;</span>,
+                                <span class="string">&quot;field_value_format_changed&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>));
+                        <span class="bool-val">true</span>
+                    })
             })
             .<span class="ident">unwrap_or_else</span>(<span class="ident">Vec</span>::<span class="ident">new</span>);
 
@@ -1246,14 +1272,10 @@
         <span class="comment">// present in the backend-specific defaults-type. To retain backwards-compatibility we</span>
         <span class="comment">// allow the old field to be present and we will use it if the backend-specific field was</span>
         <span class="comment">// not specified. (We also warn the user if they used the deprecated field.)</span>
-        <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">deprecated</span>)]</span>
+        <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">crate_major_version</span> <span class="op">=</span> <span class="string">&quot;1&quot;</span>, <span class="ident">allow</span>(<span class="ident">deprecated</span>))]</span>
         <span class="kw">let</span> <span class="ident">custom_tables</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">custom_tables</span>.<span class="ident">as_ref</span>().<span class="ident">or_else</span>(<span class="op">|</span><span class="op">|</span> {
-            <span class="ident">ctx</span>.<span class="ident">dfw</span>
-                .<span class="ident">global_defaults</span>
-                .<span class="ident">as_ref</span>()
-                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">global_defaults</span><span class="op">|</span> <span class="ident">global_defaults</span>.<span class="ident">custom_tables</span>.<span class="ident">as_ref</span>())
-                .<span class="ident">filter</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-                    <span class="macro">warn</span><span class="macro">!</span>(
+            <span class="ident">ctx</span>.<span class="ident">dfw</span>.<span class="ident">global_defaults</span>.<span class="ident">custom_tables</span>.<span class="ident">as_ref</span>().<span class="ident">filter</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
+                <span class="macro">warn</span><span class="macro">!</span>(
                         <span class="ident">ctx</span>.<span class="ident">logger</span>,
                         <span class="string">&quot;You are using the deprecated `global_defaults.custom_tables` field in \
                          your configuration! This field has been replaced by the \
@@ -1265,8 +1287,8 @@
                            <span class="string">&quot;planned_removal_in&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;2.0.0&quot;</span>,
                            <span class="string">&quot;new_field&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;backend_defaults.custom_tables&quot;</span>,
                            <span class="string">&quot;field_value_format_changed&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>));
-                    <span class="bool-val">true</span>
-                })
+                <span class="bool-val">true</span>
+            })
         });
 
         <span class="comment">// Hook into other chains if requested</span>

@@ -898,6 +898,23 @@
 <span id="898">898</span>
 <span id="899">899</span>
 <span id="900">900</span>
+<span id="901">901</span>
+<span id="902">902</span>
+<span id="903">903</span>
+<span id="904">904</span>
+<span id="905">905</span>
+<span id="906">906</span>
+<span id="907">907</span>
+<span id="908">908</span>
+<span id="909">909</span>
+<span id="910">910</span>
+<span id="911">911</span>
+<span id="912">912</span>
+<span id="913">913</span>
+<span id="914">914</span>
+<span id="915">915</span>
+<span id="916">916</span>
+<span id="917">917</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright Pit Kleyersburg &lt;pitkley@googlemail.com&gt;</span>
 <span class="comment">//</span>
@@ -983,12 +1000,29 @@
     <span class="ident">B</span>: <span class="ident">FirewallBackend</span>,
     <span class="ident">DFW</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>: <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>,
 {
-    <span class="doccomment">/// The `defaults` configuration section</span>
+    <span class="doccomment">/// The `defaults` configuration section.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// You can leave this section unspecified.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">alias</span> <span class="op">=</span> <span class="string">&quot;defaults&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">global_defaults</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">GlobalDefaults</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">global_defaults</span>: <span class="ident">GlobalDefaults</span>,
     <span class="doccomment">/// The `backend_defaults` configuration section</span>
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">alias</span> <span class="op">=</span> <span class="string">&quot;initialization&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>)]</span>
     <span class="kw">pub</span> <span class="ident">backend_defaults</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">B</span>::<span class="ident">Defaults</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// # This field is **DEPRECATED!**</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Provide the custom tables in the nftables backend-defaults section instead. (This field will</span>
+    <span class="doccomment">/// be removed with release 2.0.0.)</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Please consult the [firewall-backend documentation] if you want to know how to use this</span>
+    <span class="doccomment">/// field.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// [firewall-backend documentation]: ../nftables/types/struct.Defaults.html#structfield.initialization</span>
+    <span class="attribute">#[<span class="ident">deprecated</span>(
+        <span class="ident">since</span> <span class="op">=</span> <span class="string">&quot;1.2.0&quot;</span>,
+        <span class="ident">note</span> <span class="op">=</span> <span class="string">&quot;Provide the initialization in the nftables backend-defaults section instead. This \
+                field will be removed with release 2.0.0.&quot;</span>
+    )]</span>
+    <span class="kw">pub</span> <span class="ident">initialization</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">nftables</span>::<span class="ident">types</span>::<span class="ident">Initialization</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The `container_to_container` configuration section</span>
     <span class="kw">pub</span> <span class="ident">container_to_container</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ContainerToContainer</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The `container_to_wider_world` configuration section</span>

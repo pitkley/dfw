@@ -116,20 +116,6 @@
 <span id="116">116</span>
 <span id="117">117</span>
 <span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
-<span id="121">121</span>
-<span id="122">122</span>
-<span id="123">123</span>
-<span id="124">124</span>
-<span id="125">125</span>
-<span id="126">126</span>
-<span id="127">127</span>
-<span id="128">128</span>
-<span id="129">129</span>
-<span id="130">130</span>
-<span id="131">131</span>
-<span id="132">132</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright Pit Kleyersburg &lt;pitkley@googlemail.com&gt;</span>
 <span class="comment">//</span>
@@ -213,20 +199,6 @@
     <span class="doccomment">/// # &quot;#).unwrap();</span>
     <span class="doccomment">/// ```</span>
     <span class="kw">pub</span> <span class="ident">initialization</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Initialization</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// # This field is **DEPRECATED!**</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Provide the initilization rules in the [`rules` field] in the [`initialization`]</span>
-    <span class="doccomment">/// section instead. (This field will be removed with release 2.0.0.)</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [`rules` field]: struct.Initialization.html#structfield.rules</span>
-    <span class="doccomment">/// [`initialization`]: #structfield.initialization</span>
-    <span class="attribute">#[<span class="ident">deprecated</span>(
-        <span class="ident">since</span> <span class="op">=</span> <span class="string">&quot;1.2.0&quot;</span>,
-        <span class="ident">note</span> <span class="op">=</span> <span class="string">&quot;Provide the custom tables in the nftables backend-defaults section instead. This \
-                field will be removed with release 2.0.0.&quot;</span>
-    )]</span>
-    <span class="kw">pub</span> <span class="ident">rules</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// Reference to an nftables table, specifically to the input- and forward-chains within it.</span>

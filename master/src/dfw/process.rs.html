@@ -440,8 +440,8 @@
 
         <span class="kw">let</span> <span class="ident">external_network_interfaces</span> <span class="op">=</span> <span class="ident">dfw</span>
             .<span class="ident">global_defaults</span>
+            .<span class="ident">external_network_interfaces</span>
             .<span class="ident">as_ref</span>()
-            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">d</span><span class="op">|</span> <span class="ident">d</span>.<span class="ident">external_network_interfaces</span>.<span class="ident">as_ref</span>())
             .<span class="ident">cloned</span>();
         <span class="kw">let</span> <span class="ident">primary_external_network_interface</span> <span class="op">=</span> <span class="ident">external_network_interfaces</span>
             .<span class="ident">as_ref</span>()
