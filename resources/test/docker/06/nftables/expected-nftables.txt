@@ -14,6 +14,7 @@ add table ip6 dfw
 flush table ip6 dfw
 add chain ip6 dfw prerouting { type nat hook prerouting priority -105 ; }
 add chain ip6 dfw postrouting { type nat hook postrouting priority 95 ; }
+add rule inet dfw input meta iifname docker0 meta mark set 0xdf accept
 add rule ip dfw prerouting tcp dport 80 meta oifname $output=bridge meta mark set 0xdf dnat ${dnat_ip=ip}:80
 add rule ip dfw prerouting tcp dport 80 ip saddr $src_ip=ip meta iifname $input=bridge oifname $output=bridge meta mark set 0xdf dnat ${dnat_ip=ip}:80	"$input" == "$output"
 add rule ip dfw prerouting tcp dport 443 ip saddr $src_ip=ip meta iifname $input=bridge oifname $output=bridge meta mark set 0xdf dnat ${dnat_ip=ip}:443	"$input" != "$output"

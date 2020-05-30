@@ -4,6 +4,7 @@
 
 * Reintegrate the iptables-backend.
 * Make exposing containers via IPv6 configurable.
+* Ensure consistent behaviour regardless of whether `[global_defaults]` has been specified or not.
 
 <sub>Internal changes: dependency updates, move CI entirely to GitHub Actions.</sub>
 

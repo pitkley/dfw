@@ -82,9 +82,11 @@ where
     B: FirewallBackend,
     DFW<B>: Process<B>,
 {
-    /// The `defaults` configuration section
+    /// The `defaults` configuration section.
+    ///
+    /// You can leave this section unspecified.
     #[serde(default, alias = "defaults")]
-    pub global_defaults: Option<GlobalDefaults>,
+    pub global_defaults: GlobalDefaults,
     /// The `backend_defaults` configuration section
     #[serde(default, alias = "initialization")]
     pub backend_defaults: Option<B::Defaults>,

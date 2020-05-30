@@ -132,7 +132,7 @@ fn parse_conf_file() {
     };
 
     let expected: DFW<TestBackend> = DFW {
-        global_defaults: Some(global_defaults),
+        global_defaults,
         backend_defaults: Some(backend_defaults),
         container_to_container: Some(container_to_container),
         container_to_wider_world: Some(container_to_wider_world),
@@ -233,7 +233,7 @@ fn parse_conf_path() {
     };
 
     let expected: DFW<TestBackend> = DFW {
-        global_defaults: Some(global_defaults),
+        global_defaults,
         backend_defaults: Some(backend_defaults),
         container_to_container: Some(container_to_container),
         container_to_wider_world: Some(container_to_wider_world),

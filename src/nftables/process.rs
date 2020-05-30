@@ -147,12 +147,8 @@ impl Process<Nftables> for <Nftables as FirewallBackend>::Defaults {
         // not specified. (We also warn the user if they used the deprecated field.)
         #[allow(deprecated)]
         let custom_tables = self.custom_tables.as_ref().or_else(|| {
-            ctx.dfw
-                .global_defaults
-                .as_ref()
-                .and_then(|global_defaults| global_defaults.custom_tables.as_ref())
-                .filter(|_| {
-                    warn!(
+            ctx.dfw.global_defaults.custom_tables.as_ref().filter(|_| {
+                warn!(
                         ctx.logger,
                         "You are using the deprecated `global_defaults.custom_tables` field in \
                          your configuration! This field has been replaced by the \
@@ -164,8 +160,8 @@ impl Process<Nftables> for <Nftables as FirewallBackend>::Defaults {
                            "planned_removal_in" => "2.0.0",
                            "new_field" => "backend_defaults.custom_tables",
                            "field_value_format_changed" => false));
-                    true
-                })
+                true
+            })
         });
 
         // Hook into other chains if requested
