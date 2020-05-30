@@ -91,7 +91,18 @@ impl Process<Nftables> for DFW<Nftables> {
             ),
         ];
         for sub_rules in vec![
-            self.backend_defaults.process(ctx)?,
+            self.backend_defaults
+                .clone()
+                .or_else(|| {
+                    // NOTE: this is only required to retain backwards compatibility for version
+                    // <1.2. This can be removed in major-version 2 (hence the conditional
+                    // compile-error).
+                    #[cfg(not(crate_major_version = "1"))]
+                    compile_error!("remove this workaround with version 2");
+
+                    Some(Default::default())
+                })
+                .process(ctx)?,
             self.global_defaults.process(ctx)?,
             self.container_to_container.process(ctx)?,
             self.container_to_wider_world.process(ctx)?,
@@ -122,22 +133,26 @@ impl Process<Nftables> for <Nftables as FirewallBackend>::Defaults {
             .clone()
             .and_then(|initialization| initialization.rules)
             .or_else(|| {
-                #[allow(deprecated)]
-                self.rules.clone().filter(|_| {
-                    warn!(
-                        ctx.logger,
-                        "You are using the deprecated `backend_defaults.rules` field in your \
-                         configuration! This field has been replaced by the \
-                         `backend_defaults.initialization.rules` field. The value format of the \
-                         field has stayed unchanged, which means that moving the field to the new \
-                         section is sufficient to fix this warning.";
-                        o!("deprecated_field" => "backend_defaults.rules",
-                           "deprecated_since" => "1.2.0",
-                           "planned_removal_in" => "2.0.0",
-                           "new_field" => "backend_defaults.initialization.rules",
-                           "field_value_format_changed" => false));
-                    true
-                })
+                #[cfg_attr(crate_major_version = "1", allow(deprecated))]
+                ctx.dfw
+                    .initialization
+                    .as_ref()
+                    .and_then(|initialization| initialization.rules.clone())
+                    .filter(|_| {
+                        warn!(
+                            ctx.logger,
+                            "You are using the deprecated `initialization.rules` field in your \
+                                configuration! This field has been replaced by the \
+                                `backend_defaults.initialization.rules` field. The value format of the \
+                                field has stayed unchanged, which means that moving the field to the new \
+                                section is sufficient to fix this warning.";
+                            o!("deprecated_field" => "initialization.rules",
+                                "deprecated_since" => "1.2.0",
+                                "planned_removal_in" => "2.0.0",
+                                "new_field" => "backend_defaults.initialization.rules",
+                                "field_value_format_changed" => false));
+                        true
+                    })
             })
             .unwrap_or_else(Vec::new);
 
@@ -145,7 +160,7 @@ impl Process<Nftables> for <Nftables as FirewallBackend>::Defaults {
         // present in the backend-specific defaults-type. To retain backwards-compatibility we
         // allow the old field to be present and we will use it if the backend-specific field was
         // not specified. (We also warn the user if they used the deprecated field.)
-        #[allow(deprecated)]
+        #[cfg_attr(crate_major_version = "1", allow(deprecated))]
         let custom_tables = self.custom_tables.as_ref().or_else(|| {
             ctx.dfw.global_defaults.custom_tables.as_ref().filter(|_| {
                 warn!(

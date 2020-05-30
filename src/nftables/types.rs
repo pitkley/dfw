@@ -80,20 +80,6 @@ pub struct Defaults {
     /// # "#).unwrap();
     /// ```
     pub initialization: Option<Initialization>,
-
-    /// # This field is **DEPRECATED!**
-    ///
-    /// Provide the initilization rules in the [`rules` field] in the [`initialization`]
-    /// section instead. (This field will be removed with release 2.0.0.)
-    ///
-    /// [`rules` field]: struct.Initialization.html#structfield.rules
-    /// [`initialization`]: #structfield.initialization
-    #[deprecated(
-        since = "1.2.0",
-        note = "Provide the custom tables in the nftables backend-defaults section instead. This \
-                field will be removed with release 2.0.0."
-    )]
-    pub rules: Option<Vec<String>>,
 }
 
 /// Reference to an nftables table, specifically to the input- and forward-chains within it.

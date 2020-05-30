@@ -1,0 +1,23 @@
+add table inet dfw
+flush table inet dfw
+add chain inet dfw input { type filter hook input priority -5 ; }
+add rule inet dfw input ct state invalid drop
+add rule inet dfw input ct state { related, established } accept
+add chain inet dfw forward { type filter hook forward priority -5 ; }
+add rule inet dfw forward ct state invalid drop
+add rule inet dfw forward ct state { related, established } accept
+add table ip dfw
+flush table ip dfw
+add chain ip dfw prerouting { type nat hook prerouting priority -105 ; }
+add chain ip dfw postrouting { type nat hook postrouting priority 95 ; }
+add table ip6 dfw
+flush table ip6 dfw
+add chain ip6 dfw prerouting { type nat hook prerouting priority -105 ; }
+add chain ip6 dfw postrouting { type nat hook postrouting priority 95 ; }
+insert rule inet filter input meta mark and 0xdf == 0xdf accept comment "DFW-MARKER:defaults;filter;input;meta-mark"
+insert rule inet filter input ct state { related, established } accept comment "DFW-MARKER:defaults;filter;input;ct-state-relatedestablished-accept"
+insert rule inet filter input ct state invalid drop comment "DFW-MARKER:defaults;filter;input;ct-state-invalid-drop"
+insert rule inet filter forward meta mark and 0xdf == 0xdf accept comment "DFW-MARKER:defaults;filter;forward;meta-mark"
+insert rule inet filter forward ct state { related, established } accept comment "DFW-MARKER:defaults;filter;forward;ct-state-relatedestablished-accept"
+insert rule inet filter forward ct state invalid drop comment "DFW-MARKER:defaults;filter;forward;ct-state-invalid-drop"
+add rule inet dfw input meta iifname docker0 meta mark set 0xdf accept

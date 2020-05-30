@@ -1,9 +1,11 @@
 # Regression test for GitHub issue 166
 
-|Issue:|#166|
+|Issue:|[#166]|
 |-|-|
 |Reporter:|@thielepaul|
 |Summary:|DFW >=1.0.0,<1.1.0 did not fail if an unknown network or container was specified whereas DFW <1.0.0 did.|
+
+[#166]: https://github.com/pitkley/dfw/issues/166
 
 ## Tests added
 
