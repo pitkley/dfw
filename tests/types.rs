@@ -131,9 +131,11 @@ fn parse_conf_file() {
         }]),
     };
 
+    #[cfg_attr(crate_major_version = "1", allow(deprecated))]
     let expected: DFW<TestBackend> = DFW {
-        global_defaults: Some(global_defaults),
+        global_defaults,
         backend_defaults: Some(backend_defaults),
+        initialization: None,
         container_to_container: Some(container_to_container),
         container_to_wider_world: Some(container_to_wider_world),
         container_to_host: Some(container_to_host),
@@ -232,9 +234,11 @@ fn parse_conf_path() {
         }]),
     };
 
+    #[cfg_attr(crate_major_version = "1", allow(deprecated))]
     let expected: DFW<TestBackend> = DFW {
-        global_defaults: Some(global_defaults),
+        global_defaults,
         backend_defaults: Some(backend_defaults),
+        initialization: None,
         container_to_container: Some(container_to_container),
         container_to_wider_world: Some(container_to_wider_world),
         container_to_host: Some(container_to_host),
@@ -537,11 +541,14 @@ fn ensure_backwards_compatibility_v1() {
     )
     .unwrap();
 
-    // `initialization` needs to be valid in addition to `backend_defaults`
+    // The old `initialization` key needs to follow the nftables-spec no matter what.
     toml::from_str::<DFW<TestBackend>>(
         r#"
         [initialization]
-        test = "custom backend defaults"
+        rules = [
+            "custom rule 1",
+            "custom rule 2",
+        ]
         "#,
     )
     .unwrap();
@@ -594,12 +601,6 @@ fn ensure_backwards_compatibility_v1() {
     // GlobalDefaults::custom_tables needs to be present.
     let _ = GlobalDefaults {
         custom_tables: None,
-        ..Default::default()
-    };
-
-    // nftables::types::Defaults::rules needs to be present.
-    let _ = dfw::nftables::types::Defaults {
-        rules: None,
         ..Default::default()
     };
 }

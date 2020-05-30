@@ -157,8 +157,8 @@ where
 
         let external_network_interfaces = dfw
             .global_defaults
+            .external_network_interfaces
             .as_ref()
-            .and_then(|d| d.external_network_interfaces.as_ref())
             .cloned();
         let primary_external_network_interface = external_network_interfaces
             .as_ref()

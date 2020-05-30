@@ -20,9 +20,6 @@ COMMIT
 :PREROUTING - [0:0]
 -F DFWRS_POSTROUTING
 -F DFWRS_PREROUTING
--A DFWRS_PREROUTING -o $output=bridge -p tcp --dport 80 -j DNAT --to-destination ${dst_ip=ip}:80
--A DFWRS_PREROUTING -s $src_ip=ip -i $input=bridge -o $output=bridge -p tcp --dport 80 -j DNAT --to-destination ${dst_ip=ip}:80	"$input" == "$output"
--A DFWRS_PREROUTING -s $src_ip=ip -i $input=bridge -o $output=bridge -p tcp --dport 443 -j DNAT --to-destination ${dst_ip=ip}:443	"$input" != "$output"
 -A POSTROUTING -j DFWRS_POSTROUTING
 -A PREROUTING -j DFWRS_PREROUTING
 COMMIT

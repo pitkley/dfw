@@ -14,6 +14,10 @@ add table ip6 dfw
 flush table ip6 dfw
 add chain ip6 dfw prerouting { type nat hook prerouting priority -105 ; }
 add chain ip6 dfw postrouting { type nat hook postrouting priority 95 ; }
+insert rule inet filter input meta mark and 0xdf == 0xdf accept comment "DFW-MARKER:defaults;filter;input;meta-mark"
+insert rule inet filter input ct state { related, established } accept comment "DFW-MARKER:defaults;filter;input;ct-state-relatedestablished-accept"
+insert rule inet filter input ct state invalid drop comment "DFW-MARKER:defaults;filter;input;ct-state-invalid-drop"
+insert rule inet filter forward meta mark and 0xdf == 0xdf accept comment "DFW-MARKER:defaults;filter;forward;meta-mark"
+insert rule inet filter forward ct state { related, established } accept comment "DFW-MARKER:defaults;filter;forward;ct-state-relatedestablished-accept"
+insert rule inet filter forward ct state invalid drop comment "DFW-MARKER:defaults;filter;forward;ct-state-invalid-drop"
 add rule inet dfw input meta iifname docker0 meta mark set 0xdf accept
-add rule inet dfw forward meta iifname $input=bridge meta mark set 0xdf reject
-add rule inet dfw forward ip saddr $src_ip=ip meta iifname $input=bridge oifname eni meta mark set 0xdf ct state related accept

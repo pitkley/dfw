@@ -1,0 +1,5 @@
+[initialization]
+rules = [
+    "custom rule 1",
+    "custom rule 2",
+]

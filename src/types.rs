@@ -82,12 +82,29 @@ where
     B: FirewallBackend,
     DFW<B>: Process<B>,
 {
-    /// The `defaults` configuration section
+    /// The `defaults` configuration section.
+    ///
+    /// You can leave this section unspecified.
     #[serde(default, alias = "defaults")]
-    pub global_defaults: Option<GlobalDefaults>,
+    pub global_defaults: GlobalDefaults,
     /// The `backend_defaults` configuration section
-    #[serde(default, alias = "initialization")]
+    #[serde(default)]
     pub backend_defaults: Option<B::Defaults>,
+    /// # This field is **DEPRECATED!**
+    ///
+    /// Provide the custom tables in the nftables backend-defaults section instead. (This field will
+    /// be removed with release 2.0.0.)
+    ///
+    /// Please consult the [firewall-backend documentation] if you want to know how to use this
+    /// field.
+    ///
+    /// [firewall-backend documentation]: ../nftables/types/struct.Defaults.html#structfield.initialization
+    #[deprecated(
+        since = "1.2.0",
+        note = "Provide the initialization in the nftables backend-defaults section instead. This \
+                field will be removed with release 2.0.0."
+    )]
+    pub initialization: Option<nftables::types::Initialization>,
     /// The `container_to_container` configuration section
     pub container_to_container: Option<ContainerToContainer>,
     /// The `container_to_wider_world` configuration section

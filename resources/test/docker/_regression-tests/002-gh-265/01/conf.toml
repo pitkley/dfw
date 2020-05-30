@@ -1,0 +1,4 @@
+# We are using the old alias to also check that this resolves correctly to
+# `global_defaults`.
+[defaults]
+custom_tables = { name = "filter", chains = ["input", "forward"] }
