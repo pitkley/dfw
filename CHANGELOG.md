@@ -1,6 +1,8 @@
 # Changelog
 
-## 1.2.0 - Reintegrate iptables backend (???)
+<!-- next-header -->
+
+## Unreleased
 
 * Reintegrate the iptables-backend.
 * Make exposing containers via IPv6 configurable.
