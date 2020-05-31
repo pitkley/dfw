@@ -11,7 +11,11 @@ RUN set -ex ;\
 # Stage 1: final image
 FROM alpine
 
-RUN apk add --no-cache nftables
+RUN apk add --no-cache \
+    iptables \
+    ip6tables \
+    nftables \
+    ;
 
 COPY --from=builder /home/rust/src/target/x86_64-unknown-linux-musl/release/dfw /dfw
 ENTRYPOINT ["/dfw"]
