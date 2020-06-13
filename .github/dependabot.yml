@@ -6,21 +6,3 @@ updates:
     interval: daily
     time: '04:00'
   open-pull-requests-limit: 10
-  ignore:
-  - dependency-name: futures
-    versions:
-    - ">= 0.3.a, < 0.4"
-  - dependency-name: tokio
-    versions:
-    - ">= 0.2.a, < 0.3"
-- package-ecosystem: cargo
-  directory: "/"
-  schedule:
-    interval: daily
-    time: '04:00'
-  open-pull-requests-limit: 10
-  target-branch: iptables
-  ignore:
-  - dependency-name: shiplift
-    versions:
-    - "> 0.3.2, < 1"
