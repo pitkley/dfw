@@ -5,8 +5,22 @@
 ## Unreleased
 
 * Reintegrate the iptables-backend.
+
+    This reintroduces an iptables-based firewall-backend (v1.0 initially dropped iptables-support), specifically the iptables-restore backend that was made available in v0.4+.
+
+    The backend can be selected through the `--firewall-backend iptables` CLI parameter (`nftables` is the default).
+
 * Make exposing containers via IPv6 configurable.
+
+    You can now specify the `expose_via_ipv6`-key within a wider-world-to-container-rule to configure whether the service should be exposed via IPv6 or not (the default is `true`).
+
+    _(Please note that further requirements need to be fulfilled such that exposing services via IPv6 to works, [see here](https://github.com/pitkley/dfw/blob/master/README.md#ipv6support).)_
+
 * Ensure consistent behaviour regardless of whether `[global_defaults]` has been specified or not.
+
+    Previously DFW showed different behaviour depending on whether `global_defaults` was specified or not, regardless of the actual content within the section (which was allowed to be empty).
+    This release ensures that the same behaviour is maintained no matter if the section was defined or not.
+
 * Don't exit DFW if there are no containers running ([#243], thanks to @Georgiy-Tugai).
 * Remove overloaded use of `global_defaults.external_network_interfaces`.
 
