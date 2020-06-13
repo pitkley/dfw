@@ -17,7 +17,7 @@ use dfw::{ContainerFilter, ProcessDFW, ProcessingOptions};
 use failure::bail;
 use shiplift::builder::{EventFilter, EventFilterType, EventsOptions};
 use shiplift::Docker;
-use slog::{debug, error, info, o, trace, Logger};
+use slog::{debug, error, info, o, trace, warn, Logger};
 use sloggers::terminal::{Destination, TerminalLoggerBuilder};
 use sloggers::types::Severity;
 use sloggers::Build;
@@ -529,6 +529,13 @@ fn main() {
         .destination(Destination::Stderr)
         .build()
         .expect("Failed to setup logging");
+
+    warn!(
+        root_logger,
+        "YOU ARE USING A DEPRECATED VERSION OF DFW! This version is unsupported and no longer \
+         receives any security-patches. Please upgrade your DFW-version to the latest version. \
+         (DFW v1.2+ supports both iptables and nftables!)"
+    );
 
     if let Err(ref e) = run(&matches, &r_signal, &root_logger) {
         error!(root_logger, "Encountered error";

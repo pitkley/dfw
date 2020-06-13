@@ -1,15 +1,12 @@
 # DEPRECATED: iptables implementation
 
-Please note that you are currently viewing the `iptables`-branch, which is the last-working state of DFW that supports the iptables-based backends.
-This branch is supported on a best-effort basis, mainly in terms of keeping the dependencies up-to-date using [Dependabot](https://dependabot.com)
+This branch/version previously existed because DFW dropped iptables-support in v1.0.
+v1.2 reintroduced support for iptables, which means this branch/implementation is completely unsupported.
 
-To keep using this version of DFW, simply use the `pitkley/dfw:iptables` tag when launching DFW from Docker.
-This tag will always be the latest version of the `iptables` branch.
+Please upgrade to DFW v1.2+.
+You can consult [the migration documentation][migration-docs] on how to migrate.
 
-If possible, please migrate to DFW v1.0.
-See [the migration documentation][migration-docs] on how to migrate.
-
-[migration-docs]: https://github.com/pitkley/dfw/blob/master/MIGRATION-v0.x-to-v1.0.md
+[migration-docs]: https://github.com/pitkley/dfw/blob/master/docs/migration/v0.x-to-v1.2.md
 
 -----
 
