@@ -8,6 +8,12 @@
 * Make exposing containers via IPv6 configurable.
 * Ensure consistent behaviour regardless of whether `[global_defaults]` has been specified or not.
 * Don't exit DFW if there are no containers running ([#243], thanks to @Georgiy-Tugai).
+* Remove overloaded use of `global_defaults.external_network_interfaces`.
+
+    Previously if you defined the `global_defaults.external_network_interfaces` configuration key, the first interface provided would internally be used to restrict which interfaces traffic can ingress into your containers from, even if `wider_world_to_container.rules[].external_network_interfaces` was not defined.
+
+    This version changes the behaviour such that `global_defaults.external_network_interfaces` is no longer used to determine if traffic can ingress or not.
+    If you want to restrict traffic from reaching your containers to specific interfaces, use the `wider_world_to_container.rules[].external_network_interfaces` configuration key instead.
 
 <sub>Internal changes: dependency updates, move CI entirely to GitHub Actions.</sub>
 

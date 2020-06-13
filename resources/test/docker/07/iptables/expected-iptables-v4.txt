@@ -6,12 +6,12 @@
 -F DFWRS_FORWARD
 -A DFWRS_FORWARD -m state --state INVALID -j DROP
 -A DFWRS_FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
--A DFWRS_FORWARD -d $dst_ip=ip -i eni -o $output=bridge -p tcp --dport 1010 -j ACCEPT
--A DFWRS_FORWARD -d $dst_ip=ip -i eni -o $output=bridge -p tcp --dport 2010 -j ACCEPT
--A DFWRS_FORWARD -s 192.0.2.2/32 -d $dst_ip=ip -i eni -o $output=bridge -p tcp --dport 1020 -j ACCEPT
--A DFWRS_FORWARD -s 192.0.2.3/32 -d $dst_ip=ip -i eni -o $output=bridge -p tcp --dport 1020 -j ACCEPT
--A DFWRS_FORWARD -s 192.0.2.2/32 -d $dst_ip=ip -i eni -o $output=bridge -p tcp --dport 2020 -j ACCEPT
--A DFWRS_FORWARD -s 192.0.2.3/32 -d $dst_ip=ip -i eni -o $output=bridge -p tcp --dport 2020 -j ACCEPT
+-A DFWRS_FORWARD -d $dst_ip=ip -o $output=bridge -p tcp --dport 1010 -j ACCEPT
+-A DFWRS_FORWARD -d $dst_ip=ip -o $output=bridge -p tcp --dport 2010 -j ACCEPT
+-A DFWRS_FORWARD -s 192.0.2.2/32 -d $dst_ip=ip -o $output=bridge -p tcp --dport 1020 -j ACCEPT
+-A DFWRS_FORWARD -s 192.0.2.3/32 -d $dst_ip=ip -o $output=bridge -p tcp --dport 1020 -j ACCEPT
+-A DFWRS_FORWARD -s 192.0.2.2/32 -d $dst_ip=ip -o $output=bridge -p tcp --dport 2020 -j ACCEPT
+-A DFWRS_FORWARD -s 192.0.2.3/32 -d $dst_ip=ip -o $output=bridge -p tcp --dport 2020 -j ACCEPT
 -A DFWRS_FORWARD -i docker0 -o eni -j ACCEPT
 -F DFWRS_INPUT
 -A DFWRS_INPUT -m state --state INVALID -j DROP
@@ -28,12 +28,12 @@ COMMIT
 -F DFWRS_POSTROUTING
 -A DFWRS_POSTROUTING -o eni -j MASQUERADE
 -F DFWRS_PREROUTING
--A DFWRS_PREROUTING -i eni -p tcp --dport 1010 -j DNAT --to-destination ${dst_ip=ip}:1010
--A DFWRS_PREROUTING -i eni -p tcp --dport 2010 -j DNAT --to-destination ${dst_ip=ip}:2010
--A DFWRS_PREROUTING -s 192.0.2.2/32 -i eni -p tcp --dport 1020 -j DNAT --to-destination ${dst_ip=ip}:1020
--A DFWRS_PREROUTING -s 192.0.2.3/32 -i eni -p tcp --dport 1020 -j DNAT --to-destination ${dst_ip=ip}:1020
--A DFWRS_PREROUTING -s 192.0.2.2/32 -i eni -p tcp --dport 2020 -j DNAT --to-destination ${dst_ip=ip}:2020
--A DFWRS_PREROUTING -s 192.0.2.3/32 -i eni -p tcp --dport 2020 -j DNAT --to-destination ${dst_ip=ip}:2020
+-A DFWRS_PREROUTING -p tcp --dport 1010 -j DNAT --to-destination ${dst_ip=ip}:1010
+-A DFWRS_PREROUTING -p tcp --dport 2010 -j DNAT --to-destination ${dst_ip=ip}:2010
+-A DFWRS_PREROUTING -s 192.0.2.2/32 -p tcp --dport 1020 -j DNAT --to-destination ${dst_ip=ip}:1020
+-A DFWRS_PREROUTING -s 192.0.2.3/32 -p tcp --dport 1020 -j DNAT --to-destination ${dst_ip=ip}:1020
+-A DFWRS_PREROUTING -s 192.0.2.2/32 -p tcp --dport 2020 -j DNAT --to-destination ${dst_ip=ip}:2020
+-A DFWRS_PREROUTING -s 192.0.2.3/32 -p tcp --dport 2020 -j DNAT --to-destination ${dst_ip=ip}:2020
 -A POSTROUTING -j DFWRS_POSTROUTING
 -A PREROUTING -j DFWRS_PREROUTING
 COMMIT
