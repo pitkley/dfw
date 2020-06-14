@@ -9,5 +9,6 @@
 * Releasing a full version:
 
     ```
-    cargo release --skip-publish rc
+    cargo release
     ```
+
