@@ -8,6 +8,8 @@ If you are upgrading DFW but don't want to switch to nftables, you can provide t
 Please note that no matter if you transition to nftables or not, **v1.0 introduced breaking changes to the configuration**.
 Please consult the [migration documentation][migration-v0.x-to-v1.2] on how to update your configuration.
 
+[nftables]: https://netfilter.org/projects/nftables/
+
 -----
 
 1. [Overview](#overview)

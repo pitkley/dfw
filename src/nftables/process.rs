@@ -542,12 +542,6 @@ impl Process<Nftables> for ContainerToWiderWorldRule {
             trace!(ctx.logger, "Rule has specific external network interface";
                        o!("external_network_interface" => external_network_interface));
             nft_rule.out_interface(external_network_interface);
-        } else if let Some(ref primary_external_network_interface) =
-            ctx.primary_external_network_interface
-        {
-            trace!(ctx.logger, "Rule uses primary external network interface";
-                       o!("external_network_interface" => primary_external_network_interface));
-            nft_rule.out_interface(primary_external_network_interface);
         }
 
         let rule = nft_rule.build()?;
@@ -870,18 +864,6 @@ impl Process<Nftables> for WiderWorldToContainerRule {
                 nft_forward_rule.in_interface(external_network_interface);
                 nft_dnat_rule.in_interface(external_network_interface);
                 nft_mark_rule.in_interface(external_network_interface);
-            } else if let Some(ref primary_external_network_interface) =
-                ctx.primary_external_network_interface
-            {
-                trace!(ctx.logger, "Rule uses primary external network interface";
-                       o!("external_network_interface" => primary_external_network_interface));
-
-                nft_forward_rule.in_interface(primary_external_network_interface);
-                nft_dnat_rule.in_interface(primary_external_network_interface);
-                nft_mark_rule.in_interface(primary_external_network_interface);
-            } else {
-                // The DNAT rule requires the external interface
-                return Ok(None);
             }
 
             // If source CIDRs have been specified, create the FORWARD-rules as required to
