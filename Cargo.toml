@@ -1,6 +1,6 @@
 [package]
 name = "dfw"
-version = "1.2.0-rc.4"
+version = "1.2.0-rc.5"
 edition = "2018"
 authors = ["Pit Kleyersburg <pitkley@googlemail.com>"]
 license = "MIT/Apache-2.0"
