@@ -1091,24 +1091,6 @@
 <span id="1091">1091</span>
 <span id="1092">1092</span>
 <span id="1093">1093</span>
-<span id="1094">1094</span>
-<span id="1095">1095</span>
-<span id="1096">1096</span>
-<span id="1097">1097</span>
-<span id="1098">1098</span>
-<span id="1099">1099</span>
-<span id="1100">1100</span>
-<span id="1101">1101</span>
-<span id="1102">1102</span>
-<span id="1103">1103</span>
-<span id="1104">1104</span>
-<span id="1105">1105</span>
-<span id="1106">1106</span>
-<span id="1107">1107</span>
-<span id="1108">1108</span>
-<span id="1109">1109</span>
-<span id="1110">1110</span>
-<span id="1111">1111</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright Pit Kleyersburg &lt;pitkley@googlemail.com&gt;</span>
 <span class="comment">//</span>
@@ -1654,12 +1636,6 @@
             <span class="macro">trace</span><span class="macro">!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Rule has specific external network interface&quot;</span>;
                        <span class="macro">o</span><span class="macro">!</span>(<span class="string">&quot;external_network_interface&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">external_network_interface</span>));
             <span class="ident">nft_rule</span>.<span class="ident">out_interface</span>(<span class="ident">external_network_interface</span>);
-        } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">primary_external_network_interface</span>) <span class="op">=</span>
-            <span class="ident">ctx</span>.<span class="ident">primary_external_network_interface</span>
-        {
-            <span class="macro">trace</span><span class="macro">!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Rule uses primary external network interface&quot;</span>;
-                       <span class="macro">o</span><span class="macro">!</span>(<span class="string">&quot;external_network_interface&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">primary_external_network_interface</span>));
-            <span class="ident">nft_rule</span>.<span class="ident">out_interface</span>(<span class="ident">primary_external_network_interface</span>);
         }
 
         <span class="kw">let</span> <span class="ident">rule</span> <span class="op">=</span> <span class="ident">nft_rule</span>.<span class="ident">build</span>()<span class="question-mark">?</span>;
@@ -1982,18 +1958,6 @@
                 <span class="ident">nft_forward_rule</span>.<span class="ident">in_interface</span>(<span class="ident">external_network_interface</span>);
                 <span class="ident">nft_dnat_rule</span>.<span class="ident">in_interface</span>(<span class="ident">external_network_interface</span>);
                 <span class="ident">nft_mark_rule</span>.<span class="ident">in_interface</span>(<span class="ident">external_network_interface</span>);
-            } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">primary_external_network_interface</span>) <span class="op">=</span>
-                <span class="ident">ctx</span>.<span class="ident">primary_external_network_interface</span>
-            {
-                <span class="macro">trace</span><span class="macro">!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Rule uses primary external network interface&quot;</span>;
-                       <span class="macro">o</span><span class="macro">!</span>(<span class="string">&quot;external_network_interface&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">primary_external_network_interface</span>));
-
-                <span class="ident">nft_forward_rule</span>.<span class="ident">in_interface</span>(<span class="ident">primary_external_network_interface</span>);
-                <span class="ident">nft_dnat_rule</span>.<span class="ident">in_interface</span>(<span class="ident">primary_external_network_interface</span>);
-                <span class="ident">nft_mark_rule</span>.<span class="ident">in_interface</span>(<span class="ident">primary_external_network_interface</span>);
-            } <span class="kw">else</span> {
-                <span class="comment">// The DNAT rule requires the external interface</span>
-                <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
             }
 
             <span class="comment">// If source CIDRs have been specified, create the FORWARD-rules as required to</span>

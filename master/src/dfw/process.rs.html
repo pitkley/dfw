@@ -267,12 +267,6 @@
 <span id="267">267</span>
 <span id="268">268</span>
 <span id="269">269</span>
-<span id="270">270</span>
-<span id="271">271</span>
-<span id="272">272</span>
-<span id="273">273</span>
-<span id="274">274</span>
-<span id="275">275</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright Pit Kleyersburg &lt;pitkley@googlemail.com&gt;</span>
 <span class="comment">//</span>
@@ -387,7 +381,6 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">container_map</span>: <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Container</span><span class="op">&gt;</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">network_map</span>: <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">NetworkDetails</span><span class="op">&gt;</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">external_network_interfaces</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">primary_external_network_interface</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">logger</span>: <span class="ident">Logger</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">dry_run</span>: <span class="ident">bool</span>,
 }
@@ -435,10 +428,6 @@
             .<span class="ident">external_network_interfaces</span>
             .<span class="ident">as_ref</span>()
             .<span class="ident">cloned</span>();
-        <span class="kw">let</span> <span class="ident">primary_external_network_interface</span> <span class="op">=</span> <span class="ident">external_network_interfaces</span>
-            .<span class="ident">as_ref</span>()
-            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">get</span>(<span class="number">0</span>))
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">to_owned</span>());
 
         <span class="prelude-val">Ok</span>(<span class="ident">ProcessContext</span> {
             <span class="ident">docker</span>,
@@ -446,7 +435,6 @@
             <span class="ident">container_map</span>,
             <span class="ident">network_map</span>,
             <span class="ident">external_network_interfaces</span>,
-            <span class="ident">primary_external_network_interface</span>,
             <span class="ident">logger</span>,
             <span class="ident">dry_run</span>,
         })
