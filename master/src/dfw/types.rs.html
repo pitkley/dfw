@@ -915,8 +915,6 @@
 <span id="915">915</span>
 <span id="916">916</span>
 <span id="917">917</span>
-<span id="918">918</span>
-<span id="919">919</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright Pit Kleyersburg &lt;pitkley@googlemail.com&gt;</span>
 <span class="comment">//</span>
@@ -1041,10 +1039,8 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">Default</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GlobalDefaults</span> {
-    <span class="doccomment">/// This defines the external network interfaces the containers managed through DFW should be</span>
-    <span class="doccomment">/// able to communicate through (i.e. outbound communication with the wider world).</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// The value can be unset, a string, or a sequence of strings.</span>
+    <span class="doccomment">/// This defines the external network interfaces of the host to consider during building the</span>
+    <span class="doccomment">/// rules. The value can be non-existent, a string, or a sequence of strings.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # Example</span>
     <span class="doccomment">///</span>
