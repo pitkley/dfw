@@ -21,11 +21,10 @@
     Previously DFW showed different behaviour depending on whether `global_defaults` was specified or not, regardless of the actual content within the section (which was allowed to be empty).
     This release ensures that the same behaviour is maintained no matter if the section was defined or not.
 
-* Don't exit DFW if there are no containers running ([#243], thanks to @Georgiy-Tugai).
+* Don't exit DFW if there are no containers running ([#243](https://github.com/pitkley/dfw/pull/243), thanks to @Georgiy-Tugai).
 
 <sub>Internal changes: dependency updates, move CI entirely to GitHub Actions.</sub>
 
-[#243](https://github.com/pitkley/dfw/pull/243)
 
 ## 1.1.0 - Bugfix, dependency updates (c9dc9ba)
 
