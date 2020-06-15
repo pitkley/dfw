@@ -121,10 +121,8 @@ where
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash, Default)]
 #[serde(deny_unknown_fields)]
 pub struct GlobalDefaults {
-    /// This defines the external network interfaces the containers managed through DFW should be
-    /// able to communicate through (i.e. outbound communication with the wider world).
-    ///
-    /// The value can be unset, a string, or a sequence of strings.
+    /// This defines the external network interfaces of the host to consider during building the
+    /// rules. The value can be non-existent, a string, or a sequence of strings.
     ///
     /// # Example
     ///

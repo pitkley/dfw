@@ -111,6 +111,7 @@ where
     pub(crate) container_map: Map<String, Container>,
     pub(crate) network_map: Map<String, NetworkDetails>,
     pub(crate) external_network_interfaces: Option<Vec<String>>,
+    pub(crate) primary_external_network_interface: Option<String>,
     pub(crate) logger: Logger,
     pub(crate) dry_run: bool,
 }
@@ -158,6 +159,10 @@ where
             .external_network_interfaces
             .as_ref()
             .cloned();
+        let primary_external_network_interface = external_network_interfaces
+            .as_ref()
+            .and_then(|v| v.get(0))
+            .map(|s| s.to_owned());
 
         Ok(ProcessContext {
             docker,
@@ -165,6 +170,7 @@ where
             container_map,
             network_map,
             external_network_interfaces,
+            primary_external_network_interface,
             logger,
             dry_run,
         })
