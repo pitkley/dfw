@@ -6,13 +6,13 @@
 -F DFWRS_FORWARD
 -A DFWRS_FORWARD -m state --state INVALID -j DROP
 -A DFWRS_FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
--A DFWRS_FORWARD -d $dst_ip=ip -o $output=bridge -p tcp --dport 80 -j ACCEPT
--A DFWRS_FORWARD -d $dst_ip=ip -o $output=bridge -p tcp --dport 80 -j ACCEPT
--A DFWRS_FORWARD -d $dst_ip=ip -o $output=bridge -p udp --dport 53 -j ACCEPT
+-A DFWRS_FORWARD -d $dst_ip=ip -i eni -o $output=bridge -p tcp --dport 80 -j ACCEPT
+-A DFWRS_FORWARD -d $dst_ip=ip -i eni -o $output=bridge -p tcp --dport 80 -j ACCEPT
+-A DFWRS_FORWARD -d $dst_ip=ip -i eni -o $output=bridge -p udp --dport 53 -j ACCEPT
 -A DFWRS_FORWARD -d $dst_ip=ip -i other -o $output=bridge -p tcp --dport 443 -j ACCEPT
--A DFWRS_FORWARD -s 192.0.2.1/32 -d $dst_ip=ip -o $output=bridge -p tcp --dport 22 -j ACCEPT
--A DFWRS_FORWARD -s 192.0.2.2/32 -d $dst_ip=ip -o $output=bridge -p tcp --dport 25 -j ACCEPT
--A DFWRS_FORWARD -s 192.0.2.3/32 -d $dst_ip=ip -o $output=bridge -p tcp --dport 25 -j ACCEPT
+-A DFWRS_FORWARD -s 192.0.2.1/32 -d $dst_ip=ip -i eni -o $output=bridge -p tcp --dport 22 -j ACCEPT
+-A DFWRS_FORWARD -s 192.0.2.2/32 -d $dst_ip=ip -i eni -o $output=bridge -p tcp --dport 25 -j ACCEPT
+-A DFWRS_FORWARD -s 192.0.2.3/32 -d $dst_ip=ip -i eni -o $output=bridge -p tcp --dport 25 -j ACCEPT
 -A DFWRS_FORWARD -i docker0 -o eni -j ACCEPT
 -F DFWRS_INPUT
 -A DFWRS_INPUT -m state --state INVALID -j DROP
@@ -29,13 +29,13 @@ COMMIT
 -F DFWRS_POSTROUTING
 -A DFWRS_POSTROUTING -o eni -j MASQUERADE
 -F DFWRS_PREROUTING
--A DFWRS_PREROUTING -p tcp --dport 80 -j DNAT --to-destination ${dst_ip=ip}:80
--A DFWRS_PREROUTING -p tcp --dport 80 -j DNAT --to-destination ${dst_ip=ip}:80
--A DFWRS_PREROUTING -p udp --dport 53 -j DNAT --to-destination ${dst_ip=ip}:53
+-A DFWRS_PREROUTING -i eni -p tcp --dport 80 -j DNAT --to-destination ${dst_ip=ip}:80
+-A DFWRS_PREROUTING -i eni -p tcp --dport 80 -j DNAT --to-destination ${dst_ip=ip}:80
+-A DFWRS_PREROUTING -i eni -p udp --dport 53 -j DNAT --to-destination ${dst_ip=ip}:53
 -A DFWRS_PREROUTING -i other -p tcp --dport 443 -j DNAT --to-destination ${dst_ip=ip}:443
--A DFWRS_PREROUTING -s 192.0.2.1/32 -p tcp --dport 22 -j DNAT --to-destination ${dst_ip=ip}:22
--A DFWRS_PREROUTING -s 192.0.2.2/32 -p tcp --dport 25 -j DNAT --to-destination ${dst_ip=ip}:25
--A DFWRS_PREROUTING -s 192.0.2.3/32 -p tcp --dport 25 -j DNAT --to-destination ${dst_ip=ip}:25
+-A DFWRS_PREROUTING -s 192.0.2.1/32 -i eni -p tcp --dport 22 -j DNAT --to-destination ${dst_ip=ip}:22
+-A DFWRS_PREROUTING -s 192.0.2.2/32 -i eni -p tcp --dport 25 -j DNAT --to-destination ${dst_ip=ip}:25
+-A DFWRS_PREROUTING -s 192.0.2.3/32 -i eni -p tcp --dport 25 -j DNAT --to-destination ${dst_ip=ip}:25
 -A POSTROUTING -j DFWRS_POSTROUTING
 -A PREROUTING -j DFWRS_PREROUTING
 COMMIT

@@ -475,6 +475,12 @@ impl Process<Iptables> for ContainerToWiderWorldRule {
             trace!(ctx.logger, "Rule has specific external network interface";
                    o!("external_network_interface" => external_network_interface));
             ipt_rule.out_interface(external_network_interface);
+        } else if let Some(ref primary_external_network_interface) =
+            ctx.primary_external_network_interface
+        {
+            trace!(ctx.logger, "Rule uses primary external network interface";
+                   o!("external_network_interface" => primary_external_network_interface));
+            ipt_rule.out_interface(primary_external_network_interface);
         }
 
         let rule = ipt_rule.build()?;
@@ -697,6 +703,18 @@ impl Process<Iptables> for WiderWorldToContainerRule {
 
                 ipt_forward_rule.in_interface(external_network_interface);
                 ipt_dnat_rule.in_interface(external_network_interface);
+            } else if let Some(ref primary_external_network_interface) =
+                ctx.primary_external_network_interface
+            {
+                trace!(ctx.logger, "Rule uses primary external network interface";
+                       o!("external_network_interface" => primary_external_network_interface));
+
+                ipt_forward_rule.in_interface(primary_external_network_interface);
+                ipt_dnat_rule.in_interface(primary_external_network_interface);
+                ipt6_input_rule.in_interface(primary_external_network_interface);
+            } else {
+                // The DNAT rule requires the external interface
+                continue;
             }
 
             // If source CIDRs have been specified, create the FORWARD-rules as required to
@@ -904,6 +922,24 @@ impl Process<Iptables> for ContainerDNATRule {
             debug!(ctx.logger, "Build rule to verify contents";
                    o!("args" => format!("{:?}", ipt_rule)));
             ipt_rule.build()?;
+
+            if ipt_rule.out_interface.is_none() {
+                if let Some(ref primary_external_network_interface) =
+                    ctx.primary_external_network_interface
+                {
+                    trace!(ctx.logger, "Set primary external network interface";
+                           o!("external_network_interface"
+                              => primary_external_network_interface));
+
+                    ipt_rule
+                        .in_interface(primary_external_network_interface)
+                        .not_in_interface(true);
+                } else {
+                    // We need to specify a external network interface.
+                    // If it is not defined, skip the rule.
+                    continue;
+                }
+            }
 
             let rule = ipt_rule.build()?;
             debug!(ctx.logger, "Add prerouting rule";
