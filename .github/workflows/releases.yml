@@ -54,6 +54,18 @@ jobs:
         else
           echo "::set-output name=is-prerelease::true"
         fi
+    - name: Extract current changelog
+      id: changelog
+      run:
+        |
+        changelog="$(hack/extract-current-changelog.py CHANGELOG.md)"
+        # https://github.community/t/set-output-truncates-multiline-strings/16852/3
+        changelog="${changelog//'%'/'%25'}"
+        changelog="${changelog//$'\n'/'%0A'}"
+        changelog="${changelog//$'\r'/'%0D'}"
+
+        echo "::set-output name=value::$changelog"
+
     - name: Prepare release
       id: prepare-release
       uses: actions/create-release@v1
@@ -68,6 +80,10 @@ jobs:
           # Summary
 
           TODO!
+
+          ## Changes
+
+          ${{ steps.changelog.outputs.value }}
 
           ## Installation
 
