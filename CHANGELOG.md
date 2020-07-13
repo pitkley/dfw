@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 1.2.0 (2020-07-13)
+
 * Reintegrate the iptables-backend.
 
     This reintroduces an iptables-based firewall-backend (v1.0 initially dropped iptables-support), specifically the iptables-restore backend that was made available in v0.4+.
