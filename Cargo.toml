@@ -19,6 +19,9 @@ include = [
     "LICENSE-*",
 ]
 
+[badges]
+maintenance = { status = "actively-developed" }
+
 [dependencies]
 clap = "^2.33"
 crossbeam-channel = "^0.4"
