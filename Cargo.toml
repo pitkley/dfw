@@ -7,6 +7,7 @@ license = "MIT/Apache-2.0"
 description = "Docker firewall framework, in Rust"
 homepage = "https://github.com/pitkley/dfw"
 repository = "https://github.com/pitkley/dfw.git"
+readme = "README.md"
 
 categories = ["command-line-interface", "command-line-utilities"]
 keywords = ["cli", "docker", "firewall"]
