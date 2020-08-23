@@ -22,7 +22,7 @@ use dfw::{
 };
 use itertools::{EitherOrBoth, Itertools};
 use logs::*;
-use paste;
+use paste::paste;
 use serde::de::DeserializeOwned;
 use shiplift::Docker;
 use slog::{o, Drain, Fuse, Logger, OwnedKVList, Record};
@@ -284,7 +284,7 @@ fn test_iptables_process_should_fail(path: &str) {
 
 macro_rules! dfw_test {
     ( R F $backend:ident $name:tt $param:expr $(;)* ) => {
-        paste::item! {
+        paste! {
             #[test]
             fn [<regressiontest_ $backend _ $name>]() {
                 [<test_ $backend _process_should_fail>](concat!("_regression-tests/", $param));
@@ -292,7 +292,7 @@ macro_rules! dfw_test {
         }
     };
     ( R F $backend:ident $param:expr $(;)* ) => {
-        paste::item! {
+        paste! {
             #[test]
             fn [<regressiontest_ $backend _ $param>]() {
                 [<test_ $backend _process_should_fail>](concat!("_regression-tests/", $param));
@@ -300,7 +300,7 @@ macro_rules! dfw_test {
         }
     };
     ( R $backend:ident $name:tt $param:expr $(;)* ) => {
-        paste::item! {
+        paste! {
             #[test]
             fn [<regressiontest_ $backend _ $name>]() {
                 [<test_ $backend>](concat!("_regression-tests/", $param));
@@ -308,7 +308,7 @@ macro_rules! dfw_test {
         }
     };
     ( R $backend:ident $param:expr $(;)* ) => {
-        paste::item! {
+        paste! {
             #[test]
             fn [<regressiontest_ $backend _ $param>]() {
                 [<test_ $backend>](concat!("_regression-tests/", $param));
@@ -316,7 +316,7 @@ macro_rules! dfw_test {
         }
     };
     ( F $backend:ident $param:expr $(;)* ) => {
-        paste::item! {
+        paste! {
             #[test]
             fn [<test_ $backend _ $param>]() {
                 [<test_ $backend _process_should_fail>]($param);
@@ -324,7 +324,7 @@ macro_rules! dfw_test {
         }
     };
     ( $backend:ident $param:expr $(;)* ) => {
-        paste::item! {
+        paste! {
             #[test]
             fn [<test_ $backend _ $param>]() {
                 [<test_ $backend>]($param);
