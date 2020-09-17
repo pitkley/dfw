@@ -379,7 +379,7 @@ dependencies = [
  "strum",
  "strum_macros",
  "tempfile",
- "time 0.2.19",
+ "time 0.2.20",
  "tokio",
  "toml",
  "url",
@@ -1025,9 +1025,9 @@ dependencies = [
 
 [[package]]
 name = "paste"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6ddc8e145de01d9180ac7b78b9676f95a9c2447f6a88b2c2a04702211bc5d71"
+checksum = "0520af26d4cf99643dbbe093a61507922b57232d9978d8491fdc8f7b44573c8c"
 
 [[package]]
 name = "percent-encoding"
@@ -1646,9 +1646,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.2.19"
+version = "0.2.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "80c1a1fd93112fc50b11c43a1def21f926be3c18884fad676ea879572da070a1"
+checksum = "0d4953c513c9bf1b97e9cdd83f11d60c4b0a83462880a360d80d96953a953fee"
 dependencies = [
  "const_fn",
  "libc",
