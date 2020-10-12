@@ -185,7 +185,7 @@ pub struct ContainerToContainer {
     /// `net.bridge.bridge-nf-call-iptables` to `1` to have the netfilter-module act on traffic
     /// within the same bridge, too. You can set this value temporarily like this:
     ///
-    /// ```norun
+    /// ```text
     /// sysctl net.bridge.bridge-nf-call-iptables=1
     /// ```
     ///

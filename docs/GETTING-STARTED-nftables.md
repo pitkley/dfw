@@ -66,7 +66,7 @@
     **BE CAREFUL:** do not apply this change before you also added any rules you might require to e.g. access SSH on your host.
     The following is a simple example for what this configuration file can look like:
 
-    ```norun
+    ```shell
     #!/usr/sbin/nft -f
 
     flush ruleset
