@@ -13,7 +13,7 @@ network, but only for traffic that traverses two bridges.</p>
 <p>If your kernel has the <code>br_netfilter</code> kernel-module available, you can set the sysctl
 <code>net.bridge.bridge-nf-call-iptables</code> to <code>1</code> to have the netfilter-module act on traffic
 within the same bridge, too. You can set this value temporarily like this:</p>
-<pre><code class="language-norun">sysctl net.bridge.bridge-nf-call-iptables=1
+<pre><code class="language-text">sysctl net.bridge.bridge-nf-call-iptables=1
 </code></pre>
 <p>To permanently set this configuration, take a look at <code>man sysctl.d</code> and <code>man sysctl.conf</code>.</p>
 </div><span id="structfield.rules" class="structfield small-section-header"><a href="#structfield.rules" class="anchor field"></a><code>rules: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="../../dfw/types/struct.ContainerToContainerRule.html" title="struct dfw::types::ContainerToContainerRule">ContainerToContainerRule</a>&gt;&gt;</code></span><div class='docblock'><p>An optional list of rules, see
