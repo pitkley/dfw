@@ -84,7 +84,7 @@ impl FromStr for LogLine {
     ///
     /// # Example
     ///
-    /// ```norun
+    /// ```
     /// let logline: LogLine = "command".parse().unwrap();
     /// assert_eq!(logline.command, "command");
     /// assert_eq!(logline.regex, false);
