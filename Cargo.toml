@@ -24,7 +24,7 @@ maintenance = { status = "actively-developed" }
 
 [dependencies]
 clap = "^2.33"
-crossbeam-channel = "^0.4"
+crossbeam-channel = "^0.5"
 derive_builder = "^0.9"
 failure= "^0.1"
 futures = "^0.1"
