@@ -659,12 +659,13 @@ impl Process<Iptables> for WiderWorldToContainerRule {
                         .ok_or_else(|| format_err!("IPv4 address is empty"))?,
                 );
 
-                let destination_port = match expose_port.container_port {
+                let host_port = expose_port.host_port.to_string();
+                let container_port = match expose_port.container_port {
                     Some(destination_port) => destination_port.to_string(),
                     None => expose_port.host_port.to_string(),
                 };
-                ipt_forward_rule.destination_port(&destination_port);
-                ipt_dnat_rule.destination_port(&destination_port);
+                ipt_forward_rule.destination_port(&container_port);
+                ipt_dnat_rule.destination_port(&host_port);
                 ipt_dnat_rule.jump(&format!(
                     "DNAT --to-destination {}:{}",
                     dst_network
@@ -672,9 +673,9 @@ impl Process<Iptables> for WiderWorldToContainerRule {
                         .split('/')
                         .next()
                         .ok_or_else(|| format_err!("IPv4 address is empty"))?,
-                    destination_port
+                    container_port
                 ));
-                ipt6_input_rule.destination_port(&destination_port);
+                ipt6_input_rule.destination_port(&host_port);
             } else {
                 // Network for container has to exist
                 continue;

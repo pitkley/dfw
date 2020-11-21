@@ -810,12 +810,13 @@ impl Process<Nftables> for WiderWorldToContainerRule {
                         .ok_or_else(|| format_err!("IPv4 address is empty"))?,
                 );
 
-                let destination_port = match expose_port.container_port {
+                let host_port = expose_port.host_port.to_string();
+                let container_port = match expose_port.container_port {
                     Some(destination_port) => destination_port.to_string(),
                     None => expose_port.host_port.to_string(),
                 };
-                nft_forward_rule.destination_port(&destination_port);
-                nft_dnat_rule.destination_port(&destination_port);
+                nft_forward_rule.destination_port(&container_port);
+                nft_dnat_rule.destination_port(&host_port);
                 nft_dnat_rule.dnat(&format!(
                     "{}:{}",
                     dst_network
@@ -823,9 +824,9 @@ impl Process<Nftables> for WiderWorldToContainerRule {
                         .split('/')
                         .next()
                         .ok_or_else(|| format_err!("IPv4 address is empty"))?,
-                    destination_port
+                    container_port
                 ));
-                nft_mark_rule.destination_port(&destination_port);
+                nft_mark_rule.destination_port(&host_port);
             // INFO: correct IPv6 handling would include actually using IPv6-addresses.
             // While the code below is correct, the postrouting does not work since nftables cannot
             // route IPv6 packets to IPv4 destinations.

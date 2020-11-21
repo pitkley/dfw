@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+* Fix incorrect handling of host-ports in wider-world-to-container rules.
+
 ## 1.2.0 (2020-07-13)
 
 * Reintegrate the iptables-backend.
