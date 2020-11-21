@@ -1,0 +1,4 @@
+[[wider_world_to_container.rules]]
+network = "PROJECT_default"
+dst_container = "PROJECT_a_1"
+expose_port = { host_port = 8080, container_port = 80, family = "tcp" }
