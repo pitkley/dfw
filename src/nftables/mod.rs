@@ -14,7 +14,7 @@ use std::{
     io::{prelude::*, BufWriter},
     process::Command,
 };
-use strum_macros::Display;
+use strum::Display;
 
 mod process;
 mod rule;

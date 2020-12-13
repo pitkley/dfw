@@ -17,7 +17,7 @@ use std::{
     process::{Command, Stdio},
     str,
 };
-use strum_macros::EnumDiscriminants;
+use strum::EnumDiscriminants;
 
 mod process;
 mod rule;
