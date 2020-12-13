@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["dfw"] = [{"text":"impl From&lt;IptablesRule&gt; for IptablesRuleDiscriminants","synthetic":false,"types":[]},{"text":"impl&lt;'_enum&gt; From&lt;&amp;'_enum IptablesRule&gt; for IptablesRuleDiscriminants","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

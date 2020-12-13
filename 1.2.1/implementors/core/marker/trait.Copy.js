@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["dfw"] = [{"text":"impl Copy for IptablesRuleDiscriminants","synthetic":false,"types":[]},{"text":"impl Copy for Family","synthetic":false,"types":[]},{"text":"impl Copy for Type","synthetic":false,"types":[]},{"text":"impl Copy for Hook","synthetic":false,"types":[]},{"text":"impl Copy for ChainPolicy","synthetic":false,"types":[]},{"text":"impl Copy for RuleVerdict","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
