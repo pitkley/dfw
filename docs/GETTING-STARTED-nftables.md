@@ -143,13 +143,13 @@ You have two general options of running DFW:
 ### Using the official Docker image
 
 ```console
-$ docker pull pitkley/dfw:1.2.0
+$ docker pull pitkley/dfw:1.2.1
 $ docker run -d \
       --name=dfw \
       -v /var/run/docker.sock:/var/run/docker.sock:ro \
       -v /path/to/your/config:/config \
       --net host --cap-add=NET_ADMIN \
-      pitkley/dfw:1.2.0 --config-path /config
+      pitkley/dfw:1.2.1 --config-path /config
 ```
 
 This will download a lightweight image, coming in at under 10 MB, and subsequently run it using your configuration.
@@ -162,7 +162,7 @@ For this you need to first [install Rust][rustlang-install] and then install DFW
 ```console
 $ cargo install dfw
 $ dfw --help
-dfw 1.2.0
+dfw 1.2.1
 Docker Firewall Framework, in Rust
 ...
 ```

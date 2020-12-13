@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 1.2.1 (2020-12-13)
+
 * Fix incorrect handling of host-ports in wider-world-to-container rules.
 
 ## 1.2.0 (2020-07-13)
