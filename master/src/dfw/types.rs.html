@@ -988,7 +988,7 @@
 <span class="kw">use</span> <span class="ident">derive_builder</span>::<span class="ident">Builder</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">Deserialize</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
-<span class="kw">use</span> <span class="ident">strum_macros</span>::{<span class="ident">Display</span>, <span class="ident">EnumString</span>};
+<span class="kw">use</span> <span class="ident">strum</span>::{<span class="ident">Display</span>, <span class="ident">EnumString</span>};
 
 <span class="kw">const</span> <span class="ident">DEFAULT_PROTOCOL</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;tcp&quot;</span>;
 
@@ -1731,12 +1731,12 @@
 <span class="attribute">#[<span class="ident">strum</span>(<span class="ident">serialize_all</span> <span class="op">=</span> <span class="string">&quot;snake_case&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ChainPolicy</span> {
     <span class="doccomment">/// The accept verdict means that the packet will keep traversing the network stack.</span>
-    <span class="attribute">#[<span class="ident">strum</span>(<span class="ident">to_string</span> <span class="op">=</span> <span class="string">&quot;accept&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;accept&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;ACCEPT&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">strum</span>(<span class="ident">to_string</span> <span class="op">=</span> <span class="string">&quot;accept&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;ACCEPT&quot;</span>)]</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">alias</span> <span class="op">=</span> <span class="string">&quot;ACCEPT&quot;</span>)]</span>
     <span class="ident">Accept</span>,
     <span class="doccomment">/// The drop verdict means that the packet is discarded if the packet reaches the end of the</span>
     <span class="doccomment">/// base chain.</span>
-    <span class="attribute">#[<span class="ident">strum</span>(<span class="ident">to_string</span> <span class="op">=</span> <span class="string">&quot;drop&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;drop&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;DROP&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">strum</span>(<span class="ident">to_string</span> <span class="op">=</span> <span class="string">&quot;drop&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;DROP&quot;</span>)]</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">alias</span> <span class="op">=</span> <span class="string">&quot;DROP&quot;</span>)]</span>
     <span class="ident">Drop</span>,
 }
@@ -1770,17 +1770,17 @@
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">RuleVerdict</span> {
     <span class="doccomment">/// The accept verdict means that the packet will keep traversing the network stack.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">alias</span> <span class="op">=</span> <span class="string">&quot;ACCEPT&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">strum</span>(<span class="ident">to_string</span> <span class="op">=</span> <span class="string">&quot;accept&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;accept&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;ACCEPT&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">strum</span>(<span class="ident">to_string</span> <span class="op">=</span> <span class="string">&quot;accept&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;ACCEPT&quot;</span>)]</span>
     <span class="ident">Accept</span>,
     <span class="doccomment">/// The drop verdict means that the packet is discarded if the packet reaches the end of the</span>
     <span class="doccomment">/// base chain.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">alias</span> <span class="op">=</span> <span class="string">&quot;DROP&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">strum</span>(<span class="ident">to_string</span> <span class="op">=</span> <span class="string">&quot;drop&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;drop&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;DROP&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">strum</span>(<span class="ident">to_string</span> <span class="op">=</span> <span class="string">&quot;drop&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;DROP&quot;</span>)]</span>
     <span class="ident">Drop</span>,
     <span class="doccomment">/// The reject verdict means that the packet is responded to with an ICMP message stating that</span>
     <span class="doccomment">/// it was rejected.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">alias</span> <span class="op">=</span> <span class="string">&quot;REJECT&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">strum</span>(<span class="ident">to_string</span> <span class="op">=</span> <span class="string">&quot;reject&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;reject&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;REJECT&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">strum</span>(<span class="ident">to_string</span> <span class="op">=</span> <span class="string">&quot;reject&quot;</span>, <span class="ident">serialize</span> <span class="op">=</span> <span class="string">&quot;REJECT&quot;</span>)]</span>
     <span class="ident">Reject</span>,
 }
 
