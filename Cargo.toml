@@ -37,8 +37,7 @@ signal-hook = "^0.2"
 shiplift = "^0.6"
 slog = { version = "^2", features = ["max_level_trace"] }
 sloggers = "^1.0"
-strum = "^0.19"
-strum_macros = "^0.19"
+strum = { version = "^0.20", features = ["derive"] }
 tempfile = "^3.1"
 time = "^0.2"
 tokio = "^0.1"

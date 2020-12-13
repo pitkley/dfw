@@ -67,7 +67,7 @@ use crate::{de::*, nftables, FirewallBackend, Process};
 use derive_builder::Builder;
 use serde::Deserialize;
 use std::str::FromStr;
-use strum_macros::{Display, EnumString};
+use strum::{Display, EnumString};
 
 const DEFAULT_PROTOCOL: &str = "tcp";
 
@@ -810,12 +810,12 @@ fn default_expose_port_family() -> String {
 #[strum(serialize_all = "snake_case")]
 pub enum ChainPolicy {
     /// The accept verdict means that the packet will keep traversing the network stack.
-    #[strum(to_string = "accept", serialize = "accept", serialize = "ACCEPT")]
+    #[strum(to_string = "accept", serialize = "ACCEPT")]
     #[serde(alias = "ACCEPT")]
     Accept,
     /// The drop verdict means that the packet is discarded if the packet reaches the end of the
     /// base chain.
-    #[strum(to_string = "drop", serialize = "drop", serialize = "DROP")]
+    #[strum(to_string = "drop", serialize = "DROP")]
     #[serde(alias = "DROP")]
     Drop,
 }
@@ -849,17 +849,17 @@ impl slog::Value for ChainPolicy {
 pub enum RuleVerdict {
     /// The accept verdict means that the packet will keep traversing the network stack.
     #[serde(alias = "ACCEPT")]
-    #[strum(to_string = "accept", serialize = "accept", serialize = "ACCEPT")]
+    #[strum(to_string = "accept", serialize = "ACCEPT")]
     Accept,
     /// The drop verdict means that the packet is discarded if the packet reaches the end of the
     /// base chain.
     #[serde(alias = "DROP")]
-    #[strum(to_string = "drop", serialize = "drop", serialize = "DROP")]
+    #[strum(to_string = "drop", serialize = "DROP")]
     Drop,
     /// The reject verdict means that the packet is responded to with an ICMP message stating that
     /// it was rejected.
     #[serde(alias = "REJECT")]
-    #[strum(to_string = "reject", serialize = "reject", serialize = "REJECT")]
+    #[strum(to_string = "reject", serialize = "REJECT")]
     Reject,
 }
 
