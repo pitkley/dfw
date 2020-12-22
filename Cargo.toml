@@ -33,7 +33,7 @@ iptables = "^0.2"
 lazy_static = "^1"
 libc = "^0.2"
 serde = { version = "^1", features = ["derive"] }
-signal-hook = "^0.2"
+signal-hook = "^0.3"
 shiplift = "^0.6"
 slog = { version = "^2", features = ["max_level_trace"] }
 sloggers = "^1.0"
