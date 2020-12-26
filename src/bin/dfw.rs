@@ -526,8 +526,9 @@ fn main() {
 
     // Signals should be set up as early as possible, to set proper signal masks to all threads
     let (s_signal, r_signal) = crossbeam_channel::bounded(10);
-    let signals = signal_hook::iterator::Signals::new(&[libc::SIGINT, libc::SIGTERM, libc::SIGHUP])
-        .expect("Failed to bind to process signals");
+    let mut signals =
+        signal_hook::iterator::Signals::new(&[libc::SIGINT, libc::SIGTERM, libc::SIGHUP])
+            .expect("Failed to bind to process signals");
     thread::spawn(move || {
         for signal in signals.forever() {
             s_signal.send(signal).expect("Failed to send signal event");
