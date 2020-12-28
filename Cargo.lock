@@ -1363,9 +1363,9 @@ dependencies = [
 
 [[package]]
 name = "signal-hook"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f33a720e2788e0182397413e3767ce7ad71552f9b4fe9de05ab97abce97bdb6"
+checksum = "6b3799fa361789a685db59e3986fb5f6f949e478728b9913c6759f7b014d0372"
 dependencies = [
  "libc",
  "signal-hook-registry",
