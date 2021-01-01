@@ -378,7 +378,6 @@ dependencies = [
  "failure",
  "futures",
  "glob",
- "iptables",
  "itertools",
  "lazy_static",
  "libc",
@@ -744,17 +743,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "iptables"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a709660d1d7dbeda66db54fccd785ee8eb38f8d1b87d0dea202e6ef72420555"
-dependencies = [
- "lazy_static",
- "nix",
- "regex",
-]
-
-[[package]]
 name = "itertools"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -935,18 +923,6 @@ dependencies = [
  "cfg-if 0.1.10",
  "libc",
  "winapi 0.3.8",
-]
-
-[[package]]
-name = "nix"
-version = "0.19.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2ccba0cfe4fdf15982d1674c69b1fd80bad427d293849982668dfe454bd61f2"
-dependencies = [
- "bitflags",
- "cc",
- "cfg-if 1.0.0",
- "libc",
 ]
 
 [[package]]
