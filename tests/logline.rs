@@ -11,6 +11,7 @@ mod logs;
 use logs::*;
 
 #[test]
+#[allow(clippy::eq_op)]
 fn string_eq_self() {
     let a = LogLine {
         command: "c".to_owned(),
@@ -90,6 +91,7 @@ fn string_ne_regex() {
 }
 
 #[test]
+#[allow(clippy::eq_op)]
 fn regex_ne_self() {
     let a = LogLine {
         command: ("c".to_owned()),
