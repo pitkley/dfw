@@ -391,7 +391,7 @@ dependencies = [
  "strum",
  "tempfile",
  "time 0.2.24",
- "tokio",
+ "tokio 1.0.2",
  "toml",
  "url",
  "version-compare",
@@ -664,7 +664,7 @@ dependencies = [
  "net2",
  "rustc_version",
  "time 0.1.43",
- "tokio",
+ "tokio 0.1.22",
  "tokio-buf",
  "tokio-executor",
  "tokio-io",
@@ -702,7 +702,7 @@ dependencies = [
  "futures",
  "hex",
  "hyper",
- "tokio",
+ "tokio 0.1.22",
  "tokio-io",
  "tokio-uds",
 ]
@@ -1026,6 +1026,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
 
 [[package]]
+name = "pin-project-lite"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "439697af366c49a6d0a010c56a0d97685bc140ce0d377b13a2ea2aa42d64a827"
+
+[[package]]
 name = "pkg-config"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1271,7 +1277,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tar",
- "tokio",
+ "tokio 0.1.22",
  "tokio-codec",
  "tokio-io",
  "url",
@@ -1650,6 +1656,16 @@ dependencies = [
  "tokio-timer",
  "tokio-udp",
  "tokio-uds",
+]
+
+[[package]]
+name = "tokio"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ca04cec6ff2474c638057b65798f60ac183e5e79d3448bb7163d36a39cff6ec"
+dependencies = [
+ "autocfg",
+ "pin-project-lite",
 ]
 
 [[package]]
