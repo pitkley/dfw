@@ -6,11 +6,11 @@ If you are experiencing issues with DFW that you don't find represented here, fe
 
 ---
 
-* [modprobe error when running in Docker](#modprobe-in-docker)
+* [modprobe error when running in Docker](#modprobe-error-when-running-in-docker)
 
 ---
 
-## <a name="modprobe-in-docker> modprobe error when running in Docker
+## modprobe error when running in Docker
 
 ```
 ip6tables-restore failed: 'modprobe: can't change directory to '/lib/modules': No such file or directory
