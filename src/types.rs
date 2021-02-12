@@ -581,14 +581,14 @@ pub struct ExposePort {
     pub host_port: u16,
 
     /// Port the `host_port` should map to into the container.
-    #[builder(field(public), default = "self.default_container_port()?")]
+    #[builder(field(public), default = "self.default_container_port()")]
     pub container_port: Option<u16>,
 
     /// Family of the exposed port.
     ///
     /// Can be left blank, `tcp` will be used as default.
     #[serde(default = "default_expose_port_family")]
-    #[builder(field(public), default = "self.default_family()?")]
+    #[builder(field(public), default = "self.default_family()")]
     pub family: String,
 }
 
@@ -606,12 +606,12 @@ impl ExposePortBuilder {
         Ok(self)
     }
 
-    fn default_container_port(&self) -> Result<Option<u16>, String> {
-        Ok(None)
+    fn default_container_port(&self) -> Option<u16> {
+        None
     }
 
-    fn default_family(&self) -> Result<String, String> {
-        Ok(DEFAULT_PROTOCOL.to_owned())
+    fn default_family(&self) -> String {
+        DEFAULT_PROTOCOL.to_owned()
     }
 }
 

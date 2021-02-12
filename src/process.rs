@@ -141,7 +141,7 @@ where
         debug!(logger, "Got list of containers";
                o!("containers" => format!("{:#?}", containers)));
 
-        let container_map = get_container_map(&containers)?;
+        let container_map = get_container_map(&containers);
         trace!(logger, "Got map of containers";
                o!("container_map" => format!("{:#?}", container_map)));
 
@@ -150,7 +150,7 @@ where
                o!("networks" => format!("{:#?}", networks)));
 
         let network_map =
-            get_network_map(&networks)?.ok_or_else(|| format_err!("no networks found"))?;
+            get_network_map(&networks).ok_or_else(|| format_err!("no networks found"))?;
         trace!(logger, "Got map of networks";
                o!("container_map" => format!("{:#?}", container_map)));
 
@@ -241,7 +241,7 @@ pub(crate) fn get_network_for_container(
     })
 }
 
-pub(crate) fn get_container_map(containers: &[Container]) -> Result<Map<String, Container>> {
+pub(crate) fn get_container_map(containers: &[Container]) -> Map<String, Container> {
     let mut container_map: Map<String, Container> = Map::new();
     for container in containers {
         for name in &container.names {
@@ -252,21 +252,19 @@ pub(crate) fn get_container_map(containers: &[Container]) -> Result<Map<String, 
         }
     }
 
-    Ok(container_map)
+    container_map
 }
 
-pub(crate) fn get_network_map(
-    networks: &[NetworkDetails],
-) -> Result<Option<Map<String, NetworkDetails>>> {
+pub(crate) fn get_network_map(networks: &[NetworkDetails]) -> Option<Map<String, NetworkDetails>> {
     let mut network_map: Map<String, NetworkDetails> = Map::new();
     for network in networks {
         network_map.insert(network.name.clone(), network.clone());
     }
 
     if network_map.is_empty() {
-        Ok(None)
+        None
     } else {
-        Ok(Some(network_map))
+        Some(network_map)
     }
 }
 
