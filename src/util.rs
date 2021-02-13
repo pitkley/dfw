@@ -10,12 +10,12 @@
 
 use crate::errors::*;
 
-use futures::{sync::oneshot::spawn, Future};
 use glob::glob;
 use lazy_static::lazy_static;
 use serde::de::DeserializeOwned;
 use std::{
     fs::File,
+    future::Future,
     io::{prelude::*, BufReader},
 };
 use tokio::runtime::Runtime;
@@ -58,17 +58,12 @@ where
 /// An extension trait for `Future` allowing synchronized execution of the future.
 pub trait FutureExt: Future
 where
-    Self: Send + Sized + 'static,
-    Self::Item: Send + 'static,
-    Self::Error: Send + 'static,
+    Self: Sized,
 {
     /// Execute future synchronously, blocking until a result can be returned.
-    fn sync(self) -> std::result::Result<Self::Item, Self::Error> {
-        spawn(self, &RUNTIME.executor()).wait()
+    fn sync(self) -> Self::Output {
+        RUNTIME.block_on(self)
     }
 }
 
-impl<T: Send + 'static, I: Send + 'static, E: Send + 'static> FutureExt for T where
-    T: Future<Item = I, Error = E>
-{
-}
+impl<F> FutureExt for F where F: Future + Sized {}
