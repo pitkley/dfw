@@ -27,19 +27,19 @@ clap = "^2.33"
 crossbeam-channel = "^0.5"
 derive_builder = "^0.9"
 failure= "^0.1"
-futures = "^0.1"
+futures = "^0.3"
 glob = "^0.3"
 lazy_static = "^1"
 libc = "^0.2"
 serde = { version = "^1", features = ["derive"] }
 signal-hook = "^0.3"
-shiplift = "^0.6"
+shiplift = "^0.7"
 slog = { version = "^2", features = ["max_level_trace"] }
 sloggers = "^1.0"
 strum = { version = "^0.20", features = ["derive"] }
-tempfile = "^3.1"
+tempfile = "^3.2"
 time = "^0.2"
-tokio = "^0.1"
+tokio = "^1.2"
 toml = "^0.5"
 url = "^2.2"
 

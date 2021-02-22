@@ -16,7 +16,7 @@ use dfw::{
     util::*,
 };
 use failure::bail;
-use futures::Stream;
+use futures::{future, stream::StreamExt};
 use shiplift::{
     builder::{EventFilter, EventFilterType, EventsOptions},
     Docker,
@@ -156,23 +156,23 @@ fn spawn_event_monitor(
                     let logger = logger.clone();
                     let s_event = s_event.clone();
                     move |event| {
+                        let event = event.expect("failure in getting Docker event");
                         trace!(logger, "Received event";
-                        o!("event" => format!("{:?}", &event)));
+                               o!("event" => format!("{:?}", &event)));
                         if let Some(ref status) = event.status {
                             match &**status {
                                 "create" | "destroy" | "start" | "restart" | "die" | "stop" => {
                                     trace!(logger, "Trigger channel about event";
-                                        o!("event" => format!("{:?}", event)));
+                                           o!("event" => format!("{:?}", event)));
                                     s_event.send(()).expect("Failed to send trigger event");
                                 }
                                 _ => {}
                             }
                         }
-                        Ok(())
+                        future::ready(())
                     }
                 })
-                .sync()
-                .expect("failed to handle events");
+                .sync();
         }
     })
 }
