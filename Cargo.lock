@@ -279,7 +279,7 @@ dependencies = [
  "sloggers",
  "strum",
  "tempfile",
- "time 0.2.25",
+ "time 0.2.26",
  "tokio",
  "toml",
  "url",
@@ -1557,9 +1557,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.2.25"
+version = "0.2.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1195b046942c221454c2539395f85413b33383a067449d78aab2b7b052a142f7"
+checksum = "08a8cbfbf47955132d0202d1662f49b2423ae35862aee471f3ba4b133358f372"
 dependencies = [
  "const_fn",
  "libc",
