@@ -315,15 +315,13 @@ impl Process<Nftables> for GlobalDefaults {
 
 impl Process<Nftables> for ContainerToContainer {
     fn process(&self, ctx: &ProcessContext<Nftables>) -> Result<Option<Vec<String>>> {
-        let mut rules = Vec::new();
-
         // Enforce default policy for container-to-container communication.
-        rules.push(set_chain_policy(
+        let mut rules = vec![set_chain_policy(
             Family::Inet,
             "dfw",
             "forward",
             self.default_policy,
-        ));
+        )];
 
         if let Some(mut ctc_rules) = self.rules.process(ctx)? {
             rules.append(&mut ctc_rules);
