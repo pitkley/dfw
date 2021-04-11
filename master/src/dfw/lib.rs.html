@@ -58,6 +58,11 @@
 <span id="55">55</span>
 <span id="56">56</span>
 <span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright Pit Kleyersburg &lt;pitkley@googlemail.com&gt;</span>
 <span class="comment">//</span>
@@ -85,6 +90,11 @@
 <span class="comment">// Increase the compiler&#39;s recursion limit for the `error_chain` crate.</span>
 <span class="attribute">#![<span class="ident">recursion_limit</span> <span class="op">=</span> <span class="string">&quot;1024&quot;</span>]</span>
 <span class="attribute">#![<span class="ident">deny</span>(<span class="ident">missing_docs</span>)]</span>
+<span class="comment">// Allow upper-case acronyms in types (like `DFWError`).</span>
+<span class="comment">// NOTE: while I personally would have preferred to change the type names, DFW does provide a</span>
+<span class="comment">//       public API through the `dfw` package on crates.io, for which this change would be breaking.</span>
+<span class="comment">//       We should revisit this in major-version 2 of DFW.</span>
+<span class="attribute">#![<span class="ident">cfg_attr</span>(<span class="ident">crate_major_version</span> <span class="op">=</span> <span class="string">&quot;1&quot;</span>, <span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">upper_case_acronyms</span>))]</span>
 
 <span class="comment">// declare modules</span>
 <span class="kw">mod</span> <span class="ident">de</span>;
@@ -117,4 +127,5 @@
     <span class="kw">fn</span> <span class="ident">apply</span>(<span class="ident">rules</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Rule</span><span class="op">&gt;</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
 }
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "dfw";</script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="dfw"></div>
+    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
