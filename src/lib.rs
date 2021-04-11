@@ -24,6 +24,11 @@
 // Increase the compiler's recursion limit for the `error_chain` crate.
 #![recursion_limit = "1024"]
 #![deny(missing_docs)]
+// Allow upper-case acronyms in types (like `DFWError`).
+// NOTE: while I personally would have preferred to change the type names, DFW does provide a
+//       public API through the `dfw` package on crates.io, for which this change would be breaking.
+//       We should revisit this in major-version 2 of DFW.
+#![cfg_attr(crate_major_version = "1", allow(clippy::upper_case_acronyms))]
 
 // declare modules
 mod de;
