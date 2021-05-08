@@ -225,20 +225,18 @@ pub(crate) fn get_network_for_container(
     container_name: &str,
     network_id: &str,
 ) -> Result<Option<NetworkContainerDetails>> {
-    Ok(match container_map.get(container_name) {
-        Some(container) => match docker
+    if let Some(container) = container_map.get(container_name) {
+        Ok(docker
             .networks()
             .get(network_id)
             .inspect()
             .sync()?
             .containers
             .get(&container.id)
-        {
-            Some(network) => Some(network.clone()),
-            None => None,
-        },
-        None => None,
-    })
+            .cloned())
+    } else {
+        Ok(None)
+    }
 }
 
 pub(crate) fn get_container_map(containers: &[Container]) -> Map<String, Container> {

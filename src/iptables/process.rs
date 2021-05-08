@@ -113,7 +113,7 @@ impl Process<Iptables> for DFW<Iptables> {
             ),
             set_policy(IptablesRuleDiscriminants::V4, "nat", "POSTROUTING", "-"),
         ];
-        for sub_rules in vec![
+        for mut sub_rules in vec![
             self.backend_defaults.process(ctx)?,
             self.container_to_container.process(ctx)?,
             self.container_to_wider_world.process(ctx)?,
@@ -121,10 +121,11 @@ impl Process<Iptables> for DFW<Iptables> {
             self.wider_world_to_container.process(ctx)?,
             self.container_dnat.process(ctx)?,
             self.global_defaults.process(ctx)?,
-        ] {
-            if let Some(mut sub_rules) = sub_rules {
-                rules.append(&mut sub_rules);
-            }
+        ]
+        .into_iter()
+        .flatten()
+        {
+            rules.append(&mut sub_rules);
         }
 
         info!(ctx.logger, "Finished processing";

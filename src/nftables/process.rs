@@ -90,7 +90,7 @@ impl Process<Nftables> for DFW<Nftables> {
                 NF_PRIORITY_IP6_NAT_POSTROUTING_DFW,
             ),
         ];
-        for sub_rules in vec![
+        for mut sub_rules in vec![
             self.backend_defaults
                 .clone()
                 .or_else(|| {
@@ -109,10 +109,11 @@ impl Process<Nftables> for DFW<Nftables> {
             self.container_to_host.process(ctx)?,
             self.wider_world_to_container.process(ctx)?,
             self.container_dnat.process(ctx)?,
-        ] {
-            if let Some(mut sub_rules) = sub_rules {
-                rules.append(&mut sub_rules);
-            }
+        ]
+        .into_iter()
+        .flatten()
+        {
+            rules.append(&mut sub_rules);
         }
 
         info!(ctx.logger, "Finished processing";
