@@ -655,11 +655,13 @@ impl FromStr for ExposePort {
         Ok(match split.len() {
             1 => ExposePortBuilder::default()
                 .client_and_host_port(split[0])?
-                .build()?,
+                .build()
+                .map_err(|error| format!("{}", error))?,
             2 => ExposePortBuilder::default()
                 .client_and_host_port(split[0])?
                 .family(split[1].to_owned())
-                .build()?,
+                .build()
+                .map_err(|error| format!("{}", error))?,
             _ => return Err(format!("port string has invalid format '{}'", s)),
         })
     }
