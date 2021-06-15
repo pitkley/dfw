@@ -3,10 +3,10 @@ name: cargo-bloat
 on:
   push:
     branches:
-    - master
+    - main
   pull_request:
     branches:
-    - master
+    - main
     paths:
     - '**/Cargo.toml'
     - '**/Cargo.lock'

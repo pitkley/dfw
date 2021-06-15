@@ -130,7 +130,7 @@ The general configuration happens across six categories:
 **See the [examples][examples] and [configuration types][types.rs] for detailed descriptions and examples of every configuration section.**
 
 [docker-networks]: https://docs.docker.com/engine/userguide/networking/
-[examples]: https://github.com/pitkley/dfw/tree/master/examples
+[examples]: https://github.com/pitkley/dfw/tree/main/examples
 [types.rs]: https://dfw.rs/latest/dfw/types/index.html
 
 ## <a name="runningdfw"></a> Running DFW
