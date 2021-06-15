@@ -19,7 +19,8 @@ Please consult the [migration documentation][migration-v0.x-to-v1.2] on how to u
 4. [IPv6 support](#ipv6support)
     1. [Example: webserver reachable via IPv6](#ipv6support-example)
 5. [Supported Docker versions](#supporteddockerversions)
-6. [License](#license)
+6. [Version bump policy](#versionbumppolicy)
+7. [License](#license)
     1. [Contribution](#license-contribution)
 
 -----
@@ -229,6 +230,23 @@ DFW is continuously and automatically tested with the following stable Docker ve
 * `17.07`
 * `17.06`
 * `1.13`
+
+## <a name="versionbumppolicy"></a> Version bump policy
+
+In general, the versioning scheme for DFW follows the semantic versioning guidelines:
+
+* The patch version is bumped when backwards compatible fixes are made (this includes updates to dependencies).
+* The minor version is bumped when new features are introduced, but backwards compatibility is retained.
+* The major version is bumped when a backwards incompatible change was made.
+
+Special cases:
+
+* A bump in the minimum supported Rust version (MSRV), which for DFW currently is 1.45.2, will be done in minor version updates (i.e. they do not require a major version bump).
+* DFW is available both as a binary for direct use and as a library on [crates.io](https://crates.io/crates/dfw).
+
+    The target audience of DFW are the users of the binary, and support for the library's public API is only provided on a best-effort basis.
+
+    Thus, changes that break the API of the library will be done in minor version updates, i.e. consumers of the library might have to expect breaking changes in non-major releases.
 
 ## <a name="license"></a> License
 
