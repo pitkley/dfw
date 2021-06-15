@@ -12,6 +12,7 @@ on:
 
 jobs:
   build-and-push-docker-image:
+    if: github.repository_owner == 'pitkley'
     runs-on: ubuntu-latest
 
     steps:
