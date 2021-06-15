@@ -8,9 +8,9 @@
 
 script_path=$(cd -P -- "$(dirname -- "$0")" && pwd -P)
 
-# We check if the file starts with "// Copyright". If it doesn't, it is
-# classified as an error.
-PATTERN=$'^// Copyright'
+# We check if the file starts with "Copyright" and contains our
+# `SPDX-License-Identifier`. If it doesn't, it is classified as an error.
+PATTERN=$'^(//|#) Copyright[^\n]+\n(//|#) SPDX-License-Identifier: MIT OR Apache-2.0'
 ERRORS=()
 
 while IFS= read -r f; do
@@ -19,9 +19,10 @@ while IFS= read -r f; do
     fi
 done < <(git ls-files -- \
 '*.rs' \
+'Dockerfile' \
 )
 
 if (( ${#ERRORS[@]} )); then
-    echo "Files missing license headers: ${ERRORS[*]}"
+    echo "Files with missing or incorrect license headers: ${ERRORS[*]}"
     exit 1
 fi

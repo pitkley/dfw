@@ -1,3 +1,6 @@
+# Copyright Pit Kleyersburg <pitkley@googlemail.com>
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
 # Stage 0: builder image
 FROM ekidd/rust-musl-builder:stable as builder
 
@@ -19,4 +22,3 @@ RUN apk add --no-cache \
 
 COPY --from=builder /home/rust/src/target/x86_64-unknown-linux-musl/release/dfw /dfw
 ENTRYPOINT ["/dfw"]
-
