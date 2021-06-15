@@ -136,7 +136,7 @@ build test binary for docker tests:
   services:
   - "docker:dind"
   only:
-  - master
+  - main
   dependencies: [] # don't download artifacts from previous jobs
   cache:
     paths:
@@ -193,7 +193,7 @@ package and push image for feature-branch:
   only:
   - branches
   except:
-  - master
+  - main
   - /^develop\/.*$/
   script:
   - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
@@ -214,7 +214,7 @@ package and push image for tags:
   - docker build --pull -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}" .
   - docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_TAG}"
 
-package and push image on master:
+package and push image on main:
   stage: package
   image: docker:latest
   tags:
@@ -222,7 +222,7 @@ package and push image on master:
   services:
   - docker:dind
   only:
-  - master
+  - main
   script:
   - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
   - docker build --pull -t $CI_REGISTRY_IMAGE .

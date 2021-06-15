@@ -20,7 +20,7 @@
 
     You can now specify the `expose_via_ipv6`-key within a wider-world-to-container-rule to configure whether the service should be exposed via IPv6 or not (the default is `true`).
 
-    _(Please note that further requirements need to be fulfilled such that exposing services via IPv6 to works, [see here](https://github.com/pitkley/dfw/blob/master/README.md#ipv6support).)_
+    _(Please note that further requirements need to be fulfilled such that exposing services via IPv6 to works, [see here](https://github.com/pitkley/dfw/blob/main/README.md#ipv6support).)_
 
 * Ensure consistent behaviour regardless of whether `[global_defaults]` has been specified or not.
 

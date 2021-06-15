@@ -3,12 +3,12 @@ name: Integration tests
 on:
   push:
     branches:
-    - master
+    - main
     - staging
     - trying
   pull_request:
     branches:
-    - master
+    - main
 
 jobs:
   build-test-binary:

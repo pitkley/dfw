@@ -87,7 +87,7 @@ But if you have, or are simply interested in trying DFW out, take a look at the 
 You can of course bind the port to `127.0.0.1`, but you have to be explicit about that, which is easy to forget.
 </sub>
 
-[example-reverseproxy]: https://github.com/pitkley/dfw/tree/master/examples/reverseproxy
+[example-reverseproxy]: https://github.com/pitkley/dfw/tree/main/examples/reverseproxy
 
 ## <a name="gettingstarted"></a> Getting started
 
@@ -117,11 +117,11 @@ Once you have decided which backend you want to use, please consult the backend-
 * [nftables][docs-nftables]
 * [iptables][docs-iptables]
 
-[migration-v0.x-to-v1.0]: https://github.com/pitkley/dfw/blob/master/docs/migration/v0.x-to-v1.0.md
-[migration-v0.x-to-v1.2]: https://github.com/pitkley/dfw/blob/master/docs/migration/v0.x-to-v1.2.md
-[migration-v1.x-to-v1.2]: https://github.com/pitkley/dfw/blob/master/docs/migration/v1.x-to-v1.2.md
-[docs-nftables]: https://github.com/pitkley/dfw/blob/master/docs/GETTING-STARTED-nftables.md
-[docs-iptables]: https://github.com/pitkley/dfw/blob/master/docs/GETTING-STARTED-iptables.md
+[migration-v0.x-to-v1.0]: https://github.com/pitkley/dfw/blob/main/docs/migration/v0.x-to-v1.0.md
+[migration-v0.x-to-v1.2]: https://github.com/pitkley/dfw/blob/main/docs/migration/v0.x-to-v1.2.md
+[migration-v1.x-to-v1.2]: https://github.com/pitkley/dfw/blob/main/docs/migration/v1.x-to-v1.2.md
+[docs-nftables]: https://github.com/pitkley/dfw/blob/main/docs/GETTING-STARTED-nftables.md
+[docs-iptables]: https://github.com/pitkley/dfw/blob/main/docs/GETTING-STARTED-iptables.md
 
 ## <a name="configuration"></a> Configuration
 
@@ -158,7 +158,7 @@ The general configuration happens across six categories:
 **See the [examples][examples] and [configuration types][types.rs] for detailed descriptions and examples of every configuration section.**
 
 [docker-networks]: https://docs.docker.com/engine/userguide/networking/
-[examples]: https://github.com/pitkley/dfw/tree/master/examples
+[examples]: https://github.com/pitkley/dfw/tree/main/examples
 [types.rs]: https://dfw.rs/latest/dfw/types/index.html
 
 ## <a name="ipv6support"></a> IPv6 support
