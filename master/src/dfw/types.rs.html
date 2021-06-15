@@ -919,6 +919,8 @@
 <span id="916">916</span>
 <span id="917">917</span>
 <span id="918">918</span>
+<span id="919">919</span>
+<span id="920">920</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright Pit Kleyersburg &lt;pitkley@googlemail.com&gt;</span>
 <span class="comment">// SPDX-License-Identifier: MIT OR Apache-2.0</span>
@@ -1577,11 +1579,13 @@
         <span class="prelude-val">Ok</span>(<span class="kw">match</span> <span class="ident">split</span>.<span class="ident">len</span>() {
             <span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ExposePortBuilder</span>::<span class="ident">default</span>()
                 .<span class="ident">client_and_host_port</span>(<span class="ident">split</span>[<span class="number">0</span>])<span class="question-mark">?</span>
-                .<span class="ident">build</span>()<span class="question-mark">?</span>,
+                .<span class="ident">build</span>()
+                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>,
             <span class="number">2</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ExposePortBuilder</span>::<span class="ident">default</span>()
                 .<span class="ident">client_and_host_port</span>(<span class="ident">split</span>[<span class="number">0</span>])<span class="question-mark">?</span>
                 .<span class="ident">family</span>(<span class="ident">split</span>[<span class="number">1</span>].<span class="ident">to_owned</span>())
-                .<span class="ident">build</span>()<span class="question-mark">?</span>,
+                .<span class="ident">build</span>()
+                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>,
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;port string has invalid format &#39;{}&#39;&quot;</span>, <span class="ident">s</span>)),
         })
     }
