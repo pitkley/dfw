@@ -158,7 +158,7 @@ fn string_ne_regex_eval() {
 fn logline_from_string() {
     let logline: LogLine = "command".parse().unwrap();
     assert_eq!(logline.command, "command".to_owned());
-    assert_eq!(logline.regex, false);
+    assert!(!logline.regex);
     assert_eq!(logline.eval, None);
 }
 
@@ -166,7 +166,7 @@ fn logline_from_string() {
 fn logline_from_string_with_eval() {
     let logline: LogLine = "command\teval".parse().unwrap();
     assert_eq!(logline.command, "command".to_owned());
-    assert_eq!(logline.regex, false);
+    assert!(!logline.regex);
     assert_eq!(logline.eval, Some("eval".to_owned()));
 }
 
@@ -177,12 +177,12 @@ fn logline_from_string_with_expansions() {
         logline.command,
         r"(?P<name>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})".to_owned(),
     );
-    assert_eq!(logline.regex, true);
+    assert!(logline.regex);
     assert_eq!(logline.eval, None);
 
     let logline: LogLine = "$name=bridge".parse().unwrap();
     assert_eq!(logline.command, r"(?P<name>br-[a-f0-9]{12})".to_owned(),);
-    assert_eq!(logline.regex, true);
+    assert!(logline.regex);
     assert_eq!(logline.eval, None);
 }
 
@@ -190,7 +190,7 @@ fn logline_from_string_with_expansions() {
 fn logline_from_string_with_wrong_expansion() {
     let logline: LogLine = "$name=wrong".parse().unwrap();
     assert_eq!(logline.command, "$name=wrong".to_owned());
-    assert_eq!(logline.regex, false);
+    assert!(!logline.regex);
     assert_eq!(logline.eval, None);
 }
 

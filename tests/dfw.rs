@@ -172,7 +172,7 @@ fn test_backend<B: FirewallBackend, F: FnOnce(&DFW<B>, ProcessContext<B>) -> ()>
     let ping = docker.ping().sync();
 
     assert!(ping.is_ok());
-    assert_eq!(ping.unwrap().is_empty(), false);
+    assert!(!ping.unwrap().is_empty());
 
     // Mark `docker` as `UnwindSafe`, since dependent type type `hyper::http::message::Protocol` is
     // not `UnwindSafe`.
@@ -192,7 +192,7 @@ fn test_backend<B: FirewallBackend, F: FnOnce(&DFW<B>, ProcessContext<B>) -> ()>
             assert!(inspect.is_ok());
             let inspect = inspect.unwrap();
             assert!(inspect.id.is_some());
-            assert_eq!(inspect.id.unwrap().is_empty(), false);
+            assert!(!inspect.id.unwrap().is_empty());
 
             body(&toml, dfw);
         },
