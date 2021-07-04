@@ -19,13 +19,21 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
 
+    - name: Prepare Docker image tags
+      id: docker-image-tags
+      uses: haya14busa/action-cond@v1
+      with:
+        cond: ${{ github.event_name == 'push' }}
+        if_true: |
+          pitkley/dfw
+          ghcr.io/pitkley/dfw
+        if_false: |
+          ghcr.io/pitkley/dfw
     - name: Prepare Docker image metadata
       id: meta
       uses: docker/metadata-action@v3
       with:
-        images: |
-          pitkley/dfw
-          ghcr.io/pitkley/dfw
+        images: ${{ steps.docker-image-tags.outputs.value }}
         tags: |
           type=ref,event=branch
           type=ref,event=pr
@@ -34,6 +42,7 @@ jobs:
           type=semver,pattern={{major}}
 
     - name: Login to Docker Hub
+      if: github.event_name == 'push'
       uses: docker/login-action@v1
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}

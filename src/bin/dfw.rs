@@ -9,6 +9,7 @@
 
 //! # DFW - binary
 
+use bollard::{system::EventsOptions, Docker, API_DEFAULT_VERSION};
 use clap::{arg_enum, crate_authors, crate_version, value_t, App, Arg, ArgGroup, ArgMatches};
 use crossbeam_channel::{select, Receiver, Sender};
 use dfw::{
@@ -18,10 +19,7 @@ use dfw::{
 };
 use failure::bail;
 use futures::{future, stream::StreamExt};
-use shiplift::{
-    builder::{EventFilter, EventFilterType, EventsOptions},
-    Docker,
-};
+use maplit::hashmap;
 use slog::{debug, error, info, o, trace, Logger};
 use sloggers::{
     terminal::{Destination, TerminalLoggerBuilder},
@@ -142,17 +140,20 @@ fn spawn_event_monitor(
     let logger = logger.new(o!("thread" => "event_monitor"));
     thread::spawn(move || {
         let docker = match docker_url {
-            Some(docker_url) => Docker::host(docker_url.parse().unwrap()),
-            None => Docker::new(),
-        };
+            Some(docker_url) => Docker::connect_with_http(&docker_url, 120, API_DEFAULT_VERSION),
+            None => Docker::connect_with_unix_defaults(),
+        }
+        .expect("Failed to setup connection to Docker")
+        .negotiate_version()
+        .sync()
+        .expect("Failed to negotiate version with Docker");
         loop {
             trace!(logger, "Waiting for events");
             docker
-                .events(
-                    &EventsOptions::builder()
-                        .filter(vec![EventFilter::Type(EventFilterType::Container)])
-                        .build(),
-                )
+                .events(Some(EventsOptions {
+                    filters: hashmap! { "type" => vec!["container"] },
+                    ..Default::default()
+                }))
                 .for_each({
                     let logger = logger.clone();
                     let s_event = s_event.clone();
@@ -160,8 +161,8 @@ fn spawn_event_monitor(
                         let event = event.expect("failure in getting Docker event");
                         trace!(logger, "Received event";
                                o!("event" => format!("{:?}", &event)));
-                        if let Some(ref status) = event.status {
-                            match &**status {
+                        if let Some(action) = &event.action {
+                            match &**action {
                                 "create" | "destroy" | "start" | "restart" | "die" | "stop" => {
                                     trace!(logger, "Trigger channel about event";
                                            o!("event" => format!("{:?}", event)));
@@ -199,9 +200,11 @@ where
            o!("config" => format!("{:#?}", toml)));
 
     let docker = match matches.value_of("docker-url") {
-        Some(docker_url) => Docker::host(docker_url.parse()?),
-        None => Docker::new(),
-    };
+        Some(docker_url) => Docker::connect_with_http(docker_url, 120, API_DEFAULT_VERSION),
+        None => Docker::connect_with_unix_defaults(),
+    }?
+    .negotiate_version()
+    .sync()?;
     // Check if the docker instance is reachable
     trace!(root_logger, "Pinging docker");
     docker.ping().sync()?;

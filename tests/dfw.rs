@@ -12,6 +12,7 @@
 mod common;
 mod logs;
 
+use bollard::Docker;
 use common::*;
 use dfw::{
     iptables::{Iptables, IptablesRuleDiscriminants},
@@ -25,7 +26,6 @@ use itertools::{EitherOrBoth, Itertools};
 use logs::*;
 use paste::paste;
 use serde::de::DeserializeOwned;
-use shiplift::Docker;
 use slog::{o, Drain, Fuse, Logger, OwnedKVList, Record};
 use std::{
     fs::File,
@@ -168,11 +168,11 @@ fn test_backend<B: FirewallBackend, F: FnOnce(&DFW<B>, ProcessContext<B>) -> ()>
     let logger = logger();
 
     // Setup docker instance
-    let docker = Docker::new();
+    let docker = Docker::connect_with_http_defaults().expect("Failed to setup Docker instance");
     let ping = docker.ping().sync();
 
     assert!(ping.is_ok());
-    assert_eq!(ping.unwrap().is_empty(), false);
+    assert!(!ping.unwrap().is_empty());
 
     // Mark `docker` as `UnwindSafe`, since dependent type type `hyper::http::message::Protocol` is
     // not `UnwindSafe`.
@@ -187,13 +187,12 @@ fn test_backend<B: FirewallBackend, F: FnOnce(&DFW<B>, ProcessContext<B>) -> ()>
                 ProcessContext::new(&docker, &toml, &PROCESSING_OPTIONS, &logger, true).unwrap();
 
             // Test if container is available
-            let containers = docker.containers();
             let container_name = format!("{}_a_1", project_name);
-            let container = containers.get(&container_name);
-            let inspect = container.inspect().sync();
+            let inspect = docker.inspect_container(&container_name, None).sync();
             assert!(inspect.is_ok());
             let inspect = inspect.unwrap();
-            assert_eq!(inspect.id.is_empty(), false);
+            assert!(inspect.id.is_some());
+            assert!(!inspect.id.unwrap().is_empty());
 
             body(&toml, dfw);
         },

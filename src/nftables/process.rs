@@ -344,7 +344,8 @@ impl Process<Nftables> for ContainerToContainerRule {
         trace!(ctx.logger, "Got network";
                     o!("network_name" => &self.network,
                         "network" => format!("{:?}", network)));
-        let bridge_name = get_bridge_name(&network.id)?;
+        let network_id = network.id.as_ref().expect("Docker network ID missing");
+        let bridge_name = get_bridge_name(&network_id)?;
         trace!(ctx.logger, "Got bridge name";
                     o!("network_name" => &network.name,
                         "bridge_name" => &bridge_name));
@@ -359,7 +360,7 @@ impl Process<Nftables> for ContainerToContainerRule {
                 ctx.docker,
                 &ctx.container_map,
                 src_container,
-                &network.id,
+                &network_id,
             )? {
                 Some(src_network) => src_network,
                 None => return Ok(None),
@@ -368,7 +369,7 @@ impl Process<Nftables> for ContainerToContainerRule {
                         o!("network_name" => &network.name,
                             "src_network" => format!("{:?}", src_network)));
 
-            let bridge_name = get_bridge_name(&network.id)?;
+            let bridge_name = get_bridge_name(&network_id)?;
             trace!(ctx.logger, "Got bridge name";
                         o!("network_name" => &network.name,
                             "bridge_name" => &bridge_name));
@@ -379,6 +380,7 @@ impl Process<Nftables> for ContainerToContainerRule {
                 .source_address(
                     src_network
                         .ipv4_address
+                        .expect("IPv4 address for container missing")
                         .split('/')
                         .next()
                         .ok_or_else(|| format_err!("IPv4 address is empty"))?,
@@ -390,7 +392,7 @@ impl Process<Nftables> for ContainerToContainerRule {
                 ctx.docker,
                 &ctx.container_map,
                 dst_container,
-                &network.id,
+                &network_id,
             )? {
                 Some(dst_network) => dst_network,
                 None => return Ok(None),
@@ -399,7 +401,8 @@ impl Process<Nftables> for ContainerToContainerRule {
                         o!("network_name" => &network.name,
                             "dst_network" => format!("{:?}", dst_network)));
 
-            let bridge_name = get_bridge_name(&network.id)?;
+            let network_id = network.id.as_ref().expect("Docker network ID missing");
+            let bridge_name = get_bridge_name(&network_id)?;
             trace!(ctx.logger, "Got bridge name";
                         o!("network_name" => &network.name,
                             "bridge_name" => &bridge_name));
@@ -407,6 +410,7 @@ impl Process<Nftables> for ContainerToContainerRule {
             nft_rule.out_interface(&bridge_name).destination_address(
                 dst_network
                     .ipv4_address
+                    .expect("IPv4 address for container missing")
                     .split('/')
                     .next()
                     .ok_or_else(|| format_err!("IPv4 address is empty"))?,
@@ -445,7 +449,8 @@ impl Process<Nftables> for ContainerToWiderWorld {
                           "external_network_interface" => external_network_interface,
                           "default_policy" => &self.default_policy));
                 for network in ctx.network_map.values() {
-                    let bridge_name = get_bridge_name(&network.id)?;
+                    let network_id = network.id.as_ref().expect("Docker network ID missing");
+                    let bridge_name = get_bridge_name(&network_id)?;
                     trace!(ctx.logger, "Got bridge name";
                            o!("network_name" => &network.name,
                               "bridge_name" => &bridge_name));
@@ -481,7 +486,8 @@ impl Process<Nftables> for ContainerToWiderWorldRule {
 
         if let Some(ref network) = self.network {
             if let Some(network) = ctx.network_map.get(network) {
-                let bridge_name = get_bridge_name(&network.id)?;
+                let network_id = network.id.as_ref().expect("Docker network ID missing");
+                let bridge_name = get_bridge_name(&network_id)?;
                 trace!(ctx.logger, "Got bridge name";
                            o!("network_name" => &network.name,
                               "bridge_name" => &bridge_name));
@@ -493,13 +499,13 @@ impl Process<Nftables> for ContainerToWiderWorldRule {
                         ctx.docker,
                         &ctx.container_map,
                         src_container,
-                        &network.id,
+                        &network_id,
                     )? {
                         trace!(ctx.logger, "Got source network";
                                    o!("network_name" => &network.name,
                                       "src_network" => format!("{:?}", src_network)));
 
-                        let bridge_name = get_bridge_name(&network.id)?;
+                        let bridge_name = get_bridge_name(&network_id)?;
                         trace!(ctx.logger, "Got bridge name";
                                    o!("network_name" => &network.name,
                                       "bridge_name" => &bridge_name));
@@ -507,13 +513,14 @@ impl Process<Nftables> for ContainerToWiderWorldRule {
                         nft_rule.in_interface(&bridge_name).source_address(
                             src_network
                                 .ipv4_address
+                                .expect("IPv4 address for container missing")
                                 .split('/')
                                 .next()
                                 .ok_or_else(|| format_err!("IPv4 address is empty"))?,
                         );
                     }
                 } else {
-                    let bridge_name = get_bridge_name(&network.id)?;
+                    let bridge_name = get_bridge_name(&network_id)?;
                     trace!(ctx.logger, "Got bridge name";
                                o!("network_name" => &network.name,
                                   "bridge_name" => &bridge_name));
@@ -571,7 +578,8 @@ impl Process<Nftables> for ContainerToHost {
 
         // Default policy
         for network in ctx.network_map.values() {
-            let bridge_name = get_bridge_name(&network.id)?;
+            let network_id = network.id.as_ref().expect("Docker network ID missing");
+            let bridge_name = get_bridge_name(&network_id)?;
             trace!(ctx.logger, "Got bridge name";
                    o!("network_name" => &network.name,
                       "bridge_name" => &bridge_name));
@@ -608,7 +616,8 @@ impl Process<Nftables> for ContainerToHostRule {
                    o!("network_name" => &network.name,
                       "network" => format!("{:?}", network)));
 
-        let bridge_name = get_bridge_name(&network.id)?;
+        let network_id = network.id.as_ref().expect("Docker network ID missing");
+        let bridge_name = get_bridge_name(&network_id)?;
         trace!(ctx.logger, "Got bridge name";
                    o!("network_name" => &network.name,
                       "bridge_name" => &bridge_name));
@@ -620,7 +629,7 @@ impl Process<Nftables> for ContainerToHostRule {
                 ctx.docker,
                 &ctx.container_map,
                 src_container,
-                &network.id,
+                &network_id,
             )? {
                 trace!(ctx.logger, "Got source network";
                            o!("network_name" => &network.name,
@@ -628,6 +637,7 @@ impl Process<Nftables> for ContainerToHostRule {
                 nft_rule.source_address(
                     src_network
                         .ipv4_address
+                        .expect("IPv4 address for container missing")
                         .split('/')
                         .next()
                         .ok_or_else(|| format_err!("IPv4 address is empty"))?,
@@ -785,7 +795,8 @@ impl Process<Nftables> for WiderWorldToContainerRule {
                    o!("network_name" => &network.name,
                       "network" => format!("{:?}", network)));
 
-            let bridge_name = get_bridge_name(&network.id)?;
+            let network_id = network.id.as_ref().expect("Docker network ID missing");
+            let bridge_name = get_bridge_name(&network_id)?;
             trace!(ctx.logger, "Got bridge name";
                    o!("network_name" => &network.name,
                       "bridge_name" => &bridge_name));
@@ -796,15 +807,17 @@ impl Process<Nftables> for WiderWorldToContainerRule {
                 ctx.docker,
                 &ctx.container_map,
                 &self.dst_container,
-                &network.id,
+                &network_id,
             )? {
                 trace!(ctx.logger, "Got destination network";
                        o!("network_name" => &network.name,
                           "dst_network" => format!("{:?}", dst_network)));
 
+                let container_ipv4_address = dst_network
+                    .ipv4_address
+                    .expect("IPv4 address for container missing");
                 nft_forward_rule.destination_address(
-                    dst_network
-                        .ipv4_address
+                    container_ipv4_address
                         .split('/')
                         .next()
                         .ok_or_else(|| format_err!("IPv4 address is empty"))?,
@@ -819,8 +832,7 @@ impl Process<Nftables> for WiderWorldToContainerRule {
                 nft_dnat_rule.destination_port(&host_port);
                 nft_dnat_rule.dnat(&format!(
                     "{}:{}",
-                    dst_network
-                        .ipv4_address
+                    container_ipv4_address
                         .split('/')
                         .next()
                         .ok_or_else(|| format_err!("IPv4 address is empty"))?,
@@ -835,6 +847,7 @@ impl Process<Nftables> for WiderWorldToContainerRule {
             //     nft_mark_rule.dnat(&format!(
             //         "{}:{}",
             //         dst_network.ipv6_address
+            //         .expect("IPv6 address for container missing")
             //         .split('/')
             //         .next()
             //         .ok_or_else(|| format_err!("Invalid IPv6 address"))?,
@@ -964,7 +977,8 @@ impl Process<Nftables> for ContainerDNATRule {
                                o!("network_name" => &network.name,
                                   "network" => format!("{:?}", network)));
 
-                    let bridge_name = get_bridge_name(&network.id)?;
+                    let network_id = network.id.as_ref().expect("Docker network ID missing");
+                    let bridge_name = get_bridge_name(&network_id)?;
                     trace!(ctx.logger, "Got bridge name";
                                o!("network_name" => &network.name,
                                   "bridge_name" => &bridge_name));
@@ -976,13 +990,13 @@ impl Process<Nftables> for ContainerDNATRule {
                             ctx.docker,
                             &ctx.container_map,
                             src_container,
-                            &network.id,
+                            &network_id,
                         )? {
                             trace!(ctx.logger, "Got source network";
                                        o!("network_name" => &network.name,
                                           "src_network" => format!("{:?}", src_network)));
 
-                            let bridge_name = get_bridge_name(&network.id)?;
+                            let bridge_name = get_bridge_name(&network_id)?;
                             trace!(ctx.logger, "Got bridge name";
                                        o!("network_name" => &network.name,
                                           "bridge_name" => &bridge_name));
@@ -990,6 +1004,7 @@ impl Process<Nftables> for ContainerDNATRule {
                             nft_rule.in_interface(&bridge_name).source_address(
                                 src_network
                                     .ipv4_address
+                                    .expect("IPv4 address for container missing")
                                     .split('/')
                                     .next()
                                     .ok_or_else(|| format_err!("IPv4 address is empty"))?,
@@ -1003,11 +1018,12 @@ impl Process<Nftables> for ContainerDNATRule {
                 Some(network) => network,
                 None => return Ok(None),
             };
+            let network_id = network.id.as_ref().expect("Docker network ID missing");
             let dst_network = match get_network_for_container(
                 ctx.docker,
                 &ctx.container_map,
                 &self.dst_container,
-                &network.id,
+                &network_id,
             )? {
                 Some(dst_network) => dst_network,
                 None => return Ok(None),
@@ -1016,7 +1032,7 @@ impl Process<Nftables> for ContainerDNATRule {
                        o!("network_name" => &network.name,
                           "dst_network" => format!("{:?}", dst_network)));
 
-            let bridge_name = get_bridge_name(&network.id)?;
+            let bridge_name = get_bridge_name(&network_id)?;
             trace!(ctx.logger, "Got bridge name";
                        o!("network_name" => &network.name,
                           "bridge_name" => &bridge_name));
@@ -1032,6 +1048,7 @@ impl Process<Nftables> for ContainerDNATRule {
                 "{}:{}",
                 dst_network
                     .ipv4_address
+                    .expect("IPv4 address for container missing")
                     .split('/')
                     .next()
                     .ok_or_else(|| format_err!("IPv4 address is empty"))?,

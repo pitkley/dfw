@@ -1,5 +1,5 @@
 status = [
-    "build-and-test (1.45.2, false)",
+    "build-and-test (1.46.0, false)",
     "build-and-test (stable, false)",
     "build-and-test (beta, false)",
     "build-and-test (stable, x86_64-unknown-linux-musl, false)",

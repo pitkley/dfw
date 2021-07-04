@@ -88,7 +88,7 @@ impl FromStr for LogLine {
     /// ```
     /// let logline: LogLine = "command".parse().unwrap();
     /// assert_eq!(logline.command, "command");
-    /// assert_eq!(logline.regex, false);
+    /// assert!(logline.regex);
     /// assert_eq!(logline.eval, None);
     /// ```
     fn from_str(s: &str) -> Result<Self, Self::Err> {

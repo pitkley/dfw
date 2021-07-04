@@ -10,12 +10,13 @@
 //! This module holds the types related to configuration processing and rule creation.
 
 use crate::{errors::*, types::*, util::FutureExt, FirewallBackend};
-use failure::{bail, format_err};
-use shiplift::{
-    builder::{ContainerFilter as ContainerFilterShiplift, ContainerListOptions},
-    rep::{Container, NetworkContainerDetails, NetworkDetails},
+use bollard::{
+    container::ListContainersOptions,
+    models::{ContainerSummaryInner, Network, NetworkContainer},
     Docker,
 };
+use failure::{bail, format_err};
+use maplit::hashmap;
 use slog::{debug, o, trace, Logger};
 use std::collections::HashMap as Map;
 
@@ -109,8 +110,8 @@ where
 {
     pub(crate) docker: &'a Docker,
     pub(crate) dfw: &'a DFW<B>,
-    pub(crate) container_map: Map<String, Container>,
-    pub(crate) network_map: Map<String, NetworkDetails>,
+    pub(crate) container_map: Map<String, ContainerSummaryInner>,
+    pub(crate) network_map: Map<String, Network>,
     pub(crate) external_network_interfaces: Option<Vec<String>>,
     pub(crate) primary_external_network_interface: Option<String>,
     pub(crate) logger: Logger,
@@ -132,13 +133,14 @@ where
     ) -> Result<ProcessContext<'a, B>> {
         let logger = logger.new(o!());
 
-        let container_list_options = match processing_options.container_filter {
-            ContainerFilter::All => Default::default(),
-            ContainerFilter::Running => ContainerListOptions::builder()
-                .filter(vec![ContainerFilterShiplift::Status("running".to_owned())])
-                .build(),
+        let list_containers_options = match processing_options.container_filter {
+            ContainerFilter::All => None,
+            ContainerFilter::Running => Some(ListContainersOptions {
+                filters: hashmap! { "status" => vec!["running"]},
+                ..Default::default()
+            }),
         };
-        let containers = docker.containers().list(&container_list_options).sync()?;
+        let containers = docker.list_containers(list_containers_options).sync()?;
         debug!(logger, "Got list of containers";
                o!("containers" => format!("{:#?}", containers)));
 
@@ -146,7 +148,7 @@ where
         trace!(logger, "Got map of containers";
                o!("container_map" => format!("{:#?}", container_map)));
 
-        let networks = docker.networks().list(&Default::default()).sync()?;
+        let networks = docker.list_networks::<String>(None).sync()?;
         debug!(logger, "Got list of networks";
                o!("networks" => format!("{:#?}", networks)));
 
@@ -222,42 +224,50 @@ pub(crate) fn get_bridge_name(network_id: &str) -> Result<String> {
 
 pub(crate) fn get_network_for_container(
     docker: &Docker,
-    container_map: &Map<String, Container>,
+    container_map: &Map<String, ContainerSummaryInner>,
     container_name: &str,
     network_id: &str,
-) -> Result<Option<NetworkContainerDetails>> {
+) -> Result<Option<NetworkContainer>> {
     if let Some(container) = container_map.get(container_name) {
         Ok(docker
-            .networks()
-            .get(network_id)
-            .inspect()
+            .inspect_network::<String>(network_id, None)
             .sync()?
             .containers
-            .get(&container.id)
-            .cloned())
+            .and_then(|containers| {
+                container
+                    .id
+                    .as_ref()
+                    .and_then(|container_id| containers.get(container_id).cloned())
+            }))
     } else {
         Ok(None)
     }
 }
 
-pub(crate) fn get_container_map(containers: &[Container]) -> Map<String, Container> {
-    let mut container_map: Map<String, Container> = Map::new();
+pub(crate) fn get_container_map(
+    containers: &[ContainerSummaryInner],
+) -> Map<String, ContainerSummaryInner> {
+    let mut container_map: Map<String, ContainerSummaryInner> = Map::new();
     for container in containers {
-        for name in &container.names {
-            container_map.insert(
-                name.clone().trim_start_matches('/').to_owned(),
-                container.clone(),
-            );
+        if let Some(names) = &container.names {
+            for name in names {
+                container_map.insert(
+                    name.clone().trim_start_matches('/').to_owned(),
+                    container.clone(),
+                );
+            }
         }
     }
 
     container_map
 }
 
-pub(crate) fn get_network_map(networks: &[NetworkDetails]) -> Option<Map<String, NetworkDetails>> {
-    let mut network_map: Map<String, NetworkDetails> = Map::new();
+pub(crate) fn get_network_map(networks: &[Network]) -> Option<Map<String, Network>> {
+    let mut network_map: Map<String, Network> = Map::new();
     for network in networks {
-        network_map.insert(network.name.clone(), network.clone());
+        if let Some(name) = &network.name {
+            network_map.insert(name.clone(), network.clone());
+        }
     }
 
     if network_map.is_empty() {
