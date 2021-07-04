@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/process.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>process.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings"></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../../favicon.svg">
 <link rel="alternate icon" type="image/png" href="../../favicon-16x16.png">
-<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../dfw/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../brush.svg" width="18" height="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
+<link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../dfw/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../../brush.svg" width="18" height="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" class="help-button">?</button>
                 <a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" height="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
@@ -273,6 +273,16 @@
 <span id="270">270</span>
 <span id="271">271</span>
 <span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright Pit Kleyersburg &lt;pitkley@googlemail.com&gt;</span>
 <span class="comment">// SPDX-License-Identifier: MIT OR Apache-2.0</span>
@@ -285,15 +295,16 @@
 
 <span class="doccomment">//! This module holds the types related to configuration processing and rule creation.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">errors</span>::<span class="kw-2">*</span>, <span class="ident">types</span>::<span class="kw-2">*</span>, <span class="ident">util</span>::<span class="ident">FutureExt</span>, <span class="ident">FirewallBackend</span>};
-<span class="kw">use</span> <span class="ident">failure</span>::{<span class="ident">bail</span>, <span class="ident">format_err</span>};
-<span class="kw">use</span> <span class="ident">shiplift</span>::{
-    <span class="ident">builder</span>::{<span class="ident">ContainerFilter</span> <span class="kw">as</span> <span class="ident">ContainerFilterShiplift</span>, <span class="ident">ContainerListOptions</span>},
-    <span class="ident">rep</span>::{<span class="ident">Container</span>, <span class="ident">NetworkContainerDetails</span>, <span class="ident">NetworkDetails</span>},
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">errors</span>::<span class="kw-2">*</span>, <span class="ident">types</span>::<span class="kw-2">*</span>, <span class="ident">util::FutureExt</span>, <span class="ident">FirewallBackend</span>};
+<span class="kw">use</span> <span class="ident">bollard</span>::{
+    <span class="ident">container::ListContainersOptions</span>,
+    <span class="ident">models</span>::{<span class="ident">ContainerSummaryInner</span>, <span class="ident">Network</span>, <span class="ident">NetworkContainer</span>},
     <span class="ident">Docker</span>,
 };
+<span class="kw">use</span> <span class="ident">failure</span>::{<span class="ident">bail</span>, <span class="ident">format_err</span>};
+<span class="kw">use</span> <span class="ident">maplit::hashmap</span>;
 <span class="kw">use</span> <span class="ident">slog</span>::{<span class="ident">debug</span>, <span class="ident">o</span>, <span class="ident">trace</span>, <span class="ident">Logger</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span> <span class="kw">as</span> <span class="ident">Map</span>;
+<span class="kw">use</span> <span class="ident">std::collections::HashMap</span> <span class="kw">as</span> <span class="ident">Map</span>;
 
 <span class="doccomment">/// This trait allows a type to define its own processing rules. It is expected to return a list</span>
 <span class="doccomment">/// of rules that can be applied with nft.</span>
@@ -342,7 +353,7 @@
     <span class="doccomment">/// to apply with nft.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`ProcessContext`]: struct.ProcessContext.html</span>
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">B</span>::<span class="ident">Rule</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">B::Rule</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">B</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
@@ -351,7 +362,7 @@
     <span class="ident">DFW</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>: <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>,
     <span class="ident">T</span>: <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>,
 {
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">B</span>::<span class="ident">Rule</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">B::Rule</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="prelude-val">Some</span>(<span class="ident">t</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">t</span>.<span class="ident">process</span>(<span class="ident">ctx</span>),
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
@@ -365,8 +376,8 @@
     <span class="ident">DFW</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>: <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>,
     <span class="ident">T</span>: <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>,
 {
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">B</span>::<span class="ident">Rule</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rules</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
+    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">B::Rule</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rules</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
         <span class="kw">for</span> <span class="ident">rule</span> <span class="kw">in</span> <span class="self">self</span> {
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">mut</span> <span class="ident">sub_rules</span>) <span class="op">=</span> <span class="ident">rule</span>.<span class="ident">process</span>(<span class="ident">ctx</span>)<span class="question-mark">?</span> {
                 <span class="ident">rules</span>.<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">sub_rules</span>);
@@ -385,8 +396,8 @@
 {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">docker</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Docker</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">dfw</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">DFW</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">container_map</span>: <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Container</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">network_map</span>: <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">NetworkDetails</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">container_map</span>: <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">ContainerSummaryInner</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">network_map</span>: <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Network</span><span class="op">&gt;</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">external_network_interfaces</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">primary_external_network_interface</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">logger</span>: <span class="ident">Logger</span>,
@@ -406,30 +417,31 @@
         <span class="ident">logger</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Logger</span>,
         <span class="ident">dry_run</span>: <span class="ident">bool</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">B</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">logger</span> <span class="op">=</span> <span class="ident">logger</span>.<span class="ident">new</span>(<span class="macro">o</span><span class="macro">!</span>());
+        <span class="kw">let</span> <span class="ident">logger</span> <span class="op">=</span> <span class="ident">logger</span>.<span class="ident">new</span>(<span class="macro">o!</span>());
 
-        <span class="kw">let</span> <span class="ident">container_list_options</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">processing_options</span>.<span class="ident">container_filter</span> {
-            <span class="ident">ContainerFilter</span>::<span class="ident">All</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Default</span>::<span class="ident">default</span>(),
-            <span class="ident">ContainerFilter</span>::<span class="ident">Running</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ContainerListOptions</span>::<span class="ident">builder</span>()
-                .<span class="ident">filter</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">ContainerFilterShiplift</span>::<span class="ident">Status</span>(<span class="string">&quot;running&quot;</span>.<span class="ident">to_owned</span>())])
-                .<span class="ident">build</span>(),
+        <span class="kw">let</span> <span class="ident">list_containers_options</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">processing_options</span>.<span class="ident">container_filter</span> {
+            <span class="ident">ContainerFilter::All</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="ident">ContainerFilter::Running</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">ListContainersOptions</span> {
+                <span class="ident">filters</span>: <span class="macro">hashmap!</span> { <span class="string">&quot;status&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec!</span>[<span class="string">&quot;running&quot;</span>]},
+                ..<span class="ident">Default::default</span>()
+            }),
         };
-        <span class="kw">let</span> <span class="ident">containers</span> <span class="op">=</span> <span class="ident">docker</span>.<span class="ident">containers</span>().<span class="ident">list</span>(<span class="kw-2">&amp;</span><span class="ident">container_list_options</span>).<span class="ident">sync</span>()<span class="question-mark">?</span>;
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="ident">logger</span>, <span class="string">&quot;Got list of containers&quot;</span>;
-               <span class="macro">o</span><span class="macro">!</span>(<span class="string">&quot;containers&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">containers</span>)));
+        <span class="kw">let</span> <span class="ident">containers</span> <span class="op">=</span> <span class="ident">docker</span>.<span class="ident">list_containers</span>(<span class="ident">list_containers_options</span>).<span class="ident">sync</span>()<span class="question-mark">?</span>;
+        <span class="macro">debug!</span>(<span class="ident">logger</span>, <span class="string">&quot;Got list of containers&quot;</span>;
+               <span class="macro">o!</span>(<span class="string">&quot;containers&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">containers</span>)));
 
         <span class="kw">let</span> <span class="ident">container_map</span> <span class="op">=</span> <span class="ident">get_container_map</span>(<span class="kw-2">&amp;</span><span class="ident">containers</span>);
-        <span class="macro">trace</span><span class="macro">!</span>(<span class="ident">logger</span>, <span class="string">&quot;Got map of containers&quot;</span>;
-               <span class="macro">o</span><span class="macro">!</span>(<span class="string">&quot;container_map&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">container_map</span>)));
+        <span class="macro">trace!</span>(<span class="ident">logger</span>, <span class="string">&quot;Got map of containers&quot;</span>;
+               <span class="macro">o!</span>(<span class="string">&quot;container_map&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">container_map</span>)));
 
-        <span class="kw">let</span> <span class="ident">networks</span> <span class="op">=</span> <span class="ident">docker</span>.<span class="ident">networks</span>().<span class="ident">list</span>(<span class="kw-2">&amp;</span><span class="ident">Default</span>::<span class="ident">default</span>()).<span class="ident">sync</span>()<span class="question-mark">?</span>;
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="ident">logger</span>, <span class="string">&quot;Got list of networks&quot;</span>;
-               <span class="macro">o</span><span class="macro">!</span>(<span class="string">&quot;networks&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">networks</span>)));
+        <span class="kw">let</span> <span class="ident">networks</span> <span class="op">=</span> <span class="ident">docker</span>.<span class="ident">list_networks</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>(<span class="prelude-val">None</span>).<span class="ident">sync</span>()<span class="question-mark">?</span>;
+        <span class="macro">debug!</span>(<span class="ident">logger</span>, <span class="string">&quot;Got list of networks&quot;</span>;
+               <span class="macro">o!</span>(<span class="string">&quot;networks&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">networks</span>)));
 
         <span class="kw">let</span> <span class="ident">network_map</span> <span class="op">=</span>
-            <span class="ident">get_network_map</span>(<span class="kw-2">&amp;</span><span class="ident">networks</span>).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;no networks found&quot;</span>))<span class="question-mark">?</span>;
-        <span class="macro">trace</span><span class="macro">!</span>(<span class="ident">logger</span>, <span class="string">&quot;Got map of networks&quot;</span>;
-               <span class="macro">o</span><span class="macro">!</span>(<span class="string">&quot;container_map&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">container_map</span>)));
+            <span class="ident">get_network_map</span>(<span class="kw-2">&amp;</span><span class="ident">networks</span>).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err!</span>(<span class="string">&quot;no networks found&quot;</span>))<span class="question-mark">?</span>;
+        <span class="macro">trace!</span>(<span class="ident">logger</span>, <span class="string">&quot;Got map of networks&quot;</span>;
+               <span class="macro">o!</span>(<span class="string">&quot;container_map&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:#?}&quot;</span>, <span class="ident">container_map</span>)));
 
         <span class="kw">let</span> <span class="ident">external_network_interfaces</span> <span class="op">=</span> <span class="ident">dfw</span>
             .<span class="ident">global_defaults</span>
@@ -455,9 +467,9 @@
 
     <span class="doccomment">/// Start the processing using the configuration given at creation.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">rules</span> <span class="op">=</span> <span class="ident">Process</span>::<span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>::<span class="ident">process</span>(<span class="self">self</span>.<span class="ident">dfw</span>, <span class="self">self</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">rules</span> <span class="op">=</span> <span class="ident">Process</span>::<span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span><span class="ident">::process</span>(<span class="self">self</span>.<span class="ident">dfw</span>, <span class="self">self</span>)<span class="question-mark">?</span>;
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">rules</span>) <span class="op">=</span> <span class="ident">rules</span> {
-            <span class="ident">B</span>::<span class="ident">apply</span>(<span class="ident">rules</span>, <span class="self">self</span>)<span class="question-mark">?</span>;
+            <span class="ident">B::apply</span>(<span class="ident">rules</span>, <span class="self">self</span>)<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(())
@@ -484,56 +496,64 @@
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">ProcessingOptions</span> {
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">ProcessingOptions</span> {
-            <span class="ident">container_filter</span>: <span class="ident">ContainerFilter</span>::<span class="ident">All</span>,
+            <span class="ident">container_filter</span>: <span class="ident">ContainerFilter::All</span>,
         }
     }
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">get_bridge_name</span>(<span class="ident">network_id</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
     <span class="kw">if</span> <span class="ident">network_id</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="number">12</span> {
-        <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;network has to be longer than 12 characters&quot;</span>);
+        <span class="macro">bail!</span>(<span class="string">&quot;network has to be longer than 12 characters&quot;</span>);
     }
-    <span class="prelude-val">Ok</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;br-{}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">network_id</span>[..<span class="number">12</span>]))
+    <span class="prelude-val">Ok</span>(<span class="macro">format!</span>(<span class="string">&quot;br-{}&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">network_id</span>[..<span class="number">12</span>]))
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">get_network_for_container</span>(
     <span class="ident">docker</span>: <span class="kw-2">&amp;</span><span class="ident">Docker</span>,
-    <span class="ident">container_map</span>: <span class="kw-2">&amp;</span><span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Container</span><span class="op">&gt;</span>,
+    <span class="ident">container_map</span>: <span class="kw-2">&amp;</span><span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">ContainerSummaryInner</span><span class="op">&gt;</span>,
     <span class="ident">container_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">network_id</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NetworkContainerDetails</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NetworkContainer</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">container</span>) <span class="op">=</span> <span class="ident">container_map</span>.<span class="ident">get</span>(<span class="ident">container_name</span>) {
         <span class="prelude-val">Ok</span>(<span class="ident">docker</span>
-            .<span class="ident">networks</span>()
-            .<span class="ident">get</span>(<span class="ident">network_id</span>)
-            .<span class="ident">inspect</span>()
+            .<span class="ident">inspect_network</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>(<span class="ident">network_id</span>, <span class="prelude-val">None</span>)
             .<span class="ident">sync</span>()<span class="question-mark">?</span>
             .<span class="ident">containers</span>
-            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">container</span>.<span class="ident">id</span>)
-            .<span class="ident">cloned</span>())
+            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">containers</span><span class="op">|</span> {
+                <span class="ident">container</span>
+                    .<span class="ident">id</span>
+                    .<span class="ident">as_ref</span>()
+                    .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">container_id</span><span class="op">|</span> <span class="ident">containers</span>.<span class="ident">get</span>(<span class="ident">container_id</span>).<span class="ident">cloned</span>())
+            }))
     } <span class="kw">else</span> {
         <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
     }
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">get_container_map</span>(<span class="ident">containers</span>: <span class="kw-2">&amp;</span>[<span class="ident">Container</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Container</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">container_map</span>: <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Container</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Map</span>::<span class="ident">new</span>();
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">get_container_map</span>(
+    <span class="ident">containers</span>: <span class="kw-2">&amp;</span>[<span class="ident">ContainerSummaryInner</span>],
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">ContainerSummaryInner</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">container_map</span>: <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">ContainerSummaryInner</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Map::new</span>();
     <span class="kw">for</span> <span class="ident">container</span> <span class="kw">in</span> <span class="ident">containers</span> {
-        <span class="kw">for</span> <span class="ident">name</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">container</span>.<span class="ident">names</span> {
-            <span class="ident">container_map</span>.<span class="ident">insert</span>(
-                <span class="ident">name</span>.<span class="ident">clone</span>().<span class="ident">trim_start_matches</span>(<span class="string">&#39;/&#39;</span>).<span class="ident">to_owned</span>(),
-                <span class="ident">container</span>.<span class="ident">clone</span>(),
-            );
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">names</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">container</span>.<span class="ident">names</span> {
+            <span class="kw">for</span> <span class="ident">name</span> <span class="kw">in</span> <span class="ident">names</span> {
+                <span class="ident">container_map</span>.<span class="ident">insert</span>(
+                    <span class="ident">name</span>.<span class="ident">clone</span>().<span class="ident">trim_start_matches</span>(<span class="string">&#39;/&#39;</span>).<span class="ident">to_owned</span>(),
+                    <span class="ident">container</span>.<span class="ident">clone</span>(),
+                );
+            }
         }
     }
 
     <span class="ident">container_map</span>
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">get_network_map</span>(<span class="ident">networks</span>: <span class="kw-2">&amp;</span>[<span class="ident">NetworkDetails</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">NetworkDetails</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">network_map</span>: <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">NetworkDetails</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Map</span>::<span class="ident">new</span>();
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">get_network_map</span>(<span class="ident">networks</span>: <span class="kw-2">&amp;</span>[<span class="ident">Network</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Network</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">network_map</span>: <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Network</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Map::new</span>();
     <span class="kw">for</span> <span class="ident">network</span> <span class="kw">in</span> <span class="ident">networks</span> {
-        <span class="ident">network_map</span>.<span class="ident">insert</span>(<span class="ident">network</span>.<span class="ident">name</span>.<span class="ident">clone</span>(), <span class="ident">network</span>.<span class="ident">clone</span>());
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">name</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span> {
+            <span class="ident">network_map</span>.<span class="ident">insert</span>(<span class="ident">name</span>.<span class="ident">clone</span>(), <span class="ident">network</span>.<span class="ident">clone</span>());
+        }
     }
 
     <span class="kw">if</span> <span class="ident">network_map</span>.<span class="ident">is_empty</span>() {
@@ -544,8 +564,8 @@
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">generate_marker</span>(<span class="ident">components</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="ident">str</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
-    <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;DFW-MARKER:{}&quot;</span>, <span class="ident">components</span>.<span class="ident">join</span>(<span class="string">&quot;;&quot;</span>))
+    <span class="macro">format!</span>(<span class="string">&quot;DFW-MARKER:{}&quot;</span>, <span class="ident">components</span>.<span class="ident">join</span>(<span class="string">&quot;;&quot;</span>))
 }
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="dfw" data-search-js="../../search-index.js"></div>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="dfw" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
     <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script></body></html>
