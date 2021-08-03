@@ -190,7 +190,7 @@ where
     B: std::fmt::Debug + dfw::FirewallBackend,
     DFW<B>: Process<B>,
 {
-    let toml = load_config(&matches);
+    let toml = load_config(matches);
     if matches.is_present("check-config") {
         return toml.map(|_| ());
     }
@@ -273,7 +273,7 @@ where
                 trace!(root_logger, "Creating process closure according to load mode";
                        o!("load_mode" => "always"));
                 Box::new(|| {
-                    let toml = load_config(&matches)?;
+                    let toml = load_config(matches)?;
                     debug!(root_logger, "Reloaded configuration before processing";
                            o!("config" => format!("{:#?}", toml)));
                     ProcessContext::new(

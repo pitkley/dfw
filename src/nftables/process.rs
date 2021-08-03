@@ -345,7 +345,7 @@ impl Process<Nftables> for ContainerToContainerRule {
                     o!("network_name" => &self.network,
                         "network" => format!("{:?}", network)));
         let network_id = network.id.as_ref().expect("Docker network ID missing");
-        let bridge_name = get_bridge_name(&network_id)?;
+        let bridge_name = get_bridge_name(network_id)?;
         trace!(ctx.logger, "Got bridge name";
                     o!("network_name" => &network.name,
                         "bridge_name" => &bridge_name));
@@ -360,7 +360,7 @@ impl Process<Nftables> for ContainerToContainerRule {
                 ctx.docker,
                 &ctx.container_map,
                 src_container,
-                &network_id,
+                network_id,
             )? {
                 Some(src_network) => src_network,
                 None => return Ok(None),
@@ -369,7 +369,7 @@ impl Process<Nftables> for ContainerToContainerRule {
                         o!("network_name" => &network.name,
                             "src_network" => format!("{:?}", src_network)));
 
-            let bridge_name = get_bridge_name(&network_id)?;
+            let bridge_name = get_bridge_name(network_id)?;
             trace!(ctx.logger, "Got bridge name";
                         o!("network_name" => &network.name,
                             "bridge_name" => &bridge_name));
@@ -392,7 +392,7 @@ impl Process<Nftables> for ContainerToContainerRule {
                 ctx.docker,
                 &ctx.container_map,
                 dst_container,
-                &network_id,
+                network_id,
             )? {
                 Some(dst_network) => dst_network,
                 None => return Ok(None),
@@ -402,7 +402,7 @@ impl Process<Nftables> for ContainerToContainerRule {
                             "dst_network" => format!("{:?}", dst_network)));
 
             let network_id = network.id.as_ref().expect("Docker network ID missing");
-            let bridge_name = get_bridge_name(&network_id)?;
+            let bridge_name = get_bridge_name(network_id)?;
             trace!(ctx.logger, "Got bridge name";
                         o!("network_name" => &network.name,
                             "bridge_name" => &bridge_name));
@@ -450,7 +450,7 @@ impl Process<Nftables> for ContainerToWiderWorld {
                           "default_policy" => &self.default_policy));
                 for network in ctx.network_map.values() {
                     let network_id = network.id.as_ref().expect("Docker network ID missing");
-                    let bridge_name = get_bridge_name(&network_id)?;
+                    let bridge_name = get_bridge_name(network_id)?;
                     trace!(ctx.logger, "Got bridge name";
                            o!("network_name" => &network.name,
                               "bridge_name" => &bridge_name));
@@ -487,7 +487,7 @@ impl Process<Nftables> for ContainerToWiderWorldRule {
         if let Some(ref network) = self.network {
             if let Some(network) = ctx.network_map.get(network) {
                 let network_id = network.id.as_ref().expect("Docker network ID missing");
-                let bridge_name = get_bridge_name(&network_id)?;
+                let bridge_name = get_bridge_name(network_id)?;
                 trace!(ctx.logger, "Got bridge name";
                            o!("network_name" => &network.name,
                               "bridge_name" => &bridge_name));
@@ -499,13 +499,13 @@ impl Process<Nftables> for ContainerToWiderWorldRule {
                         ctx.docker,
                         &ctx.container_map,
                         src_container,
-                        &network_id,
+                        network_id,
                     )? {
                         trace!(ctx.logger, "Got source network";
                                    o!("network_name" => &network.name,
                                       "src_network" => format!("{:?}", src_network)));
 
-                        let bridge_name = get_bridge_name(&network_id)?;
+                        let bridge_name = get_bridge_name(network_id)?;
                         trace!(ctx.logger, "Got bridge name";
                                    o!("network_name" => &network.name,
                                       "bridge_name" => &bridge_name));
@@ -520,7 +520,7 @@ impl Process<Nftables> for ContainerToWiderWorldRule {
                         );
                     }
                 } else {
-                    let bridge_name = get_bridge_name(&network_id)?;
+                    let bridge_name = get_bridge_name(network_id)?;
                     trace!(ctx.logger, "Got bridge name";
                                o!("network_name" => &network.name,
                                   "bridge_name" => &bridge_name));
@@ -579,7 +579,7 @@ impl Process<Nftables> for ContainerToHost {
         // Default policy
         for network in ctx.network_map.values() {
             let network_id = network.id.as_ref().expect("Docker network ID missing");
-            let bridge_name = get_bridge_name(&network_id)?;
+            let bridge_name = get_bridge_name(network_id)?;
             trace!(ctx.logger, "Got bridge name";
                    o!("network_name" => &network.name,
                       "bridge_name" => &bridge_name));
@@ -617,7 +617,7 @@ impl Process<Nftables> for ContainerToHostRule {
                       "network" => format!("{:?}", network)));
 
         let network_id = network.id.as_ref().expect("Docker network ID missing");
-        let bridge_name = get_bridge_name(&network_id)?;
+        let bridge_name = get_bridge_name(network_id)?;
         trace!(ctx.logger, "Got bridge name";
                    o!("network_name" => &network.name,
                       "bridge_name" => &bridge_name));
@@ -629,7 +629,7 @@ impl Process<Nftables> for ContainerToHostRule {
                 ctx.docker,
                 &ctx.container_map,
                 src_container,
-                &network_id,
+                network_id,
             )? {
                 trace!(ctx.logger, "Got source network";
                            o!("network_name" => &network.name,
@@ -796,7 +796,7 @@ impl Process<Nftables> for WiderWorldToContainerRule {
                       "network" => format!("{:?}", network)));
 
             let network_id = network.id.as_ref().expect("Docker network ID missing");
-            let bridge_name = get_bridge_name(&network_id)?;
+            let bridge_name = get_bridge_name(network_id)?;
             trace!(ctx.logger, "Got bridge name";
                    o!("network_name" => &network.name,
                       "bridge_name" => &bridge_name));
@@ -807,7 +807,7 @@ impl Process<Nftables> for WiderWorldToContainerRule {
                 ctx.docker,
                 &ctx.container_map,
                 &self.dst_container,
-                &network_id,
+                network_id,
             )? {
                 trace!(ctx.logger, "Got destination network";
                        o!("network_name" => &network.name,
@@ -978,7 +978,7 @@ impl Process<Nftables> for ContainerDNATRule {
                                   "network" => format!("{:?}", network)));
 
                     let network_id = network.id.as_ref().expect("Docker network ID missing");
-                    let bridge_name = get_bridge_name(&network_id)?;
+                    let bridge_name = get_bridge_name(network_id)?;
                     trace!(ctx.logger, "Got bridge name";
                                o!("network_name" => &network.name,
                                   "bridge_name" => &bridge_name));
@@ -990,13 +990,13 @@ impl Process<Nftables> for ContainerDNATRule {
                             ctx.docker,
                             &ctx.container_map,
                             src_container,
-                            &network_id,
+                            network_id,
                         )? {
                             trace!(ctx.logger, "Got source network";
                                        o!("network_name" => &network.name,
                                           "src_network" => format!("{:?}", src_network)));
 
-                            let bridge_name = get_bridge_name(&network_id)?;
+                            let bridge_name = get_bridge_name(network_id)?;
                             trace!(ctx.logger, "Got bridge name";
                                        o!("network_name" => &network.name,
                                           "bridge_name" => &bridge_name));
@@ -1023,7 +1023,7 @@ impl Process<Nftables> for ContainerDNATRule {
                 ctx.docker,
                 &ctx.container_map,
                 &self.dst_container,
-                &network_id,
+                network_id,
             )? {
                 Some(dst_network) => dst_network,
                 None => return Ok(None),
@@ -1032,7 +1032,7 @@ impl Process<Nftables> for ContainerDNATRule {
                        o!("network_name" => &network.name,
                           "dst_network" => format!("{:?}", dst_network)));
 
-            let bridge_name = get_bridge_name(&network_id)?;
+            let bridge_name = get_bridge_name(network_id)?;
             trace!(ctx.logger, "Got bridge name";
                        o!("network_name" => &network.name,
                           "bridge_name" => &bridge_name));
