@@ -1665,9 +1665,9 @@ checksum = "f1bddf1187be692e79c5ffeab891132dfb0f236ed36a43c7ed39f1165ee20191"
 
 [[package]]
 name = "version-compare"
-version = "0.0.12"
+version = "0.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5b4985f1b6f9bd69f977208198fa7d96871d032b2a352279efc045cfb037568"
+checksum = "03fcf84b72310ec15c6b2dc9dd8f31765d10debdfb240392fc96ff4cc0ec2f16"
 
 [[package]]
 name = "version_check"
