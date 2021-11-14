@@ -36,11 +36,11 @@ maplit = "^1"
 serde = { version = "^1", features = ["derive"] }
 signal-hook = "^0.3"
 slog = { version = "^2", features = ["max_level_trace"] }
-sloggers = "^2.0"
+sloggers = "^2.1"
 strum = { version = "^0.22", features = ["derive"] }
 tempfile = "^3.2"
 time = "^0.2"
-tokio = "^1.12"
+tokio = "^1.13"
 toml = "^0.5"
 url = "^2.2"
 
@@ -49,7 +49,7 @@ eval = "^0.4"
 itertools = "0.10.1"
 lazy_static = "^1"
 regex = "^1"
-paste = "1.0.5"
+paste = "1.0.6"
 
 [build-dependencies]
 version-compare = "^0.1.0"
