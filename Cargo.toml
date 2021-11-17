@@ -40,7 +40,7 @@ sloggers = "^2.1"
 strum = { version = "^0.22", features = ["derive"] }
 tempfile = "^3.2"
 time = "^0.2"
-tokio = "^1.13"
+tokio = "^1.14"
 toml = "^0.5"
 url = "^2.2"
 
