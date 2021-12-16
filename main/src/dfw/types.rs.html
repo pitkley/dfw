@@ -1489,7 +1489,7 @@
     <span class="kw">pub</span> <span class="ident">source_cidr_v6</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">fn</span> <span class="ident">default_wwtcr_expose_via_ipv6</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+<span class="kw">fn</span> <span class="ident">default_wwtcr_expose_via_ipv6</span>() -&gt; <span class="ident">bool</span> {
     <span class="bool-val">true</span>
 }
 
@@ -1514,24 +1514,24 @@
 }
 
 <span class="kw">impl</span> <span class="ident">ExposePortBuilder</span> {
-    <span class="kw">fn</span> <span class="ident">client_and_host_port</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">value</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span>, <span class="ident">String</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">client_and_host_port</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">value</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span>, <span class="ident">String</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">split</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">split</span>(<span class="string">&#39;:&#39;</span>).<span class="ident">collect</span>();
         <span class="kw">match</span> <span class="ident">split</span>.<span class="ident">len</span>() {
-            <span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">host_port</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">split</span>[<span class="number">0</span>].<span class="ident">parse</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">e</span>))<span class="question-mark">?</span>),
-            <span class="number">2</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="number">1</span> =&gt; <span class="self">self</span>.<span class="ident">host_port</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">split</span>[<span class="number">0</span>].<span class="ident">parse</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">e</span>))<span class="question-mark">?</span>),
+            <span class="number">2</span> =&gt; {
                 <span class="self">self</span>.<span class="ident">host_port</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">split</span>[<span class="number">0</span>].<span class="ident">parse</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">e</span>))<span class="question-mark">?</span>);
                 <span class="self">self</span>.<span class="ident">container_port</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="ident">split</span>[<span class="number">1</span>].<span class="ident">parse</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">e</span>))<span class="question-mark">?</span>));
             }
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;port string has invalid format &#39;{}&#39;&quot;</span>, <span class="ident">value</span>)),
+            <span class="kw">_</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;port string has invalid format &#39;{}&#39;&quot;</span>, <span class="ident">value</span>)),
         }
         <span class="prelude-val">Ok</span>(<span class="self">self</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">default_container_port</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">default_container_port</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span> {
         <span class="prelude-val">None</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">default_family</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+    <span class="kw">fn</span> <span class="ident">default_family</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">String</span> {
         <span class="ident">DEFAULT_PROTOCOL</span>.<span class="ident">to_owned</span>()
     }
 }
@@ -1570,19 +1570,19 @@
     <span class="doccomment">/// assert_eq!(port.container_port, Some(8080));</span>
     <span class="doccomment">/// assert_eq!(port.family, &quot;tcp&quot;);</span>
     <span class="doccomment">/// ```</span>
-    <span class="kw">fn</span> <span class="ident">from_str</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Err</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">from_str</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Err</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">split</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">str</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">s</span>.<span class="ident">split</span>(<span class="string">&#39;/&#39;</span>).<span class="ident">collect</span>();
         <span class="prelude-val">Ok</span>(<span class="kw">match</span> <span class="ident">split</span>.<span class="ident">len</span>() {
-            <span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ExposePortBuilder::default</span>()
+            <span class="number">1</span> =&gt; <span class="ident">ExposePortBuilder::default</span>()
                 .<span class="ident">client_and_host_port</span>(<span class="ident">split</span>[<span class="number">0</span>])<span class="question-mark">?</span>
                 .<span class="ident">build</span>()
                 .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>,
-            <span class="number">2</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ExposePortBuilder::default</span>()
+            <span class="number">2</span> =&gt; <span class="ident">ExposePortBuilder::default</span>()
                 .<span class="ident">client_and_host_port</span>(<span class="ident">split</span>[<span class="number">0</span>])<span class="question-mark">?</span>
                 .<span class="ident">family</span>(<span class="ident">split</span>[<span class="number">1</span>].<span class="ident">to_owned</span>())
                 .<span class="ident">build</span>()
                 .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">error</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>))<span class="question-mark">?</span>,
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;port string has invalid format &#39;{}&#39;&quot;</span>, <span class="ident">s</span>)),
+            <span class="kw">_</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">&quot;port string has invalid format &#39;{}&#39;&quot;</span>, <span class="ident">s</span>)),
         })
     }
 }
@@ -1718,7 +1718,7 @@
     <span class="kw">pub</span> <span class="ident">expose_port</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ExposePort</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">fn</span> <span class="ident">default_expose_port_family</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+<span class="kw">fn</span> <span class="ident">default_expose_port_family</span>() -&gt; <span class="ident">String</span> {
     <span class="ident">DEFAULT_PROTOCOL</span>.<span class="ident">to_owned</span>()
 }
 
@@ -1744,7 +1744,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">ChainPolicy</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ChainPolicy</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="ident">ChainPolicy</span> {
         <span class="ident">ChainPolicy::Accept</span>
     }
 }
@@ -1755,7 +1755,7 @@
         <span class="ident">record</span>: <span class="kw-2">&amp;</span><span class="ident">slog::Record</span>,
         <span class="ident">key</span>: <span class="ident">slog::Key</span>,
         <span class="ident">serializer</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">slog::Serializer</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">slog::Result</span> {
+    ) -&gt; <span class="ident">slog::Result</span> {
         <span class="self">self</span>.<span class="ident">to_string</span>().<span class="ident">serialize</span>(<span class="ident">record</span>, <span class="ident">key</span>, <span class="ident">serializer</span>)
     }
 }
@@ -1787,7 +1787,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">RuleVerdict</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RuleVerdict</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="ident">RuleVerdict</span> {
         <span class="ident">RuleVerdict::Accept</span>
     }
 }
@@ -1798,7 +1798,7 @@
         <span class="ident">record</span>: <span class="kw-2">&amp;</span><span class="ident">slog::Record</span>,
         <span class="ident">key</span>: <span class="ident">slog::Key</span>,
         <span class="ident">serializer</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">slog::Serializer</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">slog::Result</span> {
+    ) -&gt; <span class="ident">slog::Result</span> {
         <span class="self">self</span>.<span class="ident">to_string</span>().<span class="ident">serialize</span>(<span class="ident">record</span>, <span class="ident">key</span>, <span class="ident">serializer</span>)
     }
 }

@@ -1147,9 +1147,9 @@
 <span class="kw">use</span> <span class="ident">std::process::Command</span>;
 
 <span class="kw">impl</span> <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">DFW</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="macro">info!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Starting processing&quot;</span>;
-              <span class="macro">o!</span>(<span class="string">&quot;started_processing_at&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">time::OffsetDateTime::now_utc</span>().<span class="ident">format</span>(<span class="string">&quot;%FT%T%z&quot;</span>)));
+              <span class="macro">o!</span>(<span class="string">&quot;started_processing_at&quot;</span> =&gt; <span class="ident">time::OffsetDateTime::now_utc</span>().<span class="ident">format</span>(<span class="string">&quot;%FT%T%z&quot;</span>)));
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rules</span> <span class="op">=</span> <span class="macro">vec!</span>[
             <span class="ident">add_table</span>(<span class="ident">Family::Inet</span>, <span class="string">&quot;dfw&quot;</span>),
             <span class="ident">flush_table</span>(<span class="ident">Family::Inet</span>, <span class="string">&quot;dfw&quot;</span>),
@@ -1247,14 +1247,14 @@
         }
 
         <span class="macro">info!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Finished processing&quot;</span>;
-              <span class="macro">o!</span>(<span class="string">&quot;finished_processing_at&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">time::OffsetDateTime::now_utc</span>().<span class="ident">format</span>(<span class="string">&quot;%FT%T%z&quot;</span>)));
+              <span class="macro">o!</span>(<span class="string">&quot;finished_processing_at&quot;</span> =&gt; <span class="ident">time::OffsetDateTime::now_utc</span>().<span class="ident">format</span>(<span class="string">&quot;%FT%T%z&quot;</span>)));
 
         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">rules</span>))
     }
 }
 
 <span class="kw">impl</span> <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="op">&lt;</span><span class="ident">Nftables</span> <span class="kw">as</span> <span class="ident">FirewallBackend</span><span class="op">&gt;</span><span class="ident">::Defaults</span> {
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="comment">// NOTE: v1.2.0 deprecated the `nftables::types::Defaults::rules` field in favour of the</span>
         <span class="comment">// field present in the `Initialization` sub-type. To retain backwards-compatibility we</span>
         <span class="comment">// allow the old field to be present and we will use it if the new field was not specified.</span>
@@ -1277,11 +1277,11 @@
                                 `backend_defaults.initialization.rules` field. The value format of the \
                                 field has stayed unchanged, which means that moving the field to the new \
                                 section is sufficient to fix this warning.&quot;</span>;
-                            <span class="macro">o!</span>(<span class="string">&quot;deprecated_field&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;initialization.rules&quot;</span>,
-                                <span class="string">&quot;deprecated_since&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;1.2.0&quot;</span>,
-                                <span class="string">&quot;planned_removal_in&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;2.0.0&quot;</span>,
-                                <span class="string">&quot;new_field&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;backend_defaults.initialization.rules&quot;</span>,
-                                <span class="string">&quot;field_value_format_changed&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>));
+                            <span class="macro">o!</span>(<span class="string">&quot;deprecated_field&quot;</span> =&gt; <span class="string">&quot;initialization.rules&quot;</span>,
+                                <span class="string">&quot;deprecated_since&quot;</span> =&gt; <span class="string">&quot;1.2.0&quot;</span>,
+                                <span class="string">&quot;planned_removal_in&quot;</span> =&gt; <span class="string">&quot;2.0.0&quot;</span>,
+                                <span class="string">&quot;new_field&quot;</span> =&gt; <span class="string">&quot;backend_defaults.initialization.rules&quot;</span>,
+                                <span class="string">&quot;field_value_format_changed&quot;</span> =&gt; <span class="bool-val">false</span>));
                         <span class="bool-val">true</span>
                     })
             })
@@ -1301,11 +1301,11 @@
                          `backend_defaults.custom_tables` field. The value format of the field has \
                          stayed unchanged, which means that moving the field to the new section is \
                          sufficient to fix this warning.&quot;</span>;
-                        <span class="macro">o!</span>(<span class="string">&quot;deprecated_field&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;global_defaults.custom_tables&quot;</span>,
-                           <span class="string">&quot;deprecated_since&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;1.2.0&quot;</span>,
-                           <span class="string">&quot;planned_removal_in&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;2.0.0&quot;</span>,
-                           <span class="string">&quot;new_field&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;backend_defaults.custom_tables&quot;</span>,
-                           <span class="string">&quot;field_value_format_changed&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>));
+                        <span class="macro">o!</span>(<span class="string">&quot;deprecated_field&quot;</span> =&gt; <span class="string">&quot;global_defaults.custom_tables&quot;</span>,
+                           <span class="string">&quot;deprecated_since&quot;</span> =&gt; <span class="string">&quot;1.2.0&quot;</span>,
+                           <span class="string">&quot;planned_removal_in&quot;</span> =&gt; <span class="string">&quot;2.0.0&quot;</span>,
+                           <span class="string">&quot;new_field&quot;</span> =&gt; <span class="string">&quot;backend_defaults.custom_tables&quot;</span>,
+                           <span class="string">&quot;field_value_format_changed&quot;</span> =&gt; <span class="bool-val">false</span>));
                 <span class="bool-val">true</span>
             })
         });
@@ -1329,7 +1329,7 @@
                     <span class="comment">// adds it. This enables us to not duplicate rules that are outside of our table</span>
                     <span class="comment">// where flushing is not an option.</span>
                     <span class="macro">macro_rules!</span> <span class="ident">m</span> {
-                        (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">mark</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">rule</span>:<span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                        (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">mark</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">rule</span>:<span class="ident">expr</span>) =&gt; {
                             <span class="kw">let</span> <span class="ident">marker</span> <span class="op">=</span>
                                 <span class="ident">generate_marker</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;defaults&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">custom_table</span>.<span class="ident">name</span>, <span class="ident">chain</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">mark</span>]);
                             <span class="kw">if</span> <span class="op">!</span><span class="ident">current_ruleset</span>
@@ -1374,7 +1374,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">GlobalDefaults</span> {
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rules</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
 
         <span class="comment">// Enforce policy for default Docker-bridge (usually docker0) to access host-resources</span>
@@ -1445,7 +1445,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ContainerToContainer</span> {
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="comment">// Enforce default policy for container-to-container communication.</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rules</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">set_chain_policy</span>(
             <span class="ident">Family::Inet</span>,
@@ -1463,21 +1463,21 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ContainerToContainerRule</span> {
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rules</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nft_rule</span> <span class="op">=</span> <span class="ident">RuleBuilder::default</span>();
         <span class="kw">let</span> <span class="ident">network</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">ctx</span>.<span class="ident">network_map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">network</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">network</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">network</span>,
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+            <span class="prelude-val">Some</span>(<span class="ident">network</span>) =&gt; <span class="ident">network</span>,
+            <span class="prelude-val">None</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
         };
         <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got network&quot;</span>;
-                    <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">network</span>,
-                        <span class="string">&quot;network&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">network</span>)));
+                    <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">network</span>,
+                        <span class="string">&quot;network&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">network</span>)));
         <span class="kw">let</span> <span class="ident">network_id</span> <span class="op">=</span> <span class="ident">network</span>.<span class="ident">id</span>.<span class="ident">as_ref</span>().<span class="ident">expect</span>(<span class="string">&quot;Docker network ID missing&quot;</span>);
         <span class="kw">let</span> <span class="ident">bridge_name</span> <span class="op">=</span> <span class="ident">get_bridge_name</span>(<span class="ident">network_id</span>)<span class="question-mark">?</span>;
         <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got bridge name&quot;</span>;
-                    <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                        <span class="string">&quot;bridge_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
+                    <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                        <span class="string">&quot;bridge_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
 
         <span class="ident">nft_rule</span>
             .<span class="ident">in_interface</span>(<span class="kw-2">&amp;</span><span class="ident">bridge_name</span>)
@@ -1491,17 +1491,17 @@
                 <span class="ident">src_container</span>,
                 <span class="ident">network_id</span>,
             )<span class="question-mark">?</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">src_network</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">src_network</span>,
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+                <span class="prelude-val">Some</span>(<span class="ident">src_network</span>) =&gt; <span class="ident">src_network</span>,
+                <span class="prelude-val">None</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
             };
             <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got source network&quot;</span>;
-                        <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                            <span class="string">&quot;src_network&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">src_network</span>)));
+                        <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                            <span class="string">&quot;src_network&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">src_network</span>)));
 
             <span class="kw">let</span> <span class="ident">bridge_name</span> <span class="op">=</span> <span class="ident">get_bridge_name</span>(<span class="ident">network_id</span>)<span class="question-mark">?</span>;
             <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got bridge name&quot;</span>;
-                        <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                            <span class="string">&quot;bridge_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
+                        <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                            <span class="string">&quot;bridge_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
 
             <span class="ident">nft_rule</span>
                 .<span class="ident">in_interface</span>(<span class="kw-2">&amp;</span><span class="ident">bridge_name</span>)
@@ -1523,18 +1523,18 @@
                 <span class="ident">dst_container</span>,
                 <span class="ident">network_id</span>,
             )<span class="question-mark">?</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">dst_network</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">dst_network</span>,
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+                <span class="prelude-val">Some</span>(<span class="ident">dst_network</span>) =&gt; <span class="ident">dst_network</span>,
+                <span class="prelude-val">None</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
             };
             <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got destination network&quot;</span>;
-                        <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                            <span class="string">&quot;dst_network&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">dst_network</span>)));
+                        <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                            <span class="string">&quot;dst_network&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">dst_network</span>)));
 
             <span class="kw">let</span> <span class="ident">network_id</span> <span class="op">=</span> <span class="ident">network</span>.<span class="ident">id</span>.<span class="ident">as_ref</span>().<span class="ident">expect</span>(<span class="string">&quot;Docker network ID missing&quot;</span>);
             <span class="kw">let</span> <span class="ident">bridge_name</span> <span class="op">=</span> <span class="ident">get_bridge_name</span>(<span class="ident">network_id</span>)<span class="question-mark">?</span>;
             <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got bridge name&quot;</span>;
-                        <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                            <span class="string">&quot;bridge_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
+                        <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                            <span class="string">&quot;bridge_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
 
             <span class="ident">nft_rule</span>.<span class="ident">out_interface</span>(<span class="kw-2">&amp;</span><span class="ident">bridge_name</span>).<span class="ident">destination_address</span>(
                 <span class="ident">dst_network</span>
@@ -1559,7 +1559,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ContainerToWiderWorld</span> {
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rules</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">mut</span> <span class="ident">ctww_rules</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">rules</span>.<span class="ident">process</span>(<span class="ident">ctx</span>)<span class="question-mark">?</span> {
@@ -1569,20 +1569,20 @@
         <span class="comment">// Enforce default policy for container-to-wider-world communication.</span>
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">external_network_interfaces</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">ctx</span>.<span class="ident">external_network_interfaces</span> {
             <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Set default policy for external network interfaces&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;container_to_wider_world&quot;</span>,
-                      <span class="string">&quot;external_network_interfaces&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">external_network_interfaces</span>),
-                      <span class="string">&quot;default_policy&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">default_policy</span>));
+                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;container_to_wider_world&quot;</span>,
+                      <span class="string">&quot;external_network_interfaces&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">external_network_interfaces</span>),
+                      <span class="string">&quot;default_policy&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">default_policy</span>));
             <span class="kw">for</span> <span class="ident">external_network_interface</span> <span class="kw">in</span> <span class="ident">external_network_interfaces</span> {
                 <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Process default policy for external network interface&quot;</span>;
-                       <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;container_to_wider_world&quot;</span>,
-                          <span class="string">&quot;external_network_interface&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">external_network_interface</span>,
-                          <span class="string">&quot;default_policy&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">default_policy</span>));
+                       <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;container_to_wider_world&quot;</span>,
+                          <span class="string">&quot;external_network_interface&quot;</span> =&gt; <span class="ident">external_network_interface</span>,
+                          <span class="string">&quot;default_policy&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">default_policy</span>));
                 <span class="kw">for</span> <span class="ident">network</span> <span class="kw">in</span> <span class="ident">ctx</span>.<span class="ident">network_map</span>.<span class="ident">values</span>() {
                     <span class="kw">let</span> <span class="ident">network_id</span> <span class="op">=</span> <span class="ident">network</span>.<span class="ident">id</span>.<span class="ident">as_ref</span>().<span class="ident">expect</span>(<span class="string">&quot;Docker network ID missing&quot;</span>);
                     <span class="kw">let</span> <span class="ident">bridge_name</span> <span class="op">=</span> <span class="ident">get_bridge_name</span>(<span class="ident">network_id</span>)<span class="question-mark">?</span>;
                     <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got bridge name&quot;</span>;
-                           <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                              <span class="string">&quot;bridge_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
+                           <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                              <span class="string">&quot;bridge_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
 
                     <span class="kw">let</span> <span class="ident">rule</span> <span class="op">=</span> <span class="ident">RuleBuilder::default</span>()
                         .<span class="ident">in_interface</span>(<span class="kw-2">&amp;</span><span class="ident">bridge_name</span>)
@@ -1591,10 +1591,10 @@
                         .<span class="ident">build</span>()<span class="question-mark">?</span>;
 
                     <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Add forward rule for default policy&quot;</span>;
-                           <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;container_to_wider_world&quot;</span>,
-                              <span class="string">&quot;external_network_interface&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">external_network_interface</span>,
-                              <span class="string">&quot;default_policy&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">default_policy</span>,
-                              <span class="string">&quot;rule&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">rule</span>));
+                           <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;container_to_wider_world&quot;</span>,
+                              <span class="string">&quot;external_network_interface&quot;</span> =&gt; <span class="ident">external_network_interface</span>,
+                              <span class="string">&quot;default_policy&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">default_policy</span>,
+                              <span class="string">&quot;rule&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">rule</span>));
 
                     <span class="ident">rules</span>.<span class="ident">push</span>(<span class="ident">add_rule</span>(<span class="ident">Family::Inet</span>, <span class="string">&quot;dfw&quot;</span>, <span class="string">&quot;forward&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">rule</span>));
                 }
@@ -1606,11 +1606,11 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ContainerToWiderWorldRule</span> {
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rules</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
         <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Process rule&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;container_to_wider_world&quot;</span>,
-                      <span class="string">&quot;rule&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>)));
+                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;container_to_wider_world&quot;</span>,
+                      <span class="string">&quot;rule&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>)));
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nft_rule</span> <span class="op">=</span> <span class="ident">RuleBuilder::default</span>();
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">network</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">network</span> {
@@ -1618,8 +1618,8 @@
                 <span class="kw">let</span> <span class="ident">network_id</span> <span class="op">=</span> <span class="ident">network</span>.<span class="ident">id</span>.<span class="ident">as_ref</span>().<span class="ident">expect</span>(<span class="string">&quot;Docker network ID missing&quot;</span>);
                 <span class="kw">let</span> <span class="ident">bridge_name</span> <span class="op">=</span> <span class="ident">get_bridge_name</span>(<span class="ident">network_id</span>)<span class="question-mark">?</span>;
                 <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got bridge name&quot;</span>;
-                           <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                              <span class="string">&quot;bridge_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
+                           <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                              <span class="string">&quot;bridge_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
 
                 <span class="ident">nft_rule</span>.<span class="ident">in_interface</span>(<span class="kw-2">&amp;</span><span class="ident">bridge_name</span>);
 
@@ -1631,13 +1631,13 @@
                         <span class="ident">network_id</span>,
                     )<span class="question-mark">?</span> {
                         <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got source network&quot;</span>;
-                                   <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                                      <span class="string">&quot;src_network&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">src_network</span>)));
+                                   <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                                      <span class="string">&quot;src_network&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">src_network</span>)));
 
                         <span class="kw">let</span> <span class="ident">bridge_name</span> <span class="op">=</span> <span class="ident">get_bridge_name</span>(<span class="ident">network_id</span>)<span class="question-mark">?</span>;
                         <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got bridge name&quot;</span>;
-                                   <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                                      <span class="string">&quot;bridge_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
+                                   <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                                      <span class="string">&quot;bridge_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
 
                         <span class="ident">nft_rule</span>.<span class="ident">in_interface</span>(<span class="kw-2">&amp;</span><span class="ident">bridge_name</span>).<span class="ident">source_address</span>(
                             <span class="ident">src_network</span>
@@ -1651,8 +1651,8 @@
                 } <span class="kw">else</span> {
                     <span class="kw">let</span> <span class="ident">bridge_name</span> <span class="op">=</span> <span class="ident">get_bridge_name</span>(<span class="ident">network_id</span>)<span class="question-mark">?</span>;
                     <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got bridge name&quot;</span>;
-                               <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                                  <span class="string">&quot;bridge_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
+                               <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                                  <span class="string">&quot;bridge_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
 
                     <span class="ident">nft_rule</span>.<span class="ident">in_interface</span>(<span class="kw-2">&amp;</span><span class="ident">bridge_name</span>);
                 }
@@ -1668,7 +1668,7 @@
         <span class="comment">// Try to build the rule without the out_interface defined to see if any of the other</span>
         <span class="comment">// mandatory fields has been populated.</span>
         <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Build rule to verify contents&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;args&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">nft_rule</span>)));
+                   <span class="macro">o!</span>(<span class="string">&quot;args&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">nft_rule</span>)));
         <span class="ident">nft_rule</span>.<span class="ident">build</span>().<span class="ident">context</span>(<span class="macro">format!</span>(
             <span class="string">&quot;failed to build rule, maybe the network `{:?}` or container `{:?}` doesn&#39;t exist&quot;</span>,
             <span class="self">self</span>.<span class="ident">network</span>, <span class="self">self</span>.<span class="ident">src_container</span>
@@ -1676,20 +1676,20 @@
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">external_network_interface</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">external_network_interface</span> {
             <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Rule has specific external network interface&quot;</span>;
-                       <span class="macro">o!</span>(<span class="string">&quot;external_network_interface&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">external_network_interface</span>));
+                       <span class="macro">o!</span>(<span class="string">&quot;external_network_interface&quot;</span> =&gt; <span class="ident">external_network_interface</span>));
             <span class="ident">nft_rule</span>.<span class="ident">out_interface</span>(<span class="ident">external_network_interface</span>);
         } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">primary_external_network_interface</span>) <span class="op">=</span>
             <span class="ident">ctx</span>.<span class="ident">primary_external_network_interface</span>
         {
             <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Rule uses primary external network interface&quot;</span>;
-                       <span class="macro">o!</span>(<span class="string">&quot;external_network_interface&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">primary_external_network_interface</span>));
+                       <span class="macro">o!</span>(<span class="string">&quot;external_network_interface&quot;</span> =&gt; <span class="ident">primary_external_network_interface</span>));
             <span class="ident">nft_rule</span>.<span class="ident">out_interface</span>(<span class="ident">primary_external_network_interface</span>);
         }
 
         <span class="kw">let</span> <span class="ident">rule</span> <span class="op">=</span> <span class="ident">nft_rule</span>.<span class="ident">build</span>()<span class="question-mark">?</span>;
         <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Add forward rule&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;container_to_wider_world&quot;</span>,
-                      <span class="string">&quot;rule&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">rule</span>));
+                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;container_to_wider_world&quot;</span>,
+                      <span class="string">&quot;rule&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">rule</span>));
 
         <span class="comment">// Apply the rule</span>
         <span class="ident">rules</span>.<span class="ident">push</span>(<span class="ident">add_rule</span>(<span class="ident">Family::Inet</span>, <span class="string">&quot;dfw&quot;</span>, <span class="string">&quot;forward&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">rule</span>));
@@ -1698,7 +1698,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ContainerToHost</span> {
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rules</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">mut</span> <span class="ident">cth_rules</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">rules</span>.<span class="ident">process</span>(<span class="ident">ctx</span>)<span class="question-mark">?</span> {
@@ -1710,8 +1710,8 @@
             <span class="kw">let</span> <span class="ident">network_id</span> <span class="op">=</span> <span class="ident">network</span>.<span class="ident">id</span>.<span class="ident">as_ref</span>().<span class="ident">expect</span>(<span class="string">&quot;Docker network ID missing&quot;</span>);
             <span class="kw">let</span> <span class="ident">bridge_name</span> <span class="op">=</span> <span class="ident">get_bridge_name</span>(<span class="ident">network_id</span>)<span class="question-mark">?</span>;
             <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got bridge name&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                      <span class="string">&quot;bridge_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
+                   <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                      <span class="string">&quot;bridge_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
 
             <span class="kw">let</span> <span class="ident">rule</span> <span class="op">=</span> <span class="ident">RuleBuilder::default</span>()
                 .<span class="ident">in_interface</span>(<span class="kw-2">&amp;</span><span class="ident">bridge_name</span>)
@@ -1719,9 +1719,9 @@
                 .<span class="ident">build</span>()<span class="question-mark">?</span>;
 
             <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Add input rule for default policy&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;container_to_host&quot;</span>,
-                      <span class="string">&quot;default_policy&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">default_policy</span>,
-                      <span class="string">&quot;rule&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">rule</span>));
+                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;container_to_host&quot;</span>,
+                      <span class="string">&quot;default_policy&quot;</span> =&gt; <span class="self">self</span>.<span class="ident">default_policy</span>,
+                      <span class="string">&quot;rule&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">rule</span>));
             <span class="ident">rules</span>.<span class="ident">push</span>(<span class="ident">add_rule</span>(<span class="ident">Family::Inet</span>, <span class="string">&quot;dfw&quot;</span>, <span class="string">&quot;input&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">rule</span>));
         }
 
@@ -1730,26 +1730,26 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ContainerToHostRule</span> {
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rules</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
         <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Process rule&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;container_to_host&quot;</span>,
-                      <span class="string">&quot;rule&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>)));
+                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;container_to_host&quot;</span>,
+                      <span class="string">&quot;rule&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>)));
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nft_rule</span> <span class="op">=</span> <span class="ident">RuleBuilder::default</span>();
 
         <span class="kw">let</span> <span class="ident">network</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">ctx</span>.<span class="ident">network_map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">network</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">network</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">network</span>,
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+            <span class="prelude-val">Some</span>(<span class="ident">network</span>) =&gt; <span class="ident">network</span>,
+            <span class="prelude-val">None</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
         };
         <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got network&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                      <span class="string">&quot;network&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">network</span>)));
+                   <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                      <span class="string">&quot;network&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">network</span>)));
 
         <span class="kw">let</span> <span class="ident">network_id</span> <span class="op">=</span> <span class="ident">network</span>.<span class="ident">id</span>.<span class="ident">as_ref</span>().<span class="ident">expect</span>(<span class="string">&quot;Docker network ID missing&quot;</span>);
         <span class="kw">let</span> <span class="ident">bridge_name</span> <span class="op">=</span> <span class="ident">get_bridge_name</span>(<span class="ident">network_id</span>)<span class="question-mark">?</span>;
         <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got bridge name&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                      <span class="string">&quot;bridge_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
+                   <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                      <span class="string">&quot;bridge_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
 
         <span class="ident">nft_rule</span>.<span class="ident">in_interface</span>(<span class="kw-2">&amp;</span><span class="ident">bridge_name</span>);
 
@@ -1761,8 +1761,8 @@
                 <span class="ident">network_id</span>,
             )<span class="question-mark">?</span> {
                 <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got source network&quot;</span>;
-                           <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                              <span class="string">&quot;src_network&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">src_network</span>)));
+                           <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                              <span class="string">&quot;src_network&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">src_network</span>)));
                 <span class="ident">nft_rule</span>.<span class="ident">source_address</span>(
                     <span class="ident">src_network</span>
                         .<span class="ident">ipv4_address</span>
@@ -1783,7 +1783,7 @@
         <span class="comment">// Try to build the rule without the out_interface defined to see if any of the other</span>
         <span class="comment">// mandatory fields has been populated.</span>
         <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Build rule to verify contents&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;args&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">nft_rule</span>)));
+                   <span class="macro">o!</span>(<span class="string">&quot;args&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">nft_rule</span>)));
         <span class="ident">nft_rule</span>.<span class="ident">build</span>().<span class="ident">context</span>(<span class="macro">format!</span>(
             <span class="string">&quot;failed to build rule, maybe the container `{:?}` doesn&#39;t exist&quot;</span>,
             <span class="self">self</span>.<span class="ident">src_container</span>
@@ -1791,8 +1791,8 @@
 
         <span class="kw">let</span> <span class="ident">rule</span> <span class="op">=</span> <span class="ident">nft_rule</span>.<span class="ident">build</span>()<span class="question-mark">?</span>;
         <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Add input rule&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;container_to_host&quot;</span>,
-                      <span class="string">&quot;rule&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">rule</span>));
+                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;container_to_host&quot;</span>,
+                      <span class="string">&quot;rule&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">rule</span>));
 
         <span class="comment">// Apply the rule</span>
         <span class="ident">rules</span>.<span class="ident">push</span>(<span class="ident">add_rule</span>(<span class="ident">Family::Inet</span>, <span class="string">&quot;dfw&quot;</span>, <span class="string">&quot;input&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">rule</span>));
@@ -1802,14 +1802,14 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">WiderWorldToContainer</span> {
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">rules</span>.<span class="ident">is_some</span>() {
             <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Process rules&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;wider_world_to_container&quot;</span>));
+                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;wider_world_to_container&quot;</span>));
             <span class="self">self</span>.<span class="ident">rules</span>.<span class="ident">process</span>(<span class="ident">ctx</span>)
         } <span class="kw">else</span> {
             <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;No rules&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;wider_world_to_container&quot;</span>));
+                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;wider_world_to_container&quot;</span>));
             <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
         }
     }
@@ -1823,10 +1823,10 @@
         <span class="ident">source_cidrs</span>: <span class="kw-2">&amp;</span>[<span class="ident">String</span>],
         <span class="ident">nft_forward_rule</span>: <span class="ident">RuleBuilder</span>,
         <span class="ident">nft_dnat_rule</span>: <span class="ident">RuleBuilder</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Generate extended FORWARD rules, source CIDRs (IPv4) were specified&quot;</span>;
-               <span class="macro">o!</span>(<span class="string">&quot;args&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">nft_dnat_rule</span>),
-                  <span class="string">&quot;source_cidrs&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">source_cidrs</span>.<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>)));
+               <span class="macro">o!</span>(<span class="string">&quot;args&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">nft_dnat_rule</span>),
+                  <span class="string">&quot;source_cidrs&quot;</span> =&gt; <span class="ident">source_cidrs</span>.<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>)));
         <span class="kw">for</span> <span class="ident">additional_forward_rule</span> <span class="kw">in</span> <span class="ident">source_cidrs</span>
             .<span class="ident">iter</span>()
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">source_cidr</span><span class="op">|</span> {
@@ -1838,8 +1838,8 @@
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>
         {
             <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Add FORWARD rule&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;wider_world_to_container&quot;</span>,
-                      <span class="string">&quot;rule&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">additional_forward_rule</span>));
+                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;wider_world_to_container&quot;</span>,
+                      <span class="string">&quot;rule&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">additional_forward_rule</span>));
             <span class="ident">rules</span>.<span class="ident">push</span>(<span class="ident">add_rule</span>(
                 <span class="ident">Family::Inet</span>,
                 <span class="string">&quot;dfw&quot;</span>,
@@ -1858,8 +1858,8 @@
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>
         {
             <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Add DNAT rule&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;wider_world_to_container&quot;</span>,
-                      <span class="string">&quot;rule&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">additional_dnat_rule</span>));
+                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;wider_world_to_container&quot;</span>,
+                      <span class="string">&quot;rule&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">additional_dnat_rule</span>));
             <span class="ident">rules</span>.<span class="ident">push</span>(<span class="ident">add_rule</span>(
                 <span class="ident">Family::Ip</span>,
                 <span class="string">&quot;dfw&quot;</span>,
@@ -1877,10 +1877,10 @@
         <span class="ident">rules</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
         <span class="ident">source_cidrs</span>: <span class="kw-2">&amp;</span>[<span class="ident">String</span>],
         <span class="ident">nft_mark_rule</span>: <span class="ident">RuleBuilder</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Generate extended prerouting rules, source CIDRs (IPv6) were specified&quot;</span>;
-               <span class="macro">o!</span>(<span class="string">&quot;args&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">nft_mark_rule</span>),
-                  <span class="string">&quot;source_cidrs&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">source_cidrs</span>.<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>)));
+               <span class="macro">o!</span>(<span class="string">&quot;args&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">nft_mark_rule</span>),
+                  <span class="string">&quot;source_cidrs&quot;</span> =&gt; <span class="ident">source_cidrs</span>.<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>)));
         <span class="kw">for</span> <span class="ident">additional_mark_rule</span> <span class="kw">in</span> <span class="ident">source_cidrs</span>
             .<span class="ident">iter</span>()
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">source_cidr</span><span class="op">|</span> {
@@ -1892,8 +1892,8 @@
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>
         {
             <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Add mark rule&quot;</span>;
-                            <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;wider_world_to_container&quot;</span>,
-                               <span class="string">&quot;rule&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">additional_mark_rule</span>));
+                            <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;wider_world_to_container&quot;</span>,
+                               <span class="string">&quot;rule&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">additional_mark_rule</span>));
             <span class="ident">rules</span>.<span class="ident">push</span>(<span class="ident">add_rule</span>(
                 <span class="ident">Family::Ip6</span>,
                 <span class="string">&quot;dfw&quot;</span>,
@@ -1906,29 +1906,29 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">WiderWorldToContainerRule</span> {
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rules</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
         <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Process rule&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;wider_world_to_container&quot;</span>,
-                      <span class="string">&quot;rule&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>)));
+                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;wider_world_to_container&quot;</span>,
+                      <span class="string">&quot;rule&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>)));
         <span class="kw">for</span> <span class="ident">expose_port</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">expose_port</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nft_forward_rule</span> <span class="op">=</span> <span class="ident">RuleBuilder::default</span>();
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nft_dnat_rule</span> <span class="op">=</span> <span class="ident">RuleBuilder::default</span>();
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nft_mark_rule</span> <span class="op">=</span> <span class="ident">RuleBuilder::default</span>();
 
             <span class="kw">let</span> <span class="ident">network</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">ctx</span>.<span class="ident">network_map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">network</span>) {
-                <span class="prelude-val">Some</span>(<span class="ident">network</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">network</span>,
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+                <span class="prelude-val">Some</span>(<span class="ident">network</span>) =&gt; <span class="ident">network</span>,
+                <span class="prelude-val">None</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
             };
             <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got network&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                      <span class="string">&quot;network&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">network</span>)));
+                   <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                      <span class="string">&quot;network&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">network</span>)));
 
             <span class="kw">let</span> <span class="ident">network_id</span> <span class="op">=</span> <span class="ident">network</span>.<span class="ident">id</span>.<span class="ident">as_ref</span>().<span class="ident">expect</span>(<span class="string">&quot;Docker network ID missing&quot;</span>);
             <span class="kw">let</span> <span class="ident">bridge_name</span> <span class="op">=</span> <span class="ident">get_bridge_name</span>(<span class="ident">network_id</span>)<span class="question-mark">?</span>;
             <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got bridge name&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                      <span class="string">&quot;bridge_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
+                   <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                      <span class="string">&quot;bridge_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
 
             <span class="ident">nft_forward_rule</span>.<span class="ident">out_interface</span>(<span class="kw-2">&amp;</span><span class="ident">bridge_name</span>);
 
@@ -1939,8 +1939,8 @@
                 <span class="ident">network_id</span>,
             )<span class="question-mark">?</span> {
                 <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got destination network&quot;</span>;
-                       <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                          <span class="string">&quot;dst_network&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">dst_network</span>)));
+                       <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                          <span class="string">&quot;dst_network&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">dst_network</span>)));
 
                 <span class="kw">let</span> <span class="ident">container_ipv4_address</span> <span class="op">=</span> <span class="ident">dst_network</span>
                     .<span class="ident">ipv4_address</span>
@@ -1954,8 +1954,8 @@
 
                 <span class="kw">let</span> <span class="ident">host_port</span> <span class="op">=</span> <span class="ident">expose_port</span>.<span class="ident">host_port</span>.<span class="ident">to_string</span>();
                 <span class="kw">let</span> <span class="ident">container_port</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">expose_port</span>.<span class="ident">container_port</span> {
-                    <span class="prelude-val">Some</span>(<span class="ident">destination_port</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">destination_port</span>.<span class="ident">to_string</span>(),
-                    <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">expose_port</span>.<span class="ident">host_port</span>.<span class="ident">to_string</span>(),
+                    <span class="prelude-val">Some</span>(<span class="ident">destination_port</span>) =&gt; <span class="ident">destination_port</span>.<span class="ident">to_string</span>(),
+                    <span class="prelude-val">None</span> =&gt; <span class="ident">expose_port</span>.<span class="ident">host_port</span>.<span class="ident">to_string</span>(),
                 };
                 <span class="ident">nft_forward_rule</span>.<span class="ident">destination_port</span>(<span class="kw-2">&amp;</span><span class="ident">container_port</span>);
                 <span class="ident">nft_dnat_rule</span>.<span class="ident">destination_port</span>(<span class="kw-2">&amp;</span><span class="ident">host_port</span>);
@@ -1997,18 +1997,18 @@
             <span class="comment">// Try to build the rule without the out_interface defined to see if any of the</span>
             <span class="comment">// other mandatory fields has been populated.</span>
             <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Build rule to verify contents&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;args&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">nft_forward_rule</span>)));
+                   <span class="macro">o!</span>(<span class="string">&quot;args&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">nft_forward_rule</span>)));
             <span class="ident">nft_forward_rule</span>.<span class="ident">build</span>()<span class="question-mark">?</span>;
             <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;build rule to verify contents&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;args&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">nft_dnat_rule</span>)));
+                   <span class="macro">o!</span>(<span class="string">&quot;args&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">nft_dnat_rule</span>)));
             <span class="ident">nft_dnat_rule</span>.<span class="ident">build</span>()<span class="question-mark">?</span>;
             <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Build rule to verify contents&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;args&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">nft_mark_rule</span>)));
+                   <span class="macro">o!</span>(<span class="string">&quot;args&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">nft_mark_rule</span>)));
             <span class="ident">nft_mark_rule</span>.<span class="ident">build</span>()<span class="question-mark">?</span>;
 
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">external_network_interface</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">external_network_interface</span> {
                 <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Rule has specific external network interface&quot;</span>;
-                       <span class="macro">o!</span>(<span class="string">&quot;external_network_interface&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">external_network_interface</span>));
+                       <span class="macro">o!</span>(<span class="string">&quot;external_network_interface&quot;</span> =&gt; <span class="ident">external_network_interface</span>));
 
                 <span class="ident">nft_forward_rule</span>.<span class="ident">in_interface</span>(<span class="ident">external_network_interface</span>);
                 <span class="ident">nft_dnat_rule</span>.<span class="ident">in_interface</span>(<span class="ident">external_network_interface</span>);
@@ -2017,7 +2017,7 @@
                 <span class="ident">ctx</span>.<span class="ident">primary_external_network_interface</span>
             {
                 <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Rule uses primary external network interface&quot;</span>;
-                       <span class="macro">o!</span>(<span class="string">&quot;external_network_interface&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">primary_external_network_interface</span>));
+                       <span class="macro">o!</span>(<span class="string">&quot;external_network_interface&quot;</span> =&gt; <span class="ident">primary_external_network_interface</span>));
 
                 <span class="ident">nft_forward_rule</span>.<span class="ident">in_interface</span>(<span class="ident">primary_external_network_interface</span>);
                 <span class="ident">nft_dnat_rule</span>.<span class="ident">in_interface</span>(<span class="ident">primary_external_network_interface</span>);
@@ -2054,16 +2054,16 @@
             <span class="kw">if</span> <span class="self">self</span>.<span class="ident">source_cidr_v4</span>.<span class="ident">is_none</span>() <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">source_cidr_v6</span>.<span class="ident">is_none</span>() {
                 <span class="kw">let</span> <span class="ident">forward_rule</span> <span class="op">=</span> <span class="ident">nft_forward_rule</span>.<span class="ident">build</span>()<span class="question-mark">?</span>;
                 <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Add forward rule&quot;</span>;
-                       <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;wider_world_to_container&quot;</span>,
-                          <span class="string">&quot;rule&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">forward_rule</span>));
+                       <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;wider_world_to_container&quot;</span>,
+                          <span class="string">&quot;rule&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">forward_rule</span>));
                 <span class="kw">let</span> <span class="ident">dnat_rule</span> <span class="op">=</span> <span class="ident">nft_dnat_rule</span>.<span class="ident">build</span>()<span class="question-mark">?</span>;
                 <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Add DNAT rule&quot;</span>;
-                       <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;wider_world_to_container&quot;</span>,
-                          <span class="string">&quot;rule&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">dnat_rule</span>));
+                       <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;wider_world_to_container&quot;</span>,
+                          <span class="string">&quot;rule&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">dnat_rule</span>));
                 <span class="kw">let</span> <span class="ident">mark_rule</span> <span class="op">=</span> <span class="ident">nft_mark_rule</span>.<span class="ident">build</span>()<span class="question-mark">?</span>;
                 <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Add mark rule&quot;</span>;
-                       <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;wider_world_to_container&quot;</span>,
-                          <span class="string">&quot;rule&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">mark_rule</span>));
+                       <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;wider_world_to_container&quot;</span>,
+                          <span class="string">&quot;rule&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">mark_rule</span>));
                 <span class="comment">// Apply the rule</span>
                 <span class="ident">rules</span>.<span class="ident">push</span>(<span class="ident">add_rule</span>(<span class="ident">Family::Inet</span>, <span class="string">&quot;dfw&quot;</span>, <span class="string">&quot;forward&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">forward_rule</span>));
                 <span class="ident">rules</span>.<span class="ident">push</span>(<span class="ident">add_rule</span>(<span class="ident">Family::Ip</span>, <span class="string">&quot;dfw&quot;</span>, <span class="string">&quot;prerouting&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">dnat_rule</span>));
@@ -2078,24 +2078,24 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ContainerDNAT</span> {
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">rules</span>.<span class="ident">is_some</span>() {
             <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Process rules&quot;</span>;
-                <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;container_dnat&quot;</span>));
+                <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;container_dnat&quot;</span>));
             <span class="self">self</span>.<span class="ident">rules</span>.<span class="ident">process</span>(<span class="ident">ctx</span>)
         } <span class="kw">else</span> {
             <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;No rules&quot;</span>;
-                    <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;container_dnat&quot;</span>));
+                    <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;container_dnat&quot;</span>));
             <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
         }
     }
 }
 
 <span class="kw">impl</span> <span class="ident">Process</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ContainerDNATRule</span> {
-    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">process</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">ProcessContext</span><span class="op">&lt;</span><span class="ident">Nftables</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Process rule&quot;</span>;
-                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;container_dnat&quot;</span>,
-                      <span class="string">&quot;rule&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>)));
+                   <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;container_dnat&quot;</span>,
+                      <span class="string">&quot;rule&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>)));
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rules</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
         <span class="kw">for</span> <span class="ident">expose_port</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">expose_port</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nft_rule</span> <span class="op">=</span> <span class="ident">RuleBuilder::default</span>();
@@ -2103,14 +2103,14 @@
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">network</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">src_network</span> {
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">network</span>) <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">network_map</span>.<span class="ident">get</span>(<span class="ident">network</span>) {
                     <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got network&quot;</span>;
-                               <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                                  <span class="string">&quot;network&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">network</span>)));
+                               <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                                  <span class="string">&quot;network&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">network</span>)));
 
                     <span class="kw">let</span> <span class="ident">network_id</span> <span class="op">=</span> <span class="ident">network</span>.<span class="ident">id</span>.<span class="ident">as_ref</span>().<span class="ident">expect</span>(<span class="string">&quot;Docker network ID missing&quot;</span>);
                     <span class="kw">let</span> <span class="ident">bridge_name</span> <span class="op">=</span> <span class="ident">get_bridge_name</span>(<span class="ident">network_id</span>)<span class="question-mark">?</span>;
                     <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got bridge name&quot;</span>;
-                               <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                                  <span class="string">&quot;bridge_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
+                               <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                                  <span class="string">&quot;bridge_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
 
                     <span class="ident">nft_rule</span>.<span class="ident">in_interface</span>(<span class="kw-2">&amp;</span><span class="ident">bridge_name</span>);
 
@@ -2122,13 +2122,13 @@
                             <span class="ident">network_id</span>,
                         )<span class="question-mark">?</span> {
                             <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got source network&quot;</span>;
-                                       <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                                          <span class="string">&quot;src_network&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">src_network</span>)));
+                                       <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                                          <span class="string">&quot;src_network&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">src_network</span>)));
 
                             <span class="kw">let</span> <span class="ident">bridge_name</span> <span class="op">=</span> <span class="ident">get_bridge_name</span>(<span class="ident">network_id</span>)<span class="question-mark">?</span>;
                             <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got bridge name&quot;</span>;
-                                       <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                                          <span class="string">&quot;bridge_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
+                                       <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                                          <span class="string">&quot;bridge_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
 
                             <span class="ident">nft_rule</span>.<span class="ident">in_interface</span>(<span class="kw-2">&amp;</span><span class="ident">bridge_name</span>).<span class="ident">source_address</span>(
                                 <span class="ident">src_network</span>
@@ -2144,8 +2144,8 @@
             }
 
             <span class="kw">let</span> <span class="ident">network</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">ctx</span>.<span class="ident">network_map</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">dst_network</span>) {
-                <span class="prelude-val">Some</span>(<span class="ident">network</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">network</span>,
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+                <span class="prelude-val">Some</span>(<span class="ident">network</span>) =&gt; <span class="ident">network</span>,
+                <span class="prelude-val">None</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
             };
             <span class="kw">let</span> <span class="ident">network_id</span> <span class="op">=</span> <span class="ident">network</span>.<span class="ident">id</span>.<span class="ident">as_ref</span>().<span class="ident">expect</span>(<span class="string">&quot;Docker network ID missing&quot;</span>);
             <span class="kw">let</span> <span class="ident">dst_network</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">get_network_for_container</span>(
@@ -2154,23 +2154,23 @@
                 <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">dst_container</span>,
                 <span class="ident">network_id</span>,
             )<span class="question-mark">?</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">dst_network</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">dst_network</span>,
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+                <span class="prelude-val">Some</span>(<span class="ident">dst_network</span>) =&gt; <span class="ident">dst_network</span>,
+                <span class="prelude-val">None</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
             };
             <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got destination network&quot;</span>;
-                       <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                          <span class="string">&quot;dst_network&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">dst_network</span>)));
+                       <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                          <span class="string">&quot;dst_network&quot;</span> =&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">dst_network</span>)));
 
             <span class="kw">let</span> <span class="ident">bridge_name</span> <span class="op">=</span> <span class="ident">get_bridge_name</span>(<span class="ident">network_id</span>)<span class="question-mark">?</span>;
             <span class="macro">trace!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Got bridge name&quot;</span>;
-                       <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
-                          <span class="string">&quot;bridge_name&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
+                       <span class="macro">o!</span>(<span class="string">&quot;network_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">network</span>.<span class="ident">name</span>,
+                          <span class="string">&quot;bridge_name&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">bridge_name</span>));
 
             <span class="ident">nft_rule</span>.<span class="ident">out_interface</span>(<span class="kw-2">&amp;</span><span class="ident">bridge_name</span>);
 
             <span class="kw">let</span> <span class="ident">destination_port</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">expose_port</span>.<span class="ident">container_port</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">destination_port</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">destination_port</span>.<span class="ident">to_string</span>(),
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">expose_port</span>.<span class="ident">host_port</span>.<span class="ident">to_string</span>(),
+                <span class="prelude-val">Some</span>(<span class="ident">destination_port</span>) =&gt; <span class="ident">destination_port</span>.<span class="ident">to_string</span>(),
+                <span class="prelude-val">None</span> =&gt; <span class="ident">expose_port</span>.<span class="ident">host_port</span>.<span class="ident">to_string</span>(),
             };
             <span class="ident">nft_rule</span>.<span class="ident">destination_port</span>(<span class="kw-2">&amp;</span><span class="ident">destination_port</span>);
             <span class="ident">nft_rule</span>.<span class="ident">dnat</span>(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
@@ -2186,8 +2186,8 @@
 
             <span class="kw">let</span> <span class="ident">rule</span> <span class="op">=</span> <span class="ident">nft_rule</span>.<span class="ident">build</span>()<span class="question-mark">?</span>;
             <span class="macro">debug!</span>(<span class="ident">ctx</span>.<span class="ident">logger</span>, <span class="string">&quot;Add prerouting rule&quot;</span>;
-                       <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;container_dnat&quot;</span>,
-                          <span class="string">&quot;rule&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">rule</span>));
+                       <span class="macro">o!</span>(<span class="string">&quot;part&quot;</span> =&gt; <span class="string">&quot;container_dnat&quot;</span>,
+                          <span class="string">&quot;rule&quot;</span> =&gt; <span class="kw-2">&amp;</span><span class="ident">rule</span>));
 
             <span class="comment">// Apply the rule</span>
             <span class="ident">rules</span>.<span class="ident">push</span>(<span class="ident">add_rule</span>(<span class="ident">Family::Ip</span>, <span class="string">&quot;dfw&quot;</span>, <span class="string">&quot;prerouting&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">rule</span>));
@@ -2198,12 +2198,12 @@
 }
 
 <span class="doccomment">/// Construct nft command for adding a table.</span>
-<span class="kw">fn</span> <span class="ident">add_table</span>(<span class="ident">family</span>: <span class="ident">Family</span>, <span class="ident">table</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+<span class="kw">fn</span> <span class="ident">add_table</span>(<span class="ident">family</span>: <span class="ident">Family</span>, <span class="ident">table</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">String</span> {
     <span class="macro">format!</span>(<span class="string">&quot;add table {} {}&quot;</span>, <span class="ident">family</span>, <span class="ident">table</span>)
 }
 
 <span class="doccomment">/// Construct nft command for flushing a table.</span>
-<span class="kw">fn</span> <span class="ident">flush_table</span>(<span class="ident">family</span>: <span class="ident">Family</span>, <span class="ident">table</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+<span class="kw">fn</span> <span class="ident">flush_table</span>(<span class="ident">family</span>: <span class="ident">Family</span>, <span class="ident">table</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">String</span> {
     <span class="macro">format!</span>(<span class="string">&quot;flush table {} {}&quot;</span>, <span class="ident">family</span>, <span class="ident">table</span>)
 }
 
@@ -2215,7 +2215,7 @@
     <span class="ident">r#type</span>: <span class="ident">Type</span>,
     <span class="ident">hook</span>: <span class="ident">Hook</span>,
     <span class="ident">priority</span>: <span class="ident">i16</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+) -&gt; <span class="ident">String</span> {
     <span class="macro">format!</span>(
         <span class="string">&quot;add chain {} {} {} {{ type {} hook {} priority {} ; }}&quot;</span>,
         <span class="ident">family</span>, <span class="ident">table</span>, <span class="ident">chain</span>, <span class="ident">r#type</span>, <span class="ident">hook</span>, <span class="ident">priority</span>
@@ -2223,7 +2223,7 @@
 }
 
 <span class="doccomment">/// Construct nft command for setting the policy for a chain.</span>
-<span class="kw">fn</span> <span class="ident">set_chain_policy</span>(<span class="ident">family</span>: <span class="ident">Family</span>, <span class="ident">table</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">chain</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">policy</span>: <span class="ident">ChainPolicy</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+<span class="kw">fn</span> <span class="ident">set_chain_policy</span>(<span class="ident">family</span>: <span class="ident">Family</span>, <span class="ident">table</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">chain</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">policy</span>: <span class="ident">ChainPolicy</span>) -&gt; <span class="ident">String</span> {
     <span class="macro">format!</span>(
         <span class="string">&quot;add chain {} {} {} {{ policy {} ; }}&quot;</span>,
         <span class="ident">family</span>, <span class="ident">table</span>, <span class="ident">chain</span>, <span class="ident">policy</span>
@@ -2231,7 +2231,7 @@
 }
 
 <span class="doccomment">/// Construct nft command for adding a rule to a chain.</span>
-<span class="kw">fn</span> <span class="ident">add_rule</span>(<span class="ident">family</span>: <span class="ident">Family</span>, <span class="ident">table</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">chain</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">rule</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+<span class="kw">fn</span> <span class="ident">add_rule</span>(<span class="ident">family</span>: <span class="ident">Family</span>, <span class="ident">table</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">chain</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">rule</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">String</span> {
     <span class="macro">format!</span>(<span class="string">&quot;add rule {} {} {} {}&quot;</span>, <span class="ident">family</span>, <span class="ident">table</span>, <span class="ident">chain</span>, <span class="ident">rule</span>)
 }
 
@@ -2242,7 +2242,7 @@
     <span class="ident">chain</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">rule</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">position</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+) -&gt; <span class="ident">String</span> {
     <span class="macro">format!</span>(
         <span class="string">&quot;insert rule {} {} {} {}{}&quot;</span>,
         <span class="ident">family</span>,
