@@ -13,6 +13,7 @@ use failure::bail;
 
 #[derive(Debug, Clone, Builder)]
 #[builder(derive(Debug), pattern = "mutable", build_fn(skip))]
+#[allow(dead_code)]
 pub(crate) struct Rule {
     #[builder(setter(into))]
     pub in_interface: String,
