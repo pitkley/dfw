@@ -4,10 +4,14 @@
 
 ## Unreleased
 
-* Replace library used to communicate with Docker.
+* Replace library used to communicate with Docker (which also fixes [#411]).
 
     This release replaces the previously used library [shiplift] by [bollard].
     This is not expected to have any impact on users of DFW.
+
+    [#411]: https://github.com/pitkley/dfw/issues/411
+    [shiplift]: https://github.com/softprops/shiplift
+    [bollard]: https://github.com/fussybeaver/bollard
 
 * Bump minimum supported Rust version to 1.54.0 (from 1.46.0).
 
