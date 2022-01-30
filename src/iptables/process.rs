@@ -15,11 +15,12 @@ use super::{
 use crate::{errors::*, process::*, types::*, FirewallBackend};
 use failure::{format_err, ResultExt};
 use slog::{debug, info, o, trace};
+use time::format_description::well_known::Rfc3339;
 
 impl Process<Iptables> for DFW<Iptables> {
     fn process(&self, ctx: &ProcessContext<Iptables>) -> Result<Option<Vec<IptablesRule>>> {
         info!(ctx.logger, "Starting processing";
-              o!("started_processing_at" => time::OffsetDateTime::now_utc().format("%FT%T%z")));
+              o!("started_processing_at" => time::OffsetDateTime::now_utc().format(&Rfc3339).expect("failed to format time")));
         let mut rules = vec![
             new_chain(IptablesRuleDiscriminants::V4, "filter", DFW_FORWARD_CHAIN),
             flush_chain(IptablesRuleDiscriminants::V4, "filter", DFW_FORWARD_CHAIN),
@@ -130,7 +131,7 @@ impl Process<Iptables> for DFW<Iptables> {
         }
 
         info!(ctx.logger, "Finished processing";
-              o!("finished_processing_at" => time::OffsetDateTime::now_utc().format("%FT%T%z")));
+              o!("finished_processing_at" => time::OffsetDateTime::now_utc().format(&Rfc3339).expect("failed to format time")));
 
         Ok(Some(rules))
     }
