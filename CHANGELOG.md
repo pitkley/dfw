@@ -13,7 +13,7 @@
 
   (Required after updating dependencies.)
 
-<sub>Internal changes: dependency updates, CI updates.</sub>
+<sub>Internal changes: dependency updates, CI updates, also test compatibility with Docker 20.10.</sub>
 
 ## 1.2.1 (2020-12-13)
 

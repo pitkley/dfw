@@ -3,6 +3,7 @@ status = [
     "build-and-test (stable, false)",
     "build-and-test (beta, false)",
     "build-and-test (stable, x86_64-unknown-linux-musl, false)",
+    "test-on-docker (docker:20.10-dind)",
     "test-on-docker (docker:19.03-dind)",
     "test-on-docker (docker:18.09-dind)",
     "test-on-docker (docker:18.06-dind)",

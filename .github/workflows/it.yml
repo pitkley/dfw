@@ -55,6 +55,7 @@ jobs:
       fail-fast: false
       matrix:
         dind-image:
+        - docker:20.10-dind
         - docker:19.03-dind
         - docker:18.09-dind
         - docker:18.06-dind
