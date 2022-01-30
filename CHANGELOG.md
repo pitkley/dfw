@@ -4,6 +4,17 @@
 
 ## Unreleased
 
+* Replace library used to communicate with Docker.
+
+    This release replaces the previously used library [shiplift] by [bollard].
+    This is not expected to have any impact on users of DFW.
+
+* Bump minimum supported Rust version to 1.54.0 (from 1.46.0).
+
+  (Required after updating dependencies.)
+
+<sub>Internal changes: dependency updates, CI updates.</sub>
+
 ## 1.2.1 (2020-12-13)
 
 * Fix incorrect handling of host-ports in wider-world-to-container rules.

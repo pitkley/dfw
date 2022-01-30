@@ -241,7 +241,7 @@ In general, the versioning scheme for DFW follows the semantic versioning guidel
 
 Special cases:
 
-* A bump in the minimum supported Rust version (MSRV), which for DFW currently is 1.46.0, will be done in minor version updates (i.e. they do not require a major version bump).
+* A bump in the minimum supported Rust version (MSRV), which for DFW currently is 1.54.0, will be done in minor version updates (i.e. they do not require a major version bump).
 * DFW is available both as a binary for direct use and as a library on [crates.io](https://crates.io/crates/dfw).
 
     The target audience of DFW are the users of the binary, and support for the library's public API is only provided on a best-effort basis.

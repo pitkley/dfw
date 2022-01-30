@@ -10,14 +10,14 @@
 //! # DFW - binary
 
 use bollard::{system::EventsOptions, Docker, API_DEFAULT_VERSION};
-use clap::{arg_enum, crate_authors, crate_version, value_t, App, Arg, ArgGroup, ArgMatches};
+use clap::{crate_version, Parser};
 use crossbeam_channel::{select, Receiver, Sender};
 use dfw::{
     process::{ContainerFilter, Process, ProcessContext, ProcessingOptions},
     types::DFW,
     util::*,
 };
-use failure::bail;
+use failure::{bail, format_err};
 use futures::{future, stream::StreamExt};
 use maplit::hashmap;
 use slog::{debug, error, info, o, trace, Logger};
@@ -30,6 +30,7 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
+use time::format_description::well_known::Rfc3339;
 
 mod errors {
     use failure::Error;
@@ -41,31 +42,44 @@ use crate::errors::*;
 
 type Signal = libc::c_int;
 
-arg_enum! {
-    #[derive(Debug)]
-    enum FirewallBackend {
-        Nftables,
-        Iptables,
+#[derive(Debug, Clone, clap::ArgEnum)]
+enum FirewallBackend {
+    Nftables,
+    Iptables,
+}
+
+impl ToString for FirewallBackend {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Nftables => "nftables".to_owned(),
+            Self::Iptables => "iptables".to_owned(),
+        }
     }
 }
 
-arg_enum! {
-    #[derive(Debug)]
-    enum LoadMode {
-        Once,
-        Always,
+#[derive(Debug, Clone, clap::ArgEnum)]
+enum LoadMode {
+    Once,
+    Always,
+}
+
+fn container_filter_try_from_str(s: &str) -> Result<ContainerFilter> {
+    match &*s.to_ascii_lowercase() {
+        "all" => Ok(ContainerFilter::All),
+        "running" => Ok(ContainerFilter::Running),
+        _ => Err(format_err!("Unknown container filter '{}'", s)),
     }
 }
 
-fn load_config<B>(matches: &ArgMatches) -> Result<DFW<B>>
+fn load_config<B>(args: &Args) -> Result<DFW<B>>
 where
     B: dfw::FirewallBackend,
     DFW<B>: Process<B>,
 {
-    let toml: DFW<B> = if matches.is_present("config-file") {
-        load_file(matches.value_of("config-file").unwrap())?
-    } else if matches.is_present("config-path") {
-        load_path(matches.value_of("config-path").unwrap())?
+    let toml: DFW<B> = if let Some(ref config_file) = args.config_file {
+        load_file(config_file)?
+    } else if let Some(ref config_path) = args.config_path {
+        load_path(config_path)?
     } else {
         // This statement should be unreachable, since clap verifies that either config-file or
         // config-path is populated.
@@ -181,17 +195,13 @@ fn spawn_event_monitor(
 
 #[allow(clippy::cognitive_complexity)]
 #[cfg(unix)]
-fn run<'a, B>(
-    matches: &ArgMatches<'a>,
-    r_signal: &Receiver<Signal>,
-    root_logger: &Logger,
-) -> Result<()>
+fn run<B>(args: &Args, r_signal: &Receiver<Signal>, root_logger: &Logger) -> Result<()>
 where
     B: std::fmt::Debug + dfw::FirewallBackend,
     DFW<B>: Process<B>,
 {
-    let toml = load_config(matches);
-    if matches.is_present("check-config") {
+    let toml = load_config(args);
+    if args.check_config {
         return toml.map(|_| ());
     }
 
@@ -199,8 +209,8 @@ where
     debug!(root_logger, "Initial configuration loaded";
            o!("config" => format!("{:#?}", toml)));
 
-    let docker = match matches.value_of("docker-url") {
-        Some(docker_url) => Docker::connect_with_http(docker_url, 120, API_DEFAULT_VERSION),
+    let docker = match args.docker_url {
+        Some(ref docker_url) => Docker::connect_with_http(docker_url, 120, API_DEFAULT_VERSION),
         None => Docker::connect_with_unix_defaults(),
     }?
     .negotiate_version()
@@ -210,9 +220,8 @@ where
     docker.ping().sync()?;
 
     // Create a dummy channel
-    let load_interval = value_t!(matches.value_of("load-interval"), u64)?;
     let load_interval_chan = {
-        let load_interval = value_t!(matches.value_of("load-interval"), u64)?;
+        let load_interval: u64 = args.load_interval;
 
         if load_interval > 0 {
             // If the load interval is greater than zero, we use a tick-channel
@@ -232,83 +241,75 @@ where
         }
     };
 
-    let container_filter = match matches.value_of("container-filter") {
-        Some("all") => ContainerFilter::All,
-        Some("running") => ContainerFilter::Running,
-        Some(_) | None => bail!("wrong or no container filter specified"),
+    let processing_options = ProcessingOptions {
+        container_filter: args.container_filter.clone(),
     };
-    let processing_options = ProcessingOptions { container_filter };
 
-    let monitor_events = !matches.is_present("disable-event-monitoring");
+    let monitor_events = !args.disable_event_monitoring;
     trace!(root_logger, "Monitoring events: {}", monitor_events;
            o!("monitor_events" => monitor_events));
 
-    let run_once = matches.is_present("run-once");
+    let run_once = args.run_once;
     trace!(root_logger, "Run once: {}", run_once;
            o!("run_once" => run_once));
 
-    let dry_run = matches.is_present("dry-run");
+    let dry_run = args.dry_run;
     trace!(root_logger, "Dry run: {}", dry_run;
            o!("dry_run" => dry_run));
 
     let processing_logger = root_logger.new(o!());
-    let mut process: Box<dyn FnMut() -> Result<()>> =
-        match value_t!(matches.value_of("load-mode"), LoadMode)? {
-            LoadMode::Once => {
-                trace!(root_logger, "Creating process closure according to load mode";
-                       o!("load_mode" => "once"));
-                Box::new(|| {
-                    ProcessContext::new(
-                        &docker,
-                        &toml,
-                        &processing_options,
-                        &processing_logger,
-                        dry_run,
-                    )?
-                    .process()
-                    .map_err(From::from)
-                })
-            }
-            LoadMode::Always => {
-                trace!(root_logger, "Creating process closure according to load mode";
-                       o!("load_mode" => "always"));
-                Box::new(|| {
-                    let toml = load_config(matches)?;
-                    debug!(root_logger, "Reloaded configuration before processing";
-                           o!("config" => format!("{:#?}", toml)));
-                    ProcessContext::new(
-                        &docker,
-                        &toml,
-                        &processing_options,
-                        &processing_logger,
-                        dry_run,
-                    )?
-                    .process()
-                    .map_err(From::from)
-                })
-            }
-        };
-    trace!(
-        root_logger,
-        "Load mode: {:?}",
-        matches.value_of("load-mode")
-    );
+    let mut process: Box<dyn FnMut() -> Result<()>> = match args.load_mode {
+        LoadMode::Once => {
+            trace!(root_logger, "Creating process closure according to load mode";
+                   o!("load_mode" => "once"));
+            Box::new(|| {
+                ProcessContext::new(
+                    &docker,
+                    &toml,
+                    &processing_options,
+                    &processing_logger,
+                    dry_run,
+                )?
+                .process()
+                .map_err(From::from)
+            })
+        }
+        LoadMode::Always => {
+            trace!(root_logger, "Creating process closure according to load mode";
+                   o!("load_mode" => "always"));
+            Box::new(|| {
+                let toml = load_config(args)?;
+                debug!(root_logger, "Reloaded configuration before processing";
+                       o!("config" => format!("{:#?}", toml)));
+                ProcessContext::new(
+                    &docker,
+                    &toml,
+                    &processing_options,
+                    &processing_logger,
+                    dry_run,
+                )?
+                .process()
+                .map_err(From::from)
+            })
+        }
+    };
+    trace!(root_logger, "Load mode: {:?}", args.load_mode);
 
     info!(root_logger, "Application started";
           "version" => crate_version!(),
-          "started_at" => time::OffsetDateTime::now_utc().format("%FT%T%z"));
+          "started_at" => time::OffsetDateTime::now_utc().format(&Rfc3339).expect("failed to format time"));
 
     // Initial processing
     debug!(root_logger, "Start first processing");
     process()?;
 
-    if run_once || (!monitor_events && load_interval == 0) {
+    if run_once || (!monitor_events && args.load_interval == 0) {
         // Either run-once is specified or both events are not monitored and rules aren't processed
         // regularly -- process once, then exit.
         info!(root_logger,
               "Run once specified (or load-interval is zero and events aren't monitored), exiting";
               o!("version" => crate_version!(),
-                 "exited_at" => time::OffsetDateTime::now_utc().format("%FT%T%z")));
+                 "exited_at" => time::OffsetDateTime::now_utc().format(&Rfc3339).expect("failed to format time")));
         return Ok(());
     }
 
@@ -319,12 +320,11 @@ where
 
         let (s_trigger, r_trigger) = crossbeam_channel::bounded(0);
         let (s_event, r_event) = crossbeam_channel::bounded(0);
-        let docker_url = matches.value_of("docker-url").map(|s| s.to_owned());
-        let burst_timeout = value_t!(matches.value_of("burst-timeout"), u64)?;
+        let docker_url = args.docker_url.as_ref().map(|s| s.to_owned());
 
         trace!(root_logger, "Start burst monitoring thread";
-               o!("burst_timeout" => burst_timeout));
-        spawn_burst_monitor(burst_timeout, s_trigger, r_event, root_logger);
+               o!("burst_timeout" => args.burst_timeout));
+        spawn_burst_monitor(args.burst_timeout, s_trigger, r_event, root_logger);
 
         trace!(root_logger, "Start event monitoring thread";
                o!("docker_url" => &docker_url));
@@ -376,157 +376,104 @@ where
 
     info!(root_logger, "Application exiting";
           o!("version" => crate_version!(),
-             "exited_at" => time::OffsetDateTime::now_utc().format("%FT%T%z")));
+             "exited_at" => time::OffsetDateTime::now_utc().format(&Rfc3339).expect("failed to format time")));
 
     Ok(())
 }
 
-fn get_arg_matches<'a>() -> ArgMatches<'a> {
-    App::new("dfw")
-        .version(crate_version!())
-        .author(crate_authors!())
-        .about("Docker Firewall Framework, in Rust")
-        .arg(
-            Arg::with_name("log-level")
-                .takes_value(true)
-                .long("log-level")
-                .value_name("SEVERITY")
-                .possible_values(&["trace", "debug", "info", "warning", "error", "critical"])
-                .default_value("info")
-                .help("Define the log level"),
-        )
-        .arg(
-            Arg::with_name("firewall-backend")
-                .takes_value(true)
-                .long("firewall-backend")
-                .value_name("BACKEND")
-                .possible_values(
-                    FirewallBackend::variants()
-                        .iter()
-                        .map(|s| s.to_ascii_lowercase())
-                        .collect::<Vec<_>>()
-                        .iter()
-                        .map(|s| &**s)
-                        .collect::<Vec<_>>()
-                        .as_slice(),
-                )
-                .default_value("nftables")
-                .case_insensitive(true)
-                .help("Select the firewall-backend to use"),
-        )
-        .arg(
-            Arg::with_name("config-file")
-                .takes_value(true)
-                .short("c")
-                .long("config-file")
-                .value_name("FILE")
-                .help("Set the configuration file"),
-        )
-        .arg(
-            Arg::with_name("config-path")
-                .takes_value(true)
-                .long("config-path")
-                .value_name("PATH")
-                .help("Set a path with multiple TOML configuration files"),
-        )
-        .group(
-            ArgGroup::with_name("config")
-                .args(&["config-file", "config-path"])
-                .multiple(false)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name("docker-url")
-                .takes_value(true)
-                .short("d")
-                .long("docker-url")
-                .value_name("URL")
-                .help("Set the url to the Docker instance (e.g. unix:///tmp/docker.sock)"),
-        )
-        .arg(
-            Arg::with_name("load-interval")
-                .takes_value(true)
-                .default_value("0")
-                .short("i")
-                .long("load-interval")
-                .value_name("INTERVAL")
-                .help("Interval between rule processing runs, in seconds (0 = disabled)"),
-        )
-        .arg(
-            Arg::with_name("load-mode")
-                .takes_value(true)
-                .short("m")
-                .long("load-mode")
-                .value_name("MODE")
-                .possible_values(
-                    LoadMode::variants()
-                        .iter()
-                        .map(|s| s.to_ascii_lowercase())
-                        .collect::<Vec<_>>()
-                        .iter()
-                        .map(|s| &**s)
-                        .collect::<Vec<_>>()
-                        .as_slice(),
-                )
-                .default_value("once")
-                .case_insensitive(true)
-                .help("Define if the config-files get loaded once, or before every run"),
-        )
-        .arg(
-            Arg::with_name("burst-timeout")
-                .takes_value(true)
-                .default_value("500")
-                .long("burst-timeout")
-                .value_name("TIMEOUT")
-                .help(
-                    "Time to wait after a event was received before processing the rules, in \
-                     milliseconds",
-                ),
-        )
-        .arg(
-            Arg::with_name("container-filter")
-                .takes_value(true)
-                .long("container-filter")
-                .value_name("FILTER")
-                .possible_values(&["all", "running"])
-                .default_value("running")
-                .help("Filter the containers to be included during processing"),
-        )
-        .arg(
-            Arg::with_name("disable-event-monitoring")
-                .takes_value(false)
-                .long("disable-event-monitoring")
-                .help("Disable Docker event monitoring"),
-        )
-        .arg(
-            Arg::with_name("run-once")
-                .takes_value(false)
-                .long("run-once")
-                .help("Process rules once, then exit."),
-        )
-        .arg(
-            Arg::with_name("dry-run")
-                .takes_value(false)
-                .long("dry-run")
-                .help("Don't touch nft, just show what would be done")
-                .long_help(
-                    "Don't touch nft, just show what would be done. Note that this requires Docker \
-                     and the containers/networks referenced in the configuration to be available. \
-                     If you want to check the config for validity, specify --check-config instead."
-                ),
-        )
-        .arg(
-            Arg::with_name("check-config")
-                .takes_value(false)
-                .long("check-config")
-                .help("Verify if the provided configuration is valid, exit afterwards."),
-        )
-        .get_matches()
+#[derive(Debug, Parser)]
+#[clap(author, version, about)]
+struct Args {
+    #[clap(
+        long = "log-level",
+        value_name = "SEVERITY",
+        default_value = "info",
+        help = "Define the log level"
+    )]
+    log_level: Severity,
+    #[clap(
+        arg_enum,
+        long = "firewall-backend",
+        value_name = "BACKEND",
+        default_value_t = FirewallBackend::Nftables,
+        ignore_case = true,
+        help = "Select the firewall-backend to use"
+    )]
+    firewall_backend: FirewallBackend,
+    #[clap(
+        required_unless_present = "config-path",
+        short = 'c',
+        long = "config-file",
+        value_name = "FILE",
+        help = "Set the configuration file"
+    )]
+    config_file: Option<String>,
+    #[clap(
+        required_unless_present = "config-file",
+        long = "config-path",
+        value_name = "PATH",
+        help = "Set a path with multiple TOML configuration files"
+    )]
+    config_path: Option<String>,
+    #[clap(
+        short = 'd',
+        long = "docker-url",
+        value_name = "URL",
+        help = "Set the URL to the Docker instance (e.g. unix:///tmp/docker.sock)"
+    )]
+    docker_url: Option<String>,
+    #[clap(
+        short = 'i',
+        long = "load-interval",
+        value_name = "INTERVAL",
+        default_value_t = 0,
+        help = "Interval between rule processing runs, in seconds (0 = disabled)"
+    )]
+    load_interval: u64,
+    #[clap(
+        arg_enum,
+        short = 'm',
+        long = "load-mode",
+        value_name = "MODE",
+        default_value_t = LoadMode::Once,
+        ignore_case = true,
+        help = "Define if the config-fields get loaded once, or before every run"
+    )]
+    load_mode: LoadMode,
+    #[clap(
+        long = "burst-timeout",
+        value_name = "TIMEOUT",
+        default_value_t = 500,
+        help = "Time to wait after a event was received before processing the rules, in milliseconds"
+    )]
+    burst_timeout: u64,
+    #[clap(
+        parse(try_from_str = container_filter_try_from_str),
+        long = "container-filter",
+        value_name = "FILTER",
+        default_value = "running",
+        help = "Filter the containers to be included during processing"
+    )]
+    container_filter: ContainerFilter,
+    #[clap(long = "disable-event-monitoring", help = "Disable event monitoring")]
+    disable_event_monitoring: bool,
+    #[clap(long = "run-once", help = "Process rules once, then exit.")]
+    run_once: bool,
+    #[clap(
+        long = "dry-run",
+        help = "Don't touch firewall-rules, just show what would be done",
+        long_help = "Don't touch firewall-rules, just show what would be done. Note that this requires Docker and the containers/networks referenced in the configuration to be available. If you want to check the config for validity, specify --check-config instead."
+    )]
+    dry_run: bool,
+    #[clap(
+        long = "check-config",
+        help = "Verify if the provided configuration is valid, exit afterwards."
+    )]
+    check_config: bool,
 }
 
 fn main() {
-    // Parse arguments
-    let matches = get_arg_matches();
+    let args = Args::parse();
 
     // Signals should be set up as early as possible, to set proper signal masks to all threads
     let (s_signal, r_signal) = crossbeam_channel::bounded(10);
@@ -540,28 +487,20 @@ fn main() {
     });
 
     // Setup logging
-    let log_level =
-        value_t!(matches.value_of("log-level"), Severity).expect("Unknown severity specified");
     let root_logger = TerminalLoggerBuilder::new()
         .format(sloggers::types::Format::Full)
-        .level(log_level)
+        .level(args.log_level)
         .destination(Destination::Stderr)
         .build()
         .expect("Failed to setup logging");
 
     debug!(root_logger, "Application starting";
            o!("version" => crate_version!(),
-              "started_at" => time::OffsetDateTime::now_utc().format("%FT%T%z"),
-              "firewall_backend" => matches.value_of("firewall_backend")));
-    if let Err(ref e) = match value_t!(matches.value_of("firewall-backend"), FirewallBackend)
-        .expect("invalid firewall backend provided")
-    {
-        FirewallBackend::Nftables => {
-            run::<dfw::nftables::Nftables>(&matches, &r_signal, &root_logger)
-        }
-        FirewallBackend::Iptables => {
-            run::<dfw::iptables::Iptables>(&matches, &r_signal, &root_logger)
-        }
+              "started_at" => time::OffsetDateTime::now_utc().format(&Rfc3339).expect("failed to format time"),
+              "firewall_backend" => args.firewall_backend.to_string()));
+    if let Err(ref e) = match args.firewall_backend {
+        FirewallBackend::Nftables => run::<dfw::nftables::Nftables>(&args, &r_signal, &root_logger),
+        FirewallBackend::Iptables => run::<dfw::iptables::Iptables>(&args, &r_signal, &root_logger),
     } {
         error!(root_logger, "Encountered error";
                o!("error" => format!("{}", e),

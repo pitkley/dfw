@@ -16,11 +16,12 @@ use crate::{errors::*, process::*, types::*, FirewallBackend};
 use failure::{format_err, ResultExt};
 use slog::{debug, info, o, trace, warn};
 use std::process::Command;
+use time::format_description::well_known::Rfc3339;
 
 impl Process<Nftables> for DFW<Nftables> {
     fn process(&self, ctx: &ProcessContext<Nftables>) -> Result<Option<Vec<String>>> {
         info!(ctx.logger, "Starting processing";
-              o!("started_processing_at" => time::OffsetDateTime::now_utc().format("%FT%T%z")));
+              o!("started_processing_at" => time::OffsetDateTime::now_utc().format(&Rfc3339).expect("failed to format time")));
         let mut rules = vec![
             add_table(Family::Inet, "dfw"),
             flush_table(Family::Inet, "dfw"),
@@ -118,7 +119,7 @@ impl Process<Nftables> for DFW<Nftables> {
         }
 
         info!(ctx.logger, "Finished processing";
-              o!("finished_processing_at" => time::OffsetDateTime::now_utc().format("%FT%T%z")));
+              o!("finished_processing_at" => time::OffsetDateTime::now_utc().format(&Rfc3339).expect("failed to format time")));
 
         Ok(Some(rules))
     }
