@@ -39,7 +39,7 @@ slog = { version = "^2", features = ["max_level_trace"] }
 sloggers = "^2.1"
 strum = { version = "^0.23", features = ["derive"] }
 tempfile = "^3.2"
-time = "^0.2"
+time = "^0.3"
 tokio = "^1.16"
 toml = "^0.5"
 url = "^2.2"
