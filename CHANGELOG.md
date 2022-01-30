@@ -17,6 +17,10 @@
 
   (Required after updating dependencies.)
 
+* Build Docker images for multiple architectures: `amd64`, `arm64`, `arm/v7`.
+
+    This allows users to pull the image from Docker Hub or GHCR for any of the mentioned architectures (from the same tag).
+
 <sub>Internal changes: dependency updates, CI updates.</sub>
 
 ## 1.2.1 (2020-12-13)
