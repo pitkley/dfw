@@ -81,7 +81,7 @@ jobs:
         - stable
         - beta
         - # MSRV
-          1.46.0
+          1.54.0
         target:
         - ""
         continue-on-error:
