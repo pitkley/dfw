@@ -3,6 +3,11 @@ tag-name = "{{version}}"
 
 # Replace `docker pull pitkley/dfw:X.Y.Z`
 [[pre-release-replacements]]
+file = "README.md"
+search = "pitkley/dfw:([0-9]+\\.?)+"
+replace = "pitkley/dfw:{{version}}"
+prerelease = false
+[[pre-release-replacements]]
 file = "docs/GETTING-STARTED-nftables.md"
 search = "pitkley/dfw:([0-9]+\\.?)+"
 replace = "pitkley/dfw:{{version}}"

@@ -18,9 +18,10 @@ Please consult the [migration documentation][migration-v0.x-to-v1.2] on how to u
 3. [Configuration](#configuration)
 4. [IPv6 support](#ipv6support)
     1. [Example: webserver reachable via IPv6](#ipv6support-example)
-5. [Supported Docker versions](#supporteddockerversions)
-6. [Version bump policy](#versionbumppolicy)
-7. [License](#license)
+5. [Supported architectures](#supportedarchitectures)
+6. [Supported Docker versions](#supporteddockerversions)
+7. [Version bump policy](#versionbumppolicy)
+8. [License](#license)
     1. [Contribution](#license-contribution)
 
 -----
@@ -214,6 +215,21 @@ expose_port = [
 ```
 
 The result of this is that your container will be reachable from the host-ports 80 and 443, from both IPv4 and IPv6.
+
+## <a name="supportedarchitectures"></a> Supported architectures
+
+The Docker image for DFW is pre-built for the following architectures:
+
+* `amd64` (a.k.a. `x86_64`)
+* `arm64` (a.k.a. `aarch64`)
+* `arm/v7` (specifically `armhf`)
+
+You don't have to do anything special to use the correct architecture: just `docker pull pitkley/dfw:1.2.1`.
+Docker will take care of pulling the image that matches the architecture of your host.
+
+In general, DFW should be able to run on any architecture that [Rust supports][rust-platform-support] and for which the `nftables` or `iptables` binaries exist.
+
+[rust-platform-support]: https://doc.rust-lang.org/stable/rustc/platform-support.html
 
 ## <a name="supporteddockerversions"></a> Supported Docker versions
 
