@@ -101,6 +101,7 @@ jobs:
           ```
 
           This will download a lightweight image, coming in at under 10 MB, and subsequently run it using your configuration.
+          The image supports multiple architectures: `amd64`, `arm64`, `armv7` (specifically `armhf`).
 
     - name: Upload static DFW binary
       uses: actions/upload-release-asset@v1

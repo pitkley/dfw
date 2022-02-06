@@ -153,16 +153,43 @@ $ docker run -d \
 ```
 
 This will download a lightweight image, coming in at under 10 MB, and subsequently run it using your configuration.
+The image supports multiple architectures: `amd64`, `arm64`, `armv7` (specifically `armhf`).
 
-### As a binary directly on your host
+Please note that you can also pull the image from the GitHub container registry, GHCR, if you want to avoid potential pull-limitations Docker Hub has put in place:
 
-We currently do not provide any pre-built binaries (aside from the Docker image), so you will have to build the binary yourself.
-For this you need to first [install Rust][rustlang-install] and then install DFW:
+```console
+$ docker pull ghcr.io/pitkley/dfw:1.2.1
+$ docker run ... ghcr.io/pitkley/dfw:1.2.1 ...
+```
+
+### Using a pre-built binary directly on your host.
+
+You can retrieve the latest pre-built binary from the GitHub releases page:
+
+* [Release page](https://github.com/pitkley/dfw/releases/latest)
+* [Direct download](https://github.com/pitkley/dfw/releases/latest/download/dfw-x86_64-unknown-linux-musl) (static Linux x86_64 binary, no further dependencies required)
+
+### Install DFW through crates.io.
+
+For this you need to first [install Rust][rustlang-install] and then install DFW using cargo:
 
 ```console
 $ cargo install dfw
 $ dfw --help
 dfw 1.2.1
+Docker Firewall Framework, in Rust
+...
+```
+### Build from source.
+
+For this you need to first [install Rust][rustlang-install].
+You can then check out the repository and build the binary:
+
+```console
+$ git checkout https://github.com/pitkley/dfw
+$ cd dfw/
+$ cargo build --release
+$ target/release/dfw
 Docker Firewall Framework, in Rust
 ...
 ```
