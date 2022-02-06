@@ -93,22 +93,16 @@ You can of course bind the port to `127.0.0.1`, but you have to be explicit abou
 
 ## <a name="gettingstarted"></a> Getting started
 
-If you are already a user of DFW and are looking to upgrade to a newer version, consult the matching migration documentation:
-
-* [Migrating from DFW 1.x to 1.2][migration-v1.x-to-v1.2]
-* [Migrating from DFW 0.x to 1.2][migration-v0.x-to-v1.2]
-* ~~[Migrating from DFW 0.x to 1.0][migration-v0.x-to-v1.0]~~
-
 If you are starting fresh, the first step is to decide on a firewall backend:
 
-* nftables
+* [nftables][docs-nftables]
 
     nftables can be seen as a newer generation of iptables, and it will replace iptables in most Linux distributions at some point.
     (It already is the default in e.g. Debian 10 Buster.)
 
     If you are starting fresh on a host where you have not used either backend yet, nftables is the suggested backend.
 
-* iptables
+* [iptables][docs-iptables]
 
     While iptables is the older netfilter implementation, it is still a valid firewall-backend and still finds extensive use across many distributions.
 
@@ -119,7 +113,11 @@ Once you have decided which backend you want to use, please consult the backend-
 * [nftables][docs-nftables]
 * [iptables][docs-iptables]
 
-[migration-v0.x-to-v1.0]: https://github.com/pitkley/dfw/blob/main/docs/migration/v0.x-to-v1.0.md
+If you are already a user of DFW and are looking to upgrade to a newer version, consult the matching migration documentation:
+
+* [Migrating from DFW 1.x to 1.2][migration-v1.x-to-v1.2]
+* [Migrating from DFW 0.x to 1.2][migration-v0.x-to-v1.2]
+
 [migration-v0.x-to-v1.2]: https://github.com/pitkley/dfw/blob/main/docs/migration/v0.x-to-v1.2.md
 [migration-v1.x-to-v1.2]: https://github.com/pitkley/dfw/blob/main/docs/migration/v1.x-to-v1.2.md
 [docs-nftables]: https://github.com/pitkley/dfw/blob/main/docs/GETTING-STARTED-nftables.md

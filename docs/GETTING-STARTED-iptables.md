@@ -103,13 +103,21 @@ $ docker run -d \
 ```
 
 This will download a lightweight image, coming in at under 10 MB, and subsequently run it using your configuration.
+The image supports multiple architectures: `amd64`, `arm64`, `armv7` (specifically `armhf`).
+
+Please note that you can also pull the image from the GitHub container registry, GHCR, if you want to avoid potential pull-limitations Docker Hub has put in place:
+
+```console
+$ docker pull ghcr.io/pitkley/dfw:1.2.1
+$ docker run ... ghcr.io/pitkley/dfw:1.2.1 ...
+```
 
 ### Using a pre-built binary directly on your host.
 
 You can retrieve the latest pre-built binary from the GitHub releases page:
 
-* [Release page](https://github.com/pitkley/dfw-ghtest/releases/latest)
-* [Direct download](https://github.com/pitkley/dfw-ghtest/releases/latest/download/dfw-x86_64-unknown-linux-musl) (static Linux x86_64 binary, no further dependencies required)
+* [Release page](https://github.com/pitkley/dfw/releases/latest)
+* [Direct download](https://github.com/pitkley/dfw/releases/latest/download/dfw-x86_64-unknown-linux-musl) (static Linux x86_64 binary, no further dependencies required)
 
 ### Install DFW through crates.io.
 
