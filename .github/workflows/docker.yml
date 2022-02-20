@@ -12,7 +12,7 @@ on:
 
 jobs:
   build-and-push-docker-image:
-    if: github.repository_owner == 'pitkley'
+    if: github.repository_owner == 'pitkley' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
 
     steps:
