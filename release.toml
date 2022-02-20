@@ -1,4 +1,5 @@
 sign-commit = true
+sign-tag = true
 tag-name = "{{version}}"
 
 # Replace `docker pull pitkley/dfw:X.Y.Z`
