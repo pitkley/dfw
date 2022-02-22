@@ -37,7 +37,7 @@ serde = { version = "^1", features = ["derive"] }
 signal-hook = "^0.3"
 slog = { version = "^2", features = ["max_level_trace"] }
 sloggers = "^2.1"
-strum = { version = "^0.23", features = ["derive"] }
+strum = { version = "^0.24", features = ["derive"] }
 tempfile = "^3.3"
 time = { version = "^0.3", features = ["formatting"] }
 tokio = "^1.17"
