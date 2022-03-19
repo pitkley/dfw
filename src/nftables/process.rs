@@ -157,7 +157,7 @@ impl Process<Nftables> for <Nftables as FirewallBackend>::Defaults {
                         true
                     })
             })
-            .unwrap_or_else(Vec::new);
+            .unwrap_or_default();
 
         // NOTE: v1.2.0 deprecated the `GlobalDefaults::custom_tables` field in favour of the field
         // present in the backend-specific defaults-type. To retain backwards-compatibility we
