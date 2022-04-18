@@ -283,8 +283,6 @@
 <span id="278">278</span>
 <span id="279">279</span>
 <span id="280">280</span>
-<span id="281">281</span>
-<span id="282">282</span>
 </pre><pre class="rust"><code><span class="comment">// Copyright Pit Kleyersburg &lt;pitkley@googlemail.com&gt;</span>
 <span class="comment">// SPDX-License-Identifier: MIT OR Apache-2.0</span>
 <span class="comment">//</span>
@@ -299,7 +297,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">errors</span>::<span class="kw-2">*</span>, <span class="ident">types</span>::<span class="kw-2">*</span>, <span class="ident">util::FutureExt</span>, <span class="ident">FirewallBackend</span>};
 <span class="kw">use</span> <span class="ident">bollard</span>::{
     <span class="ident">container::ListContainersOptions</span>,
-    <span class="ident">models</span>::{<span class="ident">ContainerSummaryInner</span>, <span class="ident">Network</span>, <span class="ident">NetworkContainer</span>},
+    <span class="ident">models</span>::{<span class="ident">ContainerSummary</span>, <span class="ident">Network</span>, <span class="ident">NetworkContainer</span>},
     <span class="ident">Docker</span>,
 };
 <span class="kw">use</span> <span class="ident">failure</span>::{<span class="ident">bail</span>, <span class="ident">format_err</span>};
@@ -397,7 +395,7 @@
 {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">docker</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Docker</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">dfw</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">DFW</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">container_map</span>: <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">ContainerSummaryInner</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">container_map</span>: <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">ContainerSummary</span><span class="op">&gt;</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">network_map</span>: <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Network</span><span class="op">&gt;</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">external_network_interfaces</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">primary_external_network_interface</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
@@ -511,7 +509,7 @@
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">get_network_for_container</span>(
     <span class="ident">docker</span>: <span class="kw-2">&amp;</span><span class="ident">Docker</span>,
-    <span class="ident">container_map</span>: <span class="kw-2">&amp;</span><span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">ContainerSummaryInner</span><span class="op">&gt;</span>,
+    <span class="ident">container_map</span>: <span class="kw-2">&amp;</span><span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">ContainerSummary</span><span class="op">&gt;</span>,
     <span class="ident">container_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">network_id</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
 ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NetworkContainer</span><span class="op">&gt;</span><span class="op">&gt;</span> {
@@ -531,10 +529,8 @@
     }
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">get_container_map</span>(
-    <span class="ident">containers</span>: <span class="kw-2">&amp;</span>[<span class="ident">ContainerSummaryInner</span>],
-) -&gt; <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">ContainerSummaryInner</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">container_map</span>: <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">ContainerSummaryInner</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Map::new</span>();
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">get_container_map</span>(<span class="ident">containers</span>: <span class="kw-2">&amp;</span>[<span class="ident">ContainerSummary</span>]) -&gt; <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">ContainerSummary</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">container_map</span>: <span class="ident">Map</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">ContainerSummary</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Map::new</span>();
     <span class="kw">for</span> <span class="ident">container</span> <span class="kw">in</span> <span class="ident">containers</span> {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">names</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">container</span>.<span class="ident">names</span> {
             <span class="kw">for</span> <span class="ident">name</span> <span class="kw">in</span> <span class="ident">names</span> {
