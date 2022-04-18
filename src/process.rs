@@ -12,7 +12,7 @@
 use crate::{errors::*, types::*, util::FutureExt, FirewallBackend};
 use bollard::{
     container::ListContainersOptions,
-    models::{ContainerSummaryInner, Network, NetworkContainer},
+    models::{ContainerSummary, Network, NetworkContainer},
     Docker,
 };
 use failure::{bail, format_err};
@@ -110,7 +110,7 @@ where
 {
     pub(crate) docker: &'a Docker,
     pub(crate) dfw: &'a DFW<B>,
-    pub(crate) container_map: Map<String, ContainerSummaryInner>,
+    pub(crate) container_map: Map<String, ContainerSummary>,
     pub(crate) network_map: Map<String, Network>,
     pub(crate) external_network_interfaces: Option<Vec<String>>,
     pub(crate) primary_external_network_interface: Option<String>,
@@ -224,7 +224,7 @@ pub(crate) fn get_bridge_name(network_id: &str) -> Result<String> {
 
 pub(crate) fn get_network_for_container(
     docker: &Docker,
-    container_map: &Map<String, ContainerSummaryInner>,
+    container_map: &Map<String, ContainerSummary>,
     container_name: &str,
     network_id: &str,
 ) -> Result<Option<NetworkContainer>> {
@@ -244,10 +244,8 @@ pub(crate) fn get_network_for_container(
     }
 }
 
-pub(crate) fn get_container_map(
-    containers: &[ContainerSummaryInner],
-) -> Map<String, ContainerSummaryInner> {
-    let mut container_map: Map<String, ContainerSummaryInner> = Map::new();
+pub(crate) fn get_container_map(containers: &[ContainerSummary]) -> Map<String, ContainerSummary> {
+    let mut container_map: Map<String, ContainerSummary> = Map::new();
     for container in containers {
         if let Some(names) = &container.names {
             for name in names {
