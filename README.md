@@ -164,6 +164,78 @@ The general configuration happens across six categories:
 
 **See the [examples][examples] and [configuration types][types.rs] for detailed descriptions and examples of every configuration section.**
 
+Additionally, you can configure general behavior of DFW using command-line arguments, which are described by executing `dfw --help`:
+
+```
+dfw
+Docker firewall framework, in Rust
+
+USAGE:
+    dfw [OPTIONS]
+
+OPTIONS:
+        --burst-timeout <TIMEOUT>
+            Time to wait after a event was received before processing the rules, in milliseconds
+
+            [default: 500]
+
+    -c, --config-file <FILE>
+            Set the configuration file
+
+        --check-config
+            Verify if the provided configuration is valid, exit afterwards.
+
+        --config-path <PATH>
+            Set a path with multiple TOML configuration files
+
+        --container-filter <FILTER>
+            Filter the containers to be included during processing
+
+            [default: running]
+
+    -d, --docker-url <URL>
+            Set the URL to the Docker instance (e.g. unix:///tmp/docker.sock)
+
+        --disable-event-monitoring
+            Disable event monitoring
+
+        --dry-run
+            Don't touch firewall-rules, just show what would be done. Note that this requires Docker
+            and the containers/networks referenced in the configuration to be available. If you want
+            to check the config for validity, specify --check-config instead.
+
+        --firewall-backend <BACKEND>
+            Select the firewall-backend to use
+
+            [default: nftables]
+            [possible values: nftables, iptables]
+
+    -h, --help
+            Print help information
+
+    -i, --load-interval <INTERVAL>
+            Interval between rule processing runs, in seconds (0 = disabled)
+
+            [default: 0]
+
+        --log-level <SEVERITY>
+            Define the log level
+
+            [default: info]
+
+    -m, --load-mode <MODE>
+            Define if the config-fields get loaded once, or before every run
+
+            [default: once]
+            [possible values: once, always]
+
+        --run-once
+            Process rules once, then exit.
+
+    -V, --version
+            Print version information
+```
+
 [docker-networks]: https://docs.docker.com/engine/userguide/networking/
 [examples]: https://github.com/pitkley/dfw/tree/main/examples
 [types.rs]: https://dfw.rs/1.2.1/dfw/types/index.html
