@@ -1,27 +1,18 @@
 # DFW - Docker Firewall Framework in Rust
 
-## Breaking changes coming from v0.x to v1.x
-
-Starting with version 1.0, DFW introduced the [nftables] backend and made it the default firewall-backend used.
-If you are upgrading DFW but don't want to switch to nftables, you can provide the `--firewall-backend iptables` parameter to DFW (this requires at least DFW v1.2).
-
-Please note that no matter if you transition to nftables or not, **v1.0 introduced breaking changes to the configuration**.
-Please consult the [migration documentation][migration-v0.x-to-v1.2] on how to update your configuration.
-
-[nftables]: https://netfilter.org/projects/nftables/
-
------
-
 1. [Overview](#overview)
     1. [Example](#overview-example)
 2. [Getting started](#gettingstarted)
 3. [Configuration](#configuration)
-4. [IPv6 support](#ipv6support)
+4. [Troubleshooting](#troubleshooting)
+5. [IPv6 support](#ipv6support)
     1. [Example: webserver reachable via IPv6](#ipv6support-example)
-5. [Supported architectures](#supportedarchitectures)
-6. [Supported Docker versions](#supporteddockerversions)
-7. [Version bump policy](#versionbumppolicy)
-8. [License](#license)
+6. [Breaking changes](#breakingchanges)
+    1. [Coming from v0.x to v1.x](#breakingchanges-v0tov1)
+7. [Supported architectures](#supportedarchitectures)
+8. [Supported Docker versions](#supporteddockerversions)
+9. [Version bump policy](#versionbumppolicy)
+10. [License](#license)
     1. [Contribution](#license-contribution)
 
 -----
@@ -131,35 +122,130 @@ The general configuration happens across six categories:
 
     This category defines global, default values to be used by DFW and the other categories.
 
+    [Field reference.](https://dfw.rs/1.2.1/dfw/types/struct.GlobalDefaults.html)
+
 * `backend_defaults`
 
     This category defines configuration values that are specific to the firewall-backend used.
+
+    [Field reference for `nftables`.](https://dfw.rs/1.2.1/dfw/nftables/types/struct.Defaults.html)
+
+    [Field reference for `iptables`.](https://dfw.rs/1.2.1/dfw/iptables/types/struct.Defaults.html)
 
 * `container_to_container`
 
     This controls the communication between containers and across [Docker networks][docker-networks].
 
+    [Field reference.](https://dfw.rs/1.2.1/dfw/types/struct.ContainerToContainer.html)
+
 * `container_to_wider_world`
 
     This controls if and how containers may access the wider world, i.e. what they can communicate across the `OUTPUT` chain on the host.
+
+    [Field reference.](https://dfw.rs/1.2.1/dfw/types/struct.ContainerToWiderWorld.html)
 
 * `container_to_host`
 
     To restrict or allow access to the host, this section is used.
 
+    [Field reference.](https://dfw.rs/1.2.1/dfw/types/struct.ContainerToHost.html)
+
 * `wider_world_to_container`
 
     This controls how the wider world, i.e. whatever comes in through the `INPUT` chain on the host, can communicate with a container or a Docker network.
+
+    [Field reference.](https://dfw.rs/1.2.1/dfw/types/struct.WiderWorldToContainer.html)
 
 * `container_dnat`
 
     This category allows you to define specific rules for destination network address translation, even or especially across Docker networks.
 
+    [Field reference.](https://dfw.rs/1.2.1/dfw/types/struct.ContainerDNAT.html)
+
 **See the [examples][examples] and [configuration types][types.rs] for detailed descriptions and examples of every configuration section.**
+
+Additionally, you can configure general behavior of DFW using command-line arguments, which are described by executing `dfw --help`:
+
+```
+dfw
+Docker firewall framework, in Rust
+
+USAGE:
+    dfw [OPTIONS]
+
+OPTIONS:
+        --burst-timeout <TIMEOUT>
+            Time to wait after a event was received before processing the rules, in milliseconds
+
+            [default: 500]
+
+    -c, --config-file <FILE>
+            Set the configuration file
+
+        --check-config
+            Verify if the provided configuration is valid, exit afterwards.
+
+        --config-path <PATH>
+            Set a path with multiple TOML configuration files
+
+        --container-filter <FILTER>
+            Filter the containers to be included during processing
+
+            [default: running]
+
+    -d, --docker-url <URL>
+            Set the URL to the Docker instance (e.g. unix:///tmp/docker.sock)
+
+        --disable-event-monitoring
+            Disable event monitoring
+
+        --dry-run
+            Don't touch firewall-rules, just show what would be done. Note that this requires Docker
+            and the containers/networks referenced in the configuration to be available. If you want
+            to check the config for validity, specify --check-config instead.
+
+        --firewall-backend <BACKEND>
+            Select the firewall-backend to use
+
+            [default: nftables]
+            [possible values: nftables, iptables]
+
+    -h, --help
+            Print help information
+
+    -i, --load-interval <INTERVAL>
+            Interval between rule processing runs, in seconds (0 = disabled)
+
+            [default: 0]
+
+        --log-level <SEVERITY>
+            Define the log level
+
+            [default: info]
+
+    -m, --load-mode <MODE>
+            Define if the config-fields get loaded once, or before every run
+
+            [default: once]
+            [possible values: once, always]
+
+        --run-once
+            Process rules once, then exit.
+
+    -V, --version
+            Print version information
+```
 
 [docker-networks]: https://docs.docker.com/engine/userguide/networking/
 [examples]: https://github.com/pitkley/dfw/tree/main/examples
-[types.rs]: https://dfw.rs/latest/dfw/types/index.html
+[types.rs]: https://dfw.rs/1.2.1/dfw/types/index.html
+
+## <a name="troubleshooting"></a> Troubleshooting
+
+If you are experiencing issues with DFW, you can consult the [troubleshooting documentation][docs-troubleshooting] for known potential obstacles.
+If you don't find your issue covered, feel free to [open a GitHub issue describing your problem](https://github.com/pitkley/dfw/issues/new).
+
+[docs-troubleshooting]: https://github.com/pitkley/dfw/blob/main/docs/TROUBLESHOOTING.md
 
 ## <a name="ipv6support"></a> IPv6 support
 
@@ -214,6 +300,18 @@ expose_port = [
 
 The result of this is that your container will be reachable from the host-ports 80 and 443, from both IPv4 and IPv6.
 
+## <a name="breakingchanges"></a>Breaking changes
+
+### <a name="breakingchanges-v0tov1"></a>Coming from v0.x to v1.x
+
+Starting with version 1.0, DFW introduced the [nftables] backend and made it the default firewall-backend used.
+If you are upgrading DFW but don't want to switch to nftables, you can provide the `--firewall-backend iptables` parameter to DFW (this requires at least DFW v1.2).
+
+Please note that no matter if you transition to nftables or not, **v1.0 introduced breaking changes to the configuration**.
+Please consult the [migration documentation][migration-v0.x-to-v1.2] on how to update your configuration.
+
+[nftables]: https://netfilter.org/projects/nftables/
+
 ## <a name="supportedarchitectures"></a> Supported architectures
 
 The Docker image for DFW is pre-built for the following architectures:
@@ -244,6 +342,8 @@ DFW is continuously and automatically tested with the following stable Docker ve
 * `17.07`
 * `17.06`
 * `1.13`
+
+Docker version 20.10 is also officially supported by DFW, although it is not yet automatically tested.
 
 ## <a name="versionbumppolicy"></a> Version bump policy
 

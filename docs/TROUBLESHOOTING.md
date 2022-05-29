@@ -2,14 +2,33 @@
 
 This document collects known problems that might occur when using DFW, and instructions on how to fix them.
 
-If you are experiencing issues with DFW that you don't find represented here, feel free to [open a GitHub issue describing your problem](https://github.com/pitkley/dfw/issues/new).
+If you are experiencing issues with DFW that you don't find represented here, feel free to [open a GitHub issue describing your problem](https://github.com/pitkley/dfw/issues/new), and please include the output from DFW you are seeing with the `--log-level debug` command-line argument set.
 
 ---
 
+* [Can't filter container-to-container traffic in same network](#cant-filter-container-to-container-traffic-in-same-network)
 * [modprobe error when running in Docker](#modprobe-error-when-running-in-docker)
 * [set up rule failed, `DOCKER_OUTPUT`/`DOCKER_POSTROUTING`](#set-up-rule-failed-docker_outputdocker_postrouting)
 
 ---
+
+## Can't filter container-to-container traffic in same network
+
+Depending on how your host is configured, traffic whose origin and destination interface are the same Docker network (i.e. the same *bridge*) is not filtered by the kernel netfilter module.
+This means that both the default policy and any rules specified in the `[container_to_container]` section  are not applied for traffic between containers that are on the same Docker network, but instead only for traffic that traverses two distinct Docker networks/bridges.
+
+If your kernel has the `br_netfilter` kernel-module available, you can set the `sysctl net.bridge.bridge-nf-call-iptables` to `1` to have the netfilter-module act on traffic within the same bridge, too. You can set this value temporarily like this:
+
+```
+sysctl net.bridge.bridge-nf-call-iptables=1
+```
+
+To permanently set this configuration, take a look at `man sysctl.d` and `man sysctl.conf`.
+
+See also:
+
+- [Issue #568](https://github.com/pitkley/dfw/issues/568)
+- [`ContainerToContainer::default_policy` reference](https://dfw.rs/1.2.1/dfw/types/struct.ContainerToContainer.html#filtering-traffic-within-the-same-bridge)
 
 ## modprobe error when running in Docker
 

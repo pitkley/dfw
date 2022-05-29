@@ -36,6 +36,23 @@ search = "dfw ([0-9]+\\.?)+"
 replace = "dfw {{version}}"
 prerelease = false
 
+# Replace `dfw.rs/X.Y.Z/`
+[[pre-release-replacements]]
+file = "README.md"
+search = "dfw\\.rs/([0-9]+\\.?)+/"
+replace = "dfw.rs/{{version}}/"
+prerelease = false
+[[pre-release-replacements]]
+file = "docs/GETTING-STARTED-nftables.md"
+search = "dfw\\.rs/([0-9]+\\.?)+/"
+replace = "dfw.rs/{{version}}/"
+prerelease = false
+[[pre-release-replacements]]
+file = "docs/GETTING-STARTED-iptables.md"
+search = "dfw\\.rs/([0-9]+\\.?)+/"
+replace = "dfw.rs/{{version}}/"
+prerelease = false
+
 # Handle new section in CHANGELOG.md
 # 1. Replace the fields in the unreleased header.
 [[pre-release-replacements]]
