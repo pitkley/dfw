@@ -4,14 +4,15 @@
     1. [Example](#overview-example)
 2. [Getting started](#gettingstarted)
 3. [Configuration](#configuration)
-4. [IPv6 support](#ipv6support)
+4. [Troubleshooting](#troubleshooting)
+5. [IPv6 support](#ipv6support)
     1. [Example: webserver reachable via IPv6](#ipv6support-example)
-5. [Breaking changes](#breakingchanges)
+6. [Breaking changes](#breakingchanges)
     1. [Coming from v0.x to v1.x](#breakingchanges-v0tov1)
-6. [Supported architectures](#supportedarchitectures)
-7. [Supported Docker versions](#supporteddockerversions)
-8. [Version bump policy](#versionbumppolicy)
-9. [License](#license)
+7. [Supported architectures](#supportedarchitectures)
+8. [Supported Docker versions](#supporteddockerversions)
+9. [Version bump policy](#versionbumppolicy)
+10. [License](#license)
     1. [Contribution](#license-contribution)
 
 -----
@@ -166,6 +167,13 @@ The general configuration happens across six categories:
 [docker-networks]: https://docs.docker.com/engine/userguide/networking/
 [examples]: https://github.com/pitkley/dfw/tree/main/examples
 [types.rs]: https://dfw.rs/1.2.1/dfw/types/index.html
+
+## <a name="troubleshooting"></a> Troubleshooting
+
+If you are experiencing issues with DFW, you can consult the [troubleshooting documentation][docs-troubleshooting] for known potential obstacles.
+If you don't find your issue covered, feel free to [open a GitHub issue describing your problem](https://github.com/pitkley/dfw/issues/new).
+
+[docs-troubleshooting]: https://github.com/pitkley/dfw/blob/main/docs/TROUBLESHOOTING.md
 
 ## <a name="ipv6support"></a> IPv6 support
 
