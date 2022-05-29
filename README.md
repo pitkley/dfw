@@ -1,27 +1,17 @@
 # DFW - Docker Firewall Framework in Rust
 
-## Breaking changes coming from v0.x to v1.x
-
-Starting with version 1.0, DFW introduced the [nftables] backend and made it the default firewall-backend used.
-If you are upgrading DFW but don't want to switch to nftables, you can provide the `--firewall-backend iptables` parameter to DFW (this requires at least DFW v1.2).
-
-Please note that no matter if you transition to nftables or not, **v1.0 introduced breaking changes to the configuration**.
-Please consult the [migration documentation][migration-v0.x-to-v1.2] on how to update your configuration.
-
-[nftables]: https://netfilter.org/projects/nftables/
-
------
-
 1. [Overview](#overview)
     1. [Example](#overview-example)
 2. [Getting started](#gettingstarted)
 3. [Configuration](#configuration)
 4. [IPv6 support](#ipv6support)
     1. [Example: webserver reachable via IPv6](#ipv6support-example)
-5. [Supported architectures](#supportedarchitectures)
-6. [Supported Docker versions](#supporteddockerversions)
-7. [Version bump policy](#versionbumppolicy)
-8. [License](#license)
+5. [Breaking changes](#breakingchanges)
+    1. [Coming from v0.x to v1.x](#breakingchanges-v0tov1)
+6. [Supported architectures](#supportedarchitectures)
+7. [Supported Docker versions](#supporteddockerversions)
+8. [Version bump policy](#versionbumppolicy)
+9. [License](#license)
     1. [Contribution](#license-contribution)
 
 -----
@@ -213,6 +203,18 @@ expose_port = [
 ```
 
 The result of this is that your container will be reachable from the host-ports 80 and 443, from both IPv4 and IPv6.
+
+## <a name="breakingchanges"></a>Breaking changes
+
+### <a name="breakingchanges-v0tov1"></a>Coming from v0.x to v1.x
+
+Starting with version 1.0, DFW introduced the [nftables] backend and made it the default firewall-backend used.
+If you are upgrading DFW but don't want to switch to nftables, you can provide the `--firewall-backend iptables` parameter to DFW (this requires at least DFW v1.2).
+
+Please note that no matter if you transition to nftables or not, **v1.0 introduced breaking changes to the configuration**.
+Please consult the [migration documentation][migration-v0.x-to-v1.2] on how to update your configuration.
+
+[nftables]: https://netfilter.org/projects/nftables/
 
 ## <a name="supportedarchitectures"></a> Supported architectures
 
