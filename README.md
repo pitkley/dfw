@@ -343,6 +343,8 @@ DFW is continuously and automatically tested with the following stable Docker ve
 * `17.06`
 * `1.13`
 
+Docker version 20.10 is also officially supported by DFW, although it is not yet automatically tested.
+
 ## <a name="versionbumppolicy"></a> Version bump policy
 
 In general, the versioning scheme for DFW follows the semantic versioning guidelines:
