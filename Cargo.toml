@@ -23,8 +23,8 @@ include = [
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-bollard = "^0.12"
-clap = { version = "^3.1", features = ["cargo", "derive"] }
+bollard = "^0.13"
+clap = { version = "^3.2", features = ["cargo", "derive"] }
 crossbeam-channel = "^0.5"
 derive_builder = "^0.11"
 failure= "^0.1"
@@ -40,7 +40,7 @@ sloggers = "^2.1"
 strum = { version = "^0.24", features = ["derive"] }
 tempfile = "^3.3"
 time = { version = "^0.3", features = ["formatting"] }
-tokio = "^1.19"
+tokio = "^1.20"
 toml = "^0.5"
 url = "^2.2"
 
