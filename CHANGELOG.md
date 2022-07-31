@@ -21,7 +21,7 @@
 
     This allows users to pull the image from Docker Hub or GHCR for any of the mentioned architectures (from the same tag).
 
-<sub>Internal changes: dependency updates, CI updates.</sub>
+<sub>Internal changes: dependency updates, CI updates, bump to Rust edition 2021.</sub>
 
 ## 1.2.1 (2020-12-13)
 

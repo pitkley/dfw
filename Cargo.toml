@@ -1,7 +1,7 @@
 [package]
 name = "dfw"
 version = "1.3.0-rc.1"
-edition = "2018"
+edition = "2021"
 authors = ["Pit Kleyersburg <pitkley@googlemail.com>"]
 license = "MIT/Apache-2.0"
 description = "Docker firewall framework, in Rust"
