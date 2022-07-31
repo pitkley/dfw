@@ -13,7 +13,7 @@
     [shiplift]: https://github.com/softprops/shiplift
     [bollard]: https://github.com/fussybeaver/bollard
 
-* Bump minimum supported Rust version to 1.54.0 (from 1.46.0).
+* Bump minimum supported Rust version to 1.57.0 (from 1.46.0).
 
   (Required after updating dependencies.)
 
@@ -21,7 +21,7 @@
 
     This allows users to pull the image from Docker Hub or GHCR for any of the mentioned architectures (from the same tag).
 
-<sub>Internal changes: dependency updates, CI updates.</sub>
+<sub>Internal changes: dependency updates, CI updates, bump to Rust edition 2021.</sub>
 
 ## 1.2.1 (2020-12-13)
 
