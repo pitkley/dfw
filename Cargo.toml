@@ -42,7 +42,7 @@ tempfile = "^3.3"
 time = { version = "^0.3", features = ["formatting"] }
 tokio = "^1.20"
 toml = "^0.5"
-url = "^2.2"
+url = "^2.3"
 
 [dev-dependencies]
 eval = "^0.4"
