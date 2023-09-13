@@ -330,6 +330,30 @@ impl Process<Nftables> for ContainerToContainer {
             rules.append(&mut ctc_rules);
         }
 
+        if let Some(same_network_verdict) = self.same_network_verdict {
+            for network in ctx.network_map.values() {
+                let network_id = network.id.as_ref().expect("Docker network ID missing");
+                let bridge_name = get_bridge_name(network_id)?;
+                trace!(ctx.logger, "Got bridge name";
+                       o!("network_name" => &network.name,
+                          "bridge_name" => &bridge_name));
+
+                let rule = RuleBuilder::default()
+                    .in_interface(&bridge_name)
+                    .out_interface(&bridge_name)
+                    .verdict(same_network_verdict)
+                    .build()?;
+
+                debug!(ctx.logger, "Add forward rule for same network verdict for bridge";
+                       o!("part" => "container_to_container",
+                          "bridge_name" => bridge_name,
+                          "same_network_verdict" => same_network_verdict,
+                          "rule" => &rule));
+
+                rules.push(add_rule(Family::Inet, "dfw", "forward", &rule));
+            }
+        }
+
         Ok(Some(rules))
     }
 }
