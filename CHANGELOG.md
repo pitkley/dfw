@@ -13,7 +13,7 @@
     [shiplift]: https://github.com/softprops/shiplift
     [bollard]: https://github.com/fussybeaver/bollard
 
-* Bump minimum supported Rust version to 1.60.0 (from 1.46.0).
+* Bump minimum supported Rust version to 1.67.0 (from 1.46.0).
 
   (Required after updating dependencies.)
 
