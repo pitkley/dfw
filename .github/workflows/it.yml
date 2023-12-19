@@ -57,6 +57,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+        - dind-image: docker:24.0-dind
+          runs-on: ubuntu-latest
         - dind-image: docker:23.0-dind
           runs-on: ubuntu-latest
         - dind-image: docker:20.10-dind
