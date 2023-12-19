@@ -31,6 +31,7 @@ jobs:
         profile: minimal
         toolchain: stable
         override: true
+        target: x86_64-unknown-linux-musl
     - name: Build the test-binary
       run: |
         cp $(
@@ -39,6 +40,7 @@ jobs:
             --test dfw \
             --no-run \
             --message-format=json \
+            --target x86_64-unknown-linux-musl \
           | jq -r 'select(.profile.test == true) | .executable'
         ) dfw-docker-test
     - name: Store the test-binary as an artifact
