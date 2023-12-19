@@ -333,6 +333,7 @@ At least Docker 1.13.0 is required.
 
 DFW is continuously and automatically tested with the following stable Docker versions (using the latest patch-version each):
 
+* `23.0`
 * `20.10`
 * `19.03`
 * `18.09`
