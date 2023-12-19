@@ -57,6 +57,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
+        - dind-image: docker:24.0-dind
+          runs-on: ubuntu-latest
+        - dind-image: docker:23.0-dind
+          runs-on: ubuntu-latest
+        - dind-image: docker:20.10-dind
+          runs-on: ubuntu-20.04
         - dind-image: docker:19.03-dind
           runs-on: ubuntu-20.04
         - dind-image: docker:18.09-dind
@@ -98,8 +104,11 @@ jobs:
           sleep 1
         done
 
-        env DOCKER_HOST="tcp://127.0.0.1:${{ job.services.dind.ports[2375] }}" \
-          docker info
+        timeout 1m bash -c '\
+          until env DOCKER_HOST="tcp://127.0.0.1:${{ job.services.dind.ports[2375] }}" docker info;\
+            do sleep 2;\
+          done\
+        '
       timeout-minutes: 1
     - name: Run the test-binary
       env:
