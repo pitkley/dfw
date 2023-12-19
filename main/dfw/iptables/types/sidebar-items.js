@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Defaults","The defaults/configuration for the iptables backend."],["Initialization","The initialization section allows you to add custom rules to any table in both iptables and ip6tables."]]};
+window.SIDEBAR_ITEMS = {"struct":["Defaults","Initialization"]};

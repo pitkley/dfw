@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["Family","Representation of nftables table-families."],["Hook","Representation of nftables chain hooks."],["Type","Representation of nftables chain-types."]],"mod":[["types","The types in this module make up the structure of the nftables backend-specific configurations."]],"struct":[["Nftables","Marker struct to implement nftables as a firewall backend."]]};
+window.SIDEBAR_ITEMS = {"enum":["Family","Hook","Type"],"mod":["types"],"struct":["Nftables"]};

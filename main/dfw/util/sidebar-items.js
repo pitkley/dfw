@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["load_file","Load single TOML-file from path and deserialize it into type `T`."],["load_path","Load all TOML-files from a path, concatenate their contents and deserialize the result into type `T`."]],"trait":[["FutureExt","An extension trait for `Future` allowing synchronized execution of the future."]]};
+window.SIDEBAR_ITEMS = {"fn":["load_file","load_path"],"trait":["FutureExt"]};

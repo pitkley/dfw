@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["DFWError",""]],"type":[["Result",""]]};
+window.SIDEBAR_ITEMS = {"enum":["DFWError"],"type":["Result"]};
