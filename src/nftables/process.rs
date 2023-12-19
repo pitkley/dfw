@@ -186,7 +186,7 @@ impl Process<Nftables> for <Nftables as FirewallBackend>::Defaults {
         if let Some(custom_tables) = custom_tables {
             // Retrieve current ruleset to avoid duplication of already existing rules.
             let current_ruleset = Command::new("nft")
-                .args(&["list", "ruleset"])
+                .args(["list", "ruleset"])
                 .output()
                 .map(|output| String::from_utf8_lossy(&output.stdout).into_owned())
                 .ok();

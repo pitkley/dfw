@@ -1042,5 +1042,5 @@ fn append_built_rule(
     rule_discriminant: IptablesRuleDiscriminants,
     rule: &BuiltRule,
 ) -> IptablesRule {
-    append_rule(rule_discriminant, &*rule.table, &*rule.chain, &*rule.rule)
+    append_rule(rule_discriminant, &rule.table, &rule.chain, &rule.rule)
 }

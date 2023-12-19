@@ -808,25 +808,20 @@ fn default_expose_port_family() -> String {
 ///
 /// Parts of the documentation have been taken from
 /// <https://wiki.nftables.org/wiki-nftables/index.php/Configuring_chains>.
-#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, Display, EnumString)]
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Display, EnumString)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "snake_case")]
 pub enum ChainPolicy {
     /// The accept verdict means that the packet will keep traversing the network stack.
     #[strum(to_string = "accept", serialize = "ACCEPT")]
     #[serde(alias = "ACCEPT")]
+    #[default]
     Accept,
     /// The drop verdict means that the packet is discarded if the packet reaches the end of the
     /// base chain.
     #[strum(to_string = "drop", serialize = "DROP")]
     #[serde(alias = "DROP")]
     Drop,
-}
-
-impl Default for ChainPolicy {
-    fn default() -> ChainPolicy {
-        ChainPolicy::Accept
-    }
 }
 
 impl slog::Value for ChainPolicy {
@@ -846,13 +841,14 @@ impl slog::Value for ChainPolicy {
 ///
 /// Parts of the documentation have been taken from
 /// <https://wiki.nftables.org/wiki-nftables/index.php/Configuring_chains>.
-#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, Display, EnumString)]
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Display, EnumString)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "snake_case")]
 pub enum RuleVerdict {
     /// The accept verdict means that the packet will keep traversing the network stack.
     #[serde(alias = "ACCEPT")]
     #[strum(to_string = "accept", serialize = "ACCEPT")]
+    #[default]
     Accept,
     /// The drop verdict means that the packet is discarded if the packet reaches the end of the
     /// base chain.
@@ -864,12 +860,6 @@ pub enum RuleVerdict {
     #[serde(alias = "REJECT")]
     #[strum(to_string = "reject", serialize = "REJECT")]
     Reject,
-}
-
-impl Default for RuleVerdict {
-    fn default() -> RuleVerdict {
-        RuleVerdict::Accept
-    }
 }
 
 impl slog::Value for RuleVerdict {
