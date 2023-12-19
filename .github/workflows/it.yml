@@ -31,6 +31,7 @@ jobs:
         profile: minimal
         toolchain: stable
         override: true
+        target: x86_64-unknown-linux-musl
     - name: Build the test-binary
       run: |
         cp $(
@@ -39,6 +40,7 @@ jobs:
             --test dfw \
             --no-run \
             --message-format=json \
+            --target x86_64-unknown-linux-musl \
           | jq -r 'select(.profile.test == true) | .executable'
         ) dfw-docker-test
     - name: Store the test-binary as an artifact
@@ -50,20 +52,29 @@ jobs:
   test-on-docker:
     needs:
     - build-test-binary
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
       matrix:
-        dind-image:
-        - docker:19.03-dind
-        - docker:18.09-dind
-        - docker:18.06-dind
-        - docker:18.03-dind
-        - docker:17.12-dind
-        - docker:17.09-dind
-        - docker:17.07-dind
-        - docker:17.06-dind
-        - docker:1.13-dind
+        include:
+        - dind-image: docker:19.03-dind
+          runs-on: ubuntu-20.04
+        - dind-image: docker:18.09-dind
+          runs-on: ubuntu-20.04
+        - dind-image: docker:18.06-dind
+          runs-on: ubuntu-20.04
+        - dind-image: docker:18.03-dind
+          runs-on: ubuntu-20.04
+        - dind-image: docker:17.12-dind
+          runs-on: ubuntu-20.04
+        - dind-image: docker:17.09-dind
+          runs-on: ubuntu-20.04
+        - dind-image: docker:17.07-dind
+          runs-on: ubuntu-20.04
+        - dind-image: docker:17.06-dind
+          runs-on: ubuntu-20.04
+        - dind-image: docker:1.13-dind
+          runs-on: ubuntu-20.04
 
     services:
       dind:
