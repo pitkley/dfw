@@ -139,7 +139,7 @@ impl Iptables {
                 } => {
                     rule_map
                         .entry(table.to_owned())
-                        .or_insert_with(BTreeMap::new)
+                        .or_default()
                         .entry(chain.to_owned())
                         .or_insert_with(|| (None, Vec::new()))
                         .0 = Some(policy.to_owned());
@@ -151,7 +151,7 @@ impl Iptables {
                 } => {
                     rule_map
                         .entry(table.to_owned())
-                        .or_insert_with(BTreeMap::new)
+                        .or_default()
                         .entry(chain.to_owned())
                         .or_insert_with(|| (None, Vec::new()))
                         .1
