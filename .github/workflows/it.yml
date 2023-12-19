@@ -100,8 +100,11 @@ jobs:
           sleep 1
         done
 
-        env DOCKER_HOST="tcp://127.0.0.1:${{ job.services.dind.ports[2375] }}" \
-          docker info
+        timeout 1m bash -c '\
+          until env DOCKER_HOST="tcp://127.0.0.1:${{ job.services.dind.ports[2375] }}" docker info;\
+            do sleep 2;\
+          done\
+        '
       timeout-minutes: 1
     - name: Run the test-binary
       env:
