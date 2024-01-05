@@ -38,7 +38,7 @@ signal-hook = "^0.3"
 slog = { version = "^2", features = ["max_level_trace"] }
 sloggers = "^2.1"
 strum = { version = "^0.25", features = ["derive"] }
-tempfile = "^3.8"
+tempfile = "^3.9"
 time = { version = "^0.3", features = ["formatting"] }
 tokio = "^1.35"
 toml = "^0.8"
