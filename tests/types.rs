@@ -596,7 +596,7 @@ fn ensure_backwards_compatibility_v1() {
             source_cidr_v4,
             source_cidr_v6,
             ..
-        } = rules.get(0).unwrap();
+        } = rules.first().unwrap();
         assert!(source_cidr_v4.is_some());
         assert!(source_cidr_v6.is_none());
     }

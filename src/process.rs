@@ -164,7 +164,7 @@ where
             .cloned();
         let primary_external_network_interface = external_network_interfaces
             .as_ref()
-            .and_then(|v| v.get(0))
+            .and_then(|v| v.first())
             .map(|s| s.to_owned());
 
         Ok(ProcessContext {
