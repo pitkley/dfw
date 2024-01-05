@@ -339,14 +339,8 @@ DFW is continuously and automatically tested with the following stable Docker ve
 * `19.03`
 * `18.09`
 * `18.06`
-* `18.03`
-* `17.12`
-* `17.09`
-* `17.07`
-* `17.06`
-* `1.13`
 
-Docker version 20.10 is also officially supported by DFW, although it is not yet automatically tested.
+Docker versions between 18.03 and 1.13 should also work, but are not automatically tested anymore due to lacking Docker BuildKit support.
 
 ## <a name="versionbumppolicy"></a> Version bump policy
 

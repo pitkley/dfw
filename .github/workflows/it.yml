@@ -69,18 +69,6 @@ jobs:
           runs-on: ubuntu-20.04
         - dind-image: docker:18.06-dind
           runs-on: ubuntu-20.04
-        - dind-image: docker:18.03-dind
-          runs-on: ubuntu-20.04
-        - dind-image: docker:17.12-dind
-          runs-on: ubuntu-20.04
-        - dind-image: docker:17.09-dind
-          runs-on: ubuntu-20.04
-        - dind-image: docker:17.07-dind
-          runs-on: ubuntu-20.04
-        - dind-image: docker:17.06-dind
-          runs-on: ubuntu-20.04
-        - dind-image: docker:1.13-dind
-          runs-on: ubuntu-20.04
 
     services:
       dind:
