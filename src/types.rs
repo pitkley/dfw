@@ -192,6 +192,69 @@ pub struct ContainerToContainer {
     ///
     /// To permanently set this configuration, take a look at `man sysctl.d` and `man sysctl.conf`.
     pub default_policy: ChainPolicy,
+    /// Configure whether traffic between containers within the same network should be allowed or
+    /// not.
+    ///
+    /// This option is more specific than [`default_policy`], applying to traffic between containers
+    /// on the same network, rather than also applying across networks. This option has precedence
+    /// over the [`default_policy`] for traffic on the same network.
+    ///
+    /// ## Example
+    ///
+    /// Setting the `same_network_verdict` to `accept` will allow all traffic between containers on
+    /// the same network to pass, regardless of the [`default_policy`] configured:
+    ///
+    /// ```
+    /// # use dfw::nftables::Nftables;
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<DFW<Nftables>>(r#"
+    /// [container_to_container]
+    /// default_policy = "drop"
+    /// same_network_verdict = "accept"
+    /// # "#).unwrap();
+    /// ```
+    ///
+    /// If you want to allow traffic between containers on the same networks in general, but want to
+    /// restrict traffic on some networks, you can additionally add [container-to-container rules]
+    /// to disallow traffic between containers for the desired networks:
+    ///
+    /// ```
+    /// # use dfw::nftables::Nftables;
+    /// # use dfw::types::*;
+    /// # use toml;
+    /// # toml::from_str::<DFW<Nftables>>(r#"
+    /// [container_to_container]
+    /// default_policy = "drop"
+    /// same_network_verdict = "accept"
+    ///
+    /// [[container_to_container.rules]]
+    /// network = "restricted_network"
+    /// verdict = "reject"
+    /// # "#).unwrap();
+    /// ```
+    ///
+    /// [container-to-container rules]: struct.ContainerToContainerRule.html
+    ///
+    /// ## Host configuration
+    ///
+    /// Depending on how your host is configured, traffic whose origin and destination interface are
+    /// the same bridge (network) is _not_ filtered by the kernel netfilter module.
+    ///
+    /// This means that this verdict is only honored if your kernel has the `br_netfilter`
+    /// kernel-module available and the sysctl `net.bridge.bridge-nf-call-iptables` is set to `1`.
+    /// Otherwise traffic between containers on the same network will always be allowed.
+    ///
+    /// You can set the sysctl-value temporarily like this:
+    ///
+    /// ```text
+    /// sysctl net.bridge.bridge-nf-call-iptables=1
+    /// ```
+    ///
+    /// To permanently set this configuration, take a look at `man sysctl.d` and `man sysctl.conf`.
+    ///
+    /// [`default_policy`]: #structfield.default_policy
+    pub same_network_verdict: Option<RuleVerdict>,
     /// An optional list of rules, see
     /// [`ContainerToContainerRule`](struct.ContainerToContainerRule.html).
     ///

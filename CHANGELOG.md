@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+* Add [`same_network_verdict` option](https://dfw.rs/latest/dfw/types/struct.ContainerToContainer.html#structfield.same_network_verdict) to container-to-container configuration, enabling users to specify whether traffic between containers within the same network should be allowed or not.
 * Replace library used to communicate with Docker (which also fixes [#411]).
 
     This release replaces the previously used library [shiplift] by [bollard].

@@ -58,6 +58,7 @@ fn parse_conf_file() {
     };
     let container_to_container = ContainerToContainer {
         default_policy: ChainPolicy::Drop,
+        same_network_verdict: None,
         rules: Some(vec![ContainerToContainerRule {
             network: "network".to_owned(),
             src_container: Some("src_container".to_owned()),
@@ -161,6 +162,7 @@ fn parse_conf_path() {
     };
     let container_to_container = ContainerToContainer {
         default_policy: ChainPolicy::Drop,
+        same_network_verdict: None,
         rules: Some(vec![ContainerToContainerRule {
             network: "network".to_owned(),
             src_container: Some("src_container".to_owned()),
@@ -594,7 +596,7 @@ fn ensure_backwards_compatibility_v1() {
             source_cidr_v4,
             source_cidr_v6,
             ..
-        } = rules.get(0).unwrap();
+        } = rules.first().unwrap();
         assert!(source_cidr_v4.is_some());
         assert!(source_cidr_v6.is_none());
     }

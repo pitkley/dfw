@@ -1,0 +1,7 @@
+[container_to_container]
+default_policy = "drop"
+same_network_verdict = "accept"
+
+[[container_to_container.rules]]
+network = "PROJECT_default"
+verdict = "reject"
