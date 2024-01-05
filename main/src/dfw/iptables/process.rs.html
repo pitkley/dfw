@@ -1044,6 +1044,30 @@
 <a href="#1044" id="1044">1044</a>
 <a href="#1045" id="1045">1045</a>
 <a href="#1046" id="1046">1046</a>
+<a href="#1047" id="1047">1047</a>
+<a href="#1048" id="1048">1048</a>
+<a href="#1049" id="1049">1049</a>
+<a href="#1050" id="1050">1050</a>
+<a href="#1051" id="1051">1051</a>
+<a href="#1052" id="1052">1052</a>
+<a href="#1053" id="1053">1053</a>
+<a href="#1054" id="1054">1054</a>
+<a href="#1055" id="1055">1055</a>
+<a href="#1056" id="1056">1056</a>
+<a href="#1057" id="1057">1057</a>
+<a href="#1058" id="1058">1058</a>
+<a href="#1059" id="1059">1059</a>
+<a href="#1060" id="1060">1060</a>
+<a href="#1061" id="1061">1061</a>
+<a href="#1062" id="1062">1062</a>
+<a href="#1063" id="1063">1063</a>
+<a href="#1064" id="1064">1064</a>
+<a href="#1065" id="1065">1065</a>
+<a href="#1066" id="1066">1066</a>
+<a href="#1067" id="1067">1067</a>
+<a href="#1068" id="1068">1068</a>
+<a href="#1069" id="1069">1069</a>
+<a href="#1070" id="1070">1070</a>
 </pre></div><pre class="rust"><code><span class="comment">// Copyright Pit Kleyersburg &lt;pitkley@googlemail.com&gt;
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //
@@ -1296,6 +1320,30 @@
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>ctc_rules) = <span class="self">self</span>.rules.process(ctx)<span class="question-mark">? </span>{
             rules.append(<span class="kw-2">&amp;mut </span>ctc_rules);
+        }
+
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(same_network_verdict) = <span class="self">self</span>.same_network_verdict {
+            <span class="kw">for </span>network <span class="kw">in </span>ctx.network_map.values() {
+                <span class="kw">let </span>network_id = network.id.as_ref().expect(<span class="string">&quot;Docker network ID missing&quot;</span>);
+                <span class="kw">let </span>bridge_name = get_bridge_name(network_id)<span class="question-mark">?</span>;
+                <span class="macro">trace!</span>(ctx.logger, <span class="string">&quot;Got bridge name&quot;</span>;
+                       <span class="macro">o!</span>(<span class="string">&quot;network_name&quot; </span>=&gt; <span class="kw-2">&amp;</span>network.name,
+                          <span class="string">&quot;bridge_name&quot; </span>=&gt; <span class="kw-2">&amp;</span>bridge_name));
+
+                <span class="kw">let </span>ipt_rule = Rule::new(<span class="string">&quot;filter&quot;</span>, DFW_FORWARD_CHAIN)
+                    .in_interface(<span class="kw-2">&amp;</span>bridge_name)
+                    .out_interface(<span class="kw-2">&amp;</span>bridge_name)
+                    .jump(<span class="kw-2">&amp;</span>same_network_verdict.to_string().to_uppercase())
+                    .build()<span class="question-mark">?</span>;
+
+                <span class="macro">debug!</span>(ctx.logger, <span class="string">&quot;Add forward rule for same network verdict for bridge&quot;</span>;
+                       <span class="macro">o!</span>(<span class="string">&quot;part&quot; </span>=&gt; <span class="string">&quot;container_to_container&quot;</span>,
+                          <span class="string">&quot;bridge_name&quot; </span>=&gt; bridge_name,
+                          <span class="string">&quot;same_network_verdict&quot; </span>=&gt; same_network_verdict,
+                          <span class="string">&quot;rule&quot; </span>=&gt; <span class="kw-2">&amp;</span>ipt_rule));
+
+                rules.push(append_built_rule(IptablesRuleDiscriminants::V4, <span class="kw-2">&amp;</span>ipt_rule));
+            }
         }
 
         <span class="comment">// Enforce default policy for container-to-container communication.
