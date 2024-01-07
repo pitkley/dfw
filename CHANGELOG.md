@@ -14,15 +14,13 @@
     [shiplift]: https://github.com/softprops/shiplift
     [bollard]: https://github.com/fussybeaver/bollard
 
-* Bump minimum supported Rust version to 1.67.0 (from 1.46.0).
-
-  (Required after updating dependencies.)
-
 * Build Docker images for multiple architectures: `amd64`, `arm64`, `arm/v7`.
 
-    This allows users to pull the image from Docker Hub or GHCR for any of the mentioned architectures (from the same tag).
+    This is especially helpful for Raspberry Pi users, as they can now use the official Docker image instead of having to build the binary themselves.
 
-<sub>Internal changes: dependency updates, CI updates, bump to Rust edition 2021.</sub>
+    You can pull the image from Docker Hub (`pitkley/dfw:1.3.0`) or the GitHub Container Registry (`ghcr.io/pitkley/dfw:1.3.0`) for any of the mentioned architectures.
+
+<sub>Internal changes: dependency updates, CI updates, bump minimum supported Rust version to 1.67.0 (from 1.46.0), bump to Rust edition 2021.</sub>
 
 ## 1.2.1 (2020-12-13)
 
