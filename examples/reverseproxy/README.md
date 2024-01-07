@@ -93,7 +93,7 @@ docker run --rm \
     -v /var/run/docker.sock:/var/run/docker.sock:ro \
     -v dfw.toml:/config/dfw.toml \
     --net host --cap-add=NET_ADMIN \
-    pitkley/dfw:1.2.1 --config-file /config/dfw.toml
+    pitkley/dfw:1.3.0 --config-file /config/dfw.toml
 ```
 
 (*Please note:* DFW will use the nftables firewall backend by default. If you want to use iptables, provide the `--firewall-backend iptables` command-line argument.)
