@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["IptablesRule","IptablesRuleDiscriminants","PolicyOrRule"],"mod":["types"],"struct":["Iptables"]};
