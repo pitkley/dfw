@@ -172,7 +172,7 @@ $ docker run -d \
       pitkley/dfw:1.2.1 --config-path /config
 ```
 
-This will download a lightweight image, coming in at under 10 MB, and subsequently run it using your configuration.
+This will download a lightweight image, coming in at around 20 MB, and subsequently run it using your configuration.
 The image supports multiple architectures: `amd64`, `arm64`, `armv7` (specifically `armhf`).
 
 Please note that you can also pull the image from the GitHub container registry, GHCR, if you want to avoid potential pull-limitations Docker Hub has put in place:
