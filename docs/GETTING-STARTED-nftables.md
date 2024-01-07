@@ -74,6 +74,12 @@
     table inet filter {
         chain input {
             type filter hook input priority 0; policy drop;
+  
+            # Ensure local traffic is accepted still
+            iif lo accept
+            # Allow established connections (e.g. responses to outgoing traffic)
+            ct state { established, related } accept
+            # Allow incoming SSH connections
             tcp dport 22 accept
         }
         chain forward {
