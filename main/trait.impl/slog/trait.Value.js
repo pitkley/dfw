@@ -1,3 +1,3 @@
 (function() {var implementors = {
-"dfw":[["impl Value for <a class=\"enum\" href=\"dfw/types/enum.RuleVerdict.html\" title=\"enum dfw::types::RuleVerdict\">RuleVerdict</a>"],["impl Value for <a class=\"enum\" href=\"dfw/types/enum.ChainPolicy.html\" title=\"enum dfw::types::ChainPolicy\">ChainPolicy</a>"]]
+"dfw":[["impl Value for <a class=\"enum\" href=\"dfw/types/enum.ChainPolicy.html\" title=\"enum dfw::types::ChainPolicy\">ChainPolicy</a>"],["impl Value for <a class=\"enum\" href=\"dfw/types/enum.RuleVerdict.html\" title=\"enum dfw::types::RuleVerdict\">RuleVerdict</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
