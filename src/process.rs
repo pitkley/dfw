@@ -155,7 +155,7 @@ where
         let network_map =
             get_network_map(&networks).ok_or_else(|| format_err!("no networks found"))?;
         trace!(logger, "Got map of networks";
-               o!("container_map" => format!("{:#?}", container_map)));
+               o!("network_map" => format!("{:#?}", network_map)));
 
         let external_network_interfaces = dfw
             .global_defaults
@@ -215,11 +215,17 @@ impl Default for ProcessingOptions {
     }
 }
 
-pub(crate) fn get_bridge_name(network_id: &str) -> Result<String> {
-    if network_id.len() < 12 {
-        bail!("network has to be longer than 12 characters");
-    }
-    Ok(format!("br-{}", &network_id[..12]))
+pub(crate) fn get_bridge_name(network: &Network) -> Result<String> {
+    return network.options.as_ref()
+        .and_then(|options| options.get("com.docker.network.bridge.name"))
+        .map(|value| Ok(value.to_owned()))
+        .unwrap_or_else(|| {
+            let network_id = network.id.as_ref().expect("Docker network ID missing");
+            if network_id.len() < 12 {
+                bail!("network has to be longer than 12 characters");
+            }
+            return Ok(format!("br-{}", &network_id[..12]));
+        });
 }
 
 pub(crate) fn get_network_for_container(
