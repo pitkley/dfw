@@ -155,7 +155,7 @@ where
         let network_map =
             get_network_map(&networks).ok_or_else(|| format_err!("no networks found"))?;
         trace!(logger, "Got map of networks";
-               o!("container_map" => format!("{:#?}", container_map)));
+               o!("network_map" => format!("{:#?}", network_map)));
 
         let external_network_interfaces = dfw
             .global_defaults
