@@ -12,13 +12,13 @@ on:
 
 jobs:
   build-test-binary:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Retrieve cache
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/registry
@@ -26,12 +26,10 @@ jobs:
           target
         key: ${{ runner.os }}-cargo-it-${{ hashFiles('**/Cargo.lock') }}
     - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        override: true
-        target: x86_64-unknown-linux-musl
+      run: |
+        rustup toolchain install stable --profile minimal --no-self-update
+        rustup default stable
+        rustup target add x86_64-unknown-linux-musl
     - name: Build the test-binary
       run: |
         cp $(
@@ -44,7 +42,7 @@ jobs:
           | jq -r 'select(.profile.test == true) | .executable'
         ) dfw-docker-test
     - name: Store the test-binary as an artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: dfw-docker-test
         path: dfw-docker-test
@@ -58,9 +56,9 @@ jobs:
       matrix:
         include:
         - dind-image: docker:24.0-dind
-          runs-on: ubuntu-latest
+          runs-on: ubuntu-24.04
         - dind-image: docker:23.0-dind
-          runs-on: ubuntu-latest
+          runs-on: ubuntu-24.04
         - dind-image: docker:20.10-dind
           runs-on: ubuntu-20.04
         - dind-image: docker:19.03-dind
@@ -81,9 +79,9 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Retrieve the test-binary
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
         name: dfw-docker-test
     - name: Ensure Docker is available

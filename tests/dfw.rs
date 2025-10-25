@@ -107,32 +107,34 @@ where
     F: UnwindSafe,
 {
     // Create and start environment
-    let mut child = Command::new("docker-compose")
+    let mut child = Command::new("docker")
+        .args(&["compose"])
         .args(&["--project-name", project_name])
         .args(&["--file", compose_path])
         .args(&["up", "-d"])
         .spawn()
-        .expect("failed to setup Docker environment using docker-compose");
+        .expect("failed to setup Docker environment using docker compose");
 
-    let up_exit_code = child.wait().expect("failed to wait on docker-compose");
+    let up_exit_code = child.wait().expect("failed to wait on docker compose");
 
     if !up_exit_code.success() {
-        panic!("docker-compose did not exit successfully");
+        panic!("docker compose did not exit successfully");
     }
 
     // Run the body, catching any potential panics
     let panic_result = panic::catch_unwind(body);
 
     // Cleanup started environment
-    let mut child = Command::new("docker-compose")
+    let mut child = Command::new("docker")
+        .args(&["compose"])
         .args(&["--project-name", project_name])
         .args(&["--file", compose_path])
         .args(&["down", "--volumes"])
         .args(&["--rmi", "local"])
         .spawn()
-        .expect("failed to stop Docker environment using docker-compose");
+        .expect("failed to stop Docker environment using docker compose");
 
-    child.wait().expect("failed to wait on docker-compose");
+    child.wait().expect("failed to wait on docker compose");
 
     // Resume unwinding potential panics
     if let Err(err) = panic_result {
