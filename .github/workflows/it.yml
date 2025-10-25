@@ -56,9 +56,9 @@ jobs:
       matrix:
         include:
         - dind-image: docker:24.0-dind
-          runs-on: ubuntu-latest
+          runs-on: ubuntu-24.04
         - dind-image: docker:23.0-dind
-          runs-on: ubuntu-latest
+          runs-on: ubuntu-24.04
         - dind-image: docker:20.10-dind
           runs-on: ubuntu-20.04
         - dind-image: docker:19.03-dind
