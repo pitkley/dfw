@@ -16,4 +16,8 @@ fn main() {
         r#"cargo:rustc-cfg=crate_major_version="{}""#,
         crate_version.part(0).unwrap()
     );
+    println!(
+        r#"cargo::rustc-check-cfg=cfg(crate_major_version, values("{}"))"#,
+        crate_version.part(0).unwrap()
+    );
 }
