@@ -86,7 +86,7 @@ expose_port = 80
 # reachable anymore.
 ```
 
-With this configuration saved under e.g. `example.toml`, you can now start DFW and have it set up your firewall:
+With this configuration saved under e.g. `dfw.toml`, you can now start DFW and have it set up your firewall:
 
 ```shell
 docker run --rm \
