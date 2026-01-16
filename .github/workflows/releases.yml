@@ -7,75 +7,114 @@ on:
     - '[0-9]+.[0-9]+.[0-9]+-*'
 
 jobs:
-  build-and-publish:
-    runs-on: ubuntu-latest
+  build-binaries:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+        - target: x86_64-unknown-linux-musl
+          runner: ubuntu-24.04
+        - target: aarch64-unknown-linux-musl
+          runner: ubuntu-24.04-arm
+        - target: armv7-unknown-linux-musleabihf
+          runner: ubuntu-24.04-arm
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
+
     - name: Retrieve cache
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/registry
           ~/.cargo/git
           target
-        key: ${{ runner.os }}-cargo-ci-${{ hashFiles('**/Cargo.lock') }}
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        override: true
+        key: ${{ runner.os }}-${{ runner.arch }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}-${{ matrix.target }}
 
-    - name: cargo build --release
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: --release
-      env:
-        TARGET: x86_64-unknown-linux-musl
+    - name: Install Rust toolchain
+      run: |
+        rustup toolchain install stable --profile minimal --no-self-update
+        rustup default stable
+        rustup target add ${{ matrix.target }}
+
+    - name: Build release binary
+      run: cargo build --release --target ${{ matrix.target }}
+
     - name: Create checksum
       run: |
-        sha256sum target/release/dfw > target/release/dfw.sha256
+        cd target/${{ matrix.target }}/release
+        sha256sum dfw > dfw.sha256
+
+    - name: Upload binary artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: binary-${{ matrix.target }}
+        path: |
+          target/${{ matrix.target }}/release/dfw
+          target/${{ matrix.target }}/release/dfw.sha256
+        if-no-files-found: error
+        retention-days: 1
+
+  create-release:
+    runs-on: ubuntu-24.04
+    needs: build-binaries
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Download all binary artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: binaries
+        pattern: binary-*
+        merge-multiple: false
 
     - name: Identify if tag is a prerelease
       id: tag
       run: |
         if [[ "${{ github.ref }}" =~ ^refs/tags/(.+)$ ]]; then
-          echo "::set-output name=value::${BASH_REMATCH[1]}"
+          echo "value=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
         else
           echo "::error ::Expected a tag"
           exit 1
         fi
 
         if [[ "${{ github.ref }}" =~ ^refs/tags/[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "::set-output name=is-prerelease::false"
+          echo "is-prerelease=false" >> $GITHUB_OUTPUT
         else
-          echo "::set-output name=is-prerelease::true"
+          echo "is-prerelease=true" >> $GITHUB_OUTPUT
         fi
+
     - name: Extract current changelog
       id: changelog
-      run:
-        |
+      run: |
         changelog="$(hack/extract-current-changelog.py CHANGELOG.md)"
         # https://github.community/t/set-output-truncates-multiline-strings/16852/3
         changelog="${changelog//'%'/'%25'}"
         changelog="${changelog//$'\n'/'%0A'}"
         changelog="${changelog//$'\r'/'%0D'}"
+        echo "value=$changelog" >> $GITHUB_OUTPUT
 
-        echo "::set-output name=value::$changelog"
+    - name: Prepare release binaries
+      run: |
+        mkdir -p release-assets
+        for target_dir in binaries/binary-*; do
+          target=$(basename "$target_dir" | sed 's/binary-//')
+          cp "$target_dir/dfw" "release-assets/dfw-$target"
+          cp "$target_dir/dfw.sha256" "release-assets/dfw-$target.sha256"
+        done
+        ls -lah release-assets/
 
-    - name: Prepare release
-      id: prepare-release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Create GitHub release
+      uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ github.ref }}
-        release_name: v${{ github.ref }}
         draft: true
         prerelease: ${{ steps.tag.outputs.is-prerelease }}
+        files: release-assets/*
         body: |
           # Summary
 
@@ -87,37 +126,26 @@ jobs:
 
           ## Installation
 
-          While you can use Cargo to install `dfw` as a binary, using the Docker image is the preferred way to go, especially if you don't want to install Rust and Cargo on your host:
+          ### Docker Image (recommended)
 
           ```console
-          $ docker pull pitkley/dfw:${{ steps.tag.outputs.value }}
+          $ docker pull ghcr.io/pitkley/dfw:${{ steps.tag.outputs.value }}
           $ docker run -d \
                 --name=dfw \
                 --restart=unless-stopped \
                 -v /var/run/docker.sock:/var/run/docker.sock:ro \
                 -v /path/to/your/config:/config \
                 --net host --cap-add=NET_ADMIN \
-                pitkley/dfw:${{ steps.tag.outputs.value }} --config-path /config
+                ghcr.io/pitkley/dfw:${{ steps.tag.outputs.value }} --config-path /config
           ```
 
-          This will download a lightweight image, coming in at around 20 MB, and subsequently run it using your configuration.
+          This will download a lightweight image and subsequently run it using your configuration.
           The image supports multiple architectures: `amd64`, `arm64`, `armv7` (specifically `armhf`).
 
-    - name: Upload static DFW binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.prepare-release.outputs.upload_url }}
-        asset_path: target/release/dfw
-        asset_name: dfw-x86_64-unknown-linux-musl
-        asset_content_type: application/octet-stream
-    - name: Upload static DFW binary checksum
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.prepare-release.outputs.upload_url }}
-        asset_path: target/release/dfw.sha256
-        asset_name: dfw-x86_64-unknown-linux-musl.sha256
-        asset_content_type: application/octet-stream
+          ### Pre-built binaries
+
+          Pre-built static binaries are available below for the following platforms:
+
+          * `dfw-x86_64-unknown-linux-musl` - Linux x86_64 (amd64)
+          * `dfw-aarch64-unknown-linux-musl` - Linux ARM64 (aarch64)
+          * `dfw-armv7-unknown-linux-musleabihf` - Linux ARMv7 (armhf, for 32-bit Raspberry Pi OS)

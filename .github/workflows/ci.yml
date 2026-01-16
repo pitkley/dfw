@@ -12,66 +12,56 @@ on:
 
 jobs:
   check-license-headers:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Check license headers
       run: |
         ./hack/check-license-headers.sh
 
   rustfmt:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        override: true
-        components: rustfmt
+      run: |
+        rustup toolchain install stable --profile minimal --no-self-update --component rustfmt
+        rustup default stable
 
     - name: cargo fmt
-      uses: actions-rs/cargo@v1
-      with:
-        command: fmt
-        args: --all -- --check
+      run: cargo fmt --all -- --check
 
   clippy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        override: true
-        components: clippy
+      run: |
+        rustup toolchain install stable --profile minimal --no-self-update --component clippy
+        rustup default stable
 
     - name: cargo clippy
-      uses: actions-rs/clippy-check@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: --workspace --lib --bins --tests --all-targets -- -Dwarnings
+      run: cargo clippy --workspace --lib --bins --tests --all-targets -- -Dwarnings
 
   yamllint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: yamllint
-      uses: ibiqlik/action-yamllint@v1.0.0
+      run: |
+        pip install yamllint
+        yamllint .
 
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     continue-on-error: ${{ matrix.continue-on-error }}
 
     strategy:
@@ -97,9 +87,9 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Retrieve cache
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/registry
@@ -107,22 +97,18 @@ jobs:
           target
         key: ${{ runner.os }}-cargo-ci-${{ hashFiles('**/Cargo.lock') }}
     - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: ${{ matrix.rust }}
-        override: true
+      run: |
+        rustup toolchain install ${{ matrix.rust }} --profile minimal --no-self-update
+        rustup default ${{ matrix.rust }}
+        if [ -n "${{ matrix.target }}" ]; then
+          rustup target add ${{ matrix.target }}
+        fi
 
     - name: cargo build
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
+      run: cargo build
       env:
         TARGET: ${{ matrix.target }}
     - name: cargo test
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: -- --nocapture
+      run: cargo test -- --nocapture
       env:
         TARGET: ${{ matrix.target }}

@@ -9,15 +9,15 @@ on:
 
 jobs:
   docs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       max-parallel: 1
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Retrieve cache
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/registry
@@ -25,14 +25,14 @@ jobs:
           target
         key: ${{ runner.os }}-cargo-doc-${{ hashFiles('**/Cargo.lock') }}
     - name: Checkout existing gh-pages branch
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         ref: gh-pages
         path: gh-pages
 
     - name: Get latest tag
       id: tag
-      uses: jimschubert/query-tag-action@v1
+      uses: jimschubert/query-tag-action@v2
       with:
         commit-ish: HEAD
     - name: Get a pretty-printed version of the current branch or tag
@@ -46,14 +46,14 @@ jobs:
           echo "No ref available" >&2
           exit 1
         fi
-        echo "::set-output name=value::${REF}"
+        echo "value=${REF}" >> $GITHUB_OUTPUT
     - name: Identify if tag is a prerelease
       id: tag-prerelease
       run: |
         if [[ "${{ steps.branch-or-tag.outputs.value }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "::set-output name=value::false"
+          echo "value=false" >> $GITHUB_OUTPUT
         else
-          echo "::set-output name=value::true"
+          echo "value=true" >> $GITHUB_OUTPUT
         fi
 
     - name: Create/update symlink for `/latest` to latest tag
@@ -63,16 +63,11 @@ jobs:
         ln -sf "${{ steps.tag.outputs.tag }}" gh-pages/latest
 
     - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        override: true
+      run: |
+        rustup toolchain install stable --profile minimal --no-self-update
+        rustup default stable
     - name: cargo doc
-      uses: actions-rs/cargo@v1
-      with:
-        command: doc
-        args: --no-deps
+      run: cargo doc --no-deps
     - name: Move generated docs to the correct location
       run: |
         rm -rf "gh-pages/${{ steps.branch-or-tag.outputs.value }}" || :
