@@ -11,10 +11,10 @@ mod common;
 
 use common::resource;
 use dfw::{
+    FirewallBackend,
     process::{Process, ProcessContext},
     types::*,
     util::*,
-    FirewallBackend,
 };
 use serde::Deserialize;
 
@@ -36,7 +36,7 @@ impl Process<TestBackend> for DFW<TestBackend> {
     fn process(
         &self,
         _ctx: &ProcessContext<TestBackend>,
-    ) -> Result<Option<Vec<String>>, failure::Error> {
+    ) -> Result<Option<Vec<String>>, anyhow::Error> {
         unimplemented!()
     }
 }

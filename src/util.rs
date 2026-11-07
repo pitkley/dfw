@@ -12,18 +12,16 @@
 use crate::errors::*;
 
 use glob::glob;
-use lazy_static::lazy_static;
 use serde::de::DeserializeOwned;
 use std::{
     fs::File,
     future::Future,
-    io::{prelude::*, BufReader},
+    io::{BufReader, prelude::*},
+    sync::LazyLock,
 };
 use tokio::runtime::Runtime;
 
-lazy_static! {
-    static ref RUNTIME: Runtime = Runtime::new().unwrap();
-}
+static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
 
 /// Load single TOML-file from path and deserialize it into type `T`.
 pub fn load_file<T>(file: &str) -> Result<T>

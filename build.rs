@@ -7,17 +7,8 @@
 // option. This file may not be copied, modified or distributed
 // except according to those terms.
 
-use version_compare::Version;
-
 fn main() {
-    let crate_version = Version::from(env!("CARGO_PKG_VERSION")).unwrap();
-
-    println!(
-        r#"cargo:rustc-cfg=crate_major_version="{}""#,
-        crate_version.part(0).unwrap()
-    );
-    println!(
-        r#"cargo:rustc-check-cfg=cfg(crate_major_version, values("{}"))"#,
-        crate_version.part(0).unwrap()
-    );
+    let major = env!("CARGO_PKG_VERSION_MAJOR");
+    println!(r#"cargo:rustc-cfg=crate_major_version="{major}""#);
+    println!(r#"cargo:rustc-check-cfg=cfg(crate_major_version, values("{major}"))"#);
 }

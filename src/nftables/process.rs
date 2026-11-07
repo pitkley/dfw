@@ -8,12 +8,12 @@
 // except according to those terms.
 
 use super::{
-    rule::RuleBuilder, Family, Hook, Nftables, Type, DFW_MARK, NF_PRIORITY_INET_FILTER_ANY_DFW,
-    NF_PRIORITY_IP6_NAT_POSTROUTING_DFW, NF_PRIORITY_IP6_NAT_PREROUTING_DFW,
-    NF_PRIORITY_IP_NAT_POSTROUTING_DFW, NF_PRIORITY_IP_NAT_PREROUTING_DFW,
+    DFW_MARK, Family, Hook, NF_PRIORITY_INET_FILTER_ANY_DFW, NF_PRIORITY_IP_NAT_POSTROUTING_DFW,
+    NF_PRIORITY_IP_NAT_PREROUTING_DFW, NF_PRIORITY_IP6_NAT_POSTROUTING_DFW,
+    NF_PRIORITY_IP6_NAT_PREROUTING_DFW, Nftables, Type, rule::RuleBuilder,
 };
-use crate::{errors::*, process::*, types::*, FirewallBackend};
-use failure::{format_err, ResultExt};
+use crate::{FirewallBackend, errors::*, process::*, types::*};
+use anyhow::{Context, anyhow};
 use slog::{debug, info, o, trace, warn};
 use std::process::Command;
 use time::format_description::well_known::Rfc3339;
@@ -250,40 +250,39 @@ impl Process<Nftables> for GlobalDefaults {
         let mut rules = Vec::new();
 
         // Enforce policy for default Docker-bridge (usually docker0) to access host-resources
-        if let Some(bridge_network) = ctx.network_map.get("bridge") {
-            if let Some(bridge_name) = bridge_network
+        if let Some(bridge_network) = ctx.network_map.get("bridge")
+            && let Some(bridge_name) = bridge_network
                 .options
                 .as_ref()
-                .ok_or_else(|| format_err!("couldn't get network options"))?
+                .ok_or_else(|| anyhow!("couldn't get network options"))?
                 .get("com.docker.network.bridge.name")
-            {
-                // Set policy for input-chain
-                rules.push(add_rule(
-                    Family::Inet,
-                    "dfw",
-                    "input",
-                    &format!(
-                        "meta iifname {} meta mark set {} {}",
-                        bridge_name, DFW_MARK, self.default_docker_bridge_to_host_policy,
-                    ),
-                ));
+        {
+            // Set policy for input-chain
+            rules.push(add_rule(
+                Family::Inet,
+                "dfw",
+                "input",
+                &format!(
+                    "meta iifname {} meta mark set {} {}",
+                    bridge_name, DFW_MARK, self.default_docker_bridge_to_host_policy,
+                ),
+            ));
 
-                // Set policy for forward-chain, divided by the external network interfaces.
-                if let Some(ref external_network_interfaces) = self.external_network_interfaces {
-                    for external_network_interface in external_network_interfaces {
-                        rules.push(add_rule(
-                            Family::Inet,
-                            "dfw",
-                            "forward",
-                            &format!(
-                                "meta iifname {} oifname {} meta mark set {} {}",
-                                bridge_name,
-                                external_network_interface,
-                                DFW_MARK,
-                                self.default_docker_bridge_to_host_policy,
-                            ),
-                        ));
-                    }
+            // Set policy for forward-chain, divided by the external network interfaces.
+            if let Some(ref external_network_interfaces) = self.external_network_interfaces {
+                for external_network_interface in external_network_interfaces {
+                    rules.push(add_rule(
+                        Family::Inet,
+                        "dfw",
+                        "forward",
+                        &format!(
+                            "meta iifname {} oifname {} meta mark set {} {}",
+                            bridge_name,
+                            external_network_interface,
+                            DFW_MARK,
+                            self.default_docker_bridge_to_host_policy,
+                        ),
+                    ));
                 }
             }
         }
@@ -408,7 +407,7 @@ impl Process<Nftables> for ContainerToContainerRule {
                         .expect("IPv4 address for container missing")
                         .split('/')
                         .next()
-                        .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+                        .ok_or_else(|| anyhow!("IPv4 address is empty"))?,
                 );
         }
 
@@ -438,7 +437,7 @@ impl Process<Nftables> for ContainerToContainerRule {
                     .expect("IPv4 address for container missing")
                     .split('/')
                     .next()
-                    .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+                    .ok_or_else(|| anyhow!("IPv4 address is empty"))?,
             );
         }
 
@@ -510,7 +509,7 @@ impl Process<Nftables> for ContainerToWiderWorldRule {
         let mut nft_rule = RuleBuilder::default();
 
         if self.network.is_none() && self.src_container.is_some() {
-            return Err(format_err!(
+            return Err(anyhow!(
                 "a container-to-wider-world rule with src_container requires network"
             ));
         }
@@ -657,7 +656,7 @@ impl Process<Nftables> for ContainerToHostRule {
                     .expect("IPv4 address for container missing")
                     .split('/')
                     .next()
-                    .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+                    .ok_or_else(|| anyhow!("IPv4 address is empty"))?,
             );
         }
 
@@ -836,7 +835,7 @@ impl Process<Nftables> for WiderWorldToContainerRule {
                     container_ipv4_address
                         .split('/')
                         .next()
-                        .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+                        .ok_or_else(|| anyhow!("IPv4 address is empty"))?,
                 );
 
                 let host_port = expose_port.host_port.to_string();
@@ -851,7 +850,7 @@ impl Process<Nftables> for WiderWorldToContainerRule {
                     container_ipv4_address
                         .split('/')
                         .next()
-                        .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+                        .ok_or_else(|| anyhow!("IPv4 address is empty"))?,
                     container_port
                 ));
                 nft_mark_rule.destination_port(&host_port);
@@ -866,7 +865,7 @@ impl Process<Nftables> for WiderWorldToContainerRule {
             //         .expect("IPv6 address for container missing")
             //         .split('/')
             //         .next()
-            //         .ok_or_else(|| format_err!("Invalid IPv6 address"))?,
+            //         .ok_or_else(|| anyhow!("Invalid IPv6 address"))?,
             //     destination_port));
             // }
             } else {
@@ -925,15 +924,15 @@ impl Process<Nftables> for WiderWorldToContainerRule {
                     nft_dnat_rule.clone(),
                 )?;
             }
-            if self.expose_via_ipv6 {
-                if let Some(source_cidrs_v6) = &self.source_cidr_v6 {
-                    self.apply_source_cidrs_v6(
-                        ctx,
-                        &mut rules,
-                        source_cidrs_v6,
-                        nft_mark_rule.clone(),
-                    )?;
-                }
+            if self.expose_via_ipv6
+                && let Some(source_cidrs_v6) = &self.source_cidr_v6
+            {
+                self.apply_source_cidrs_v6(
+                    ctx,
+                    &mut rules,
+                    source_cidrs_v6,
+                    nft_mark_rule.clone(),
+                )?;
             }
 
             // If no source CIDRs were specified, we create the default rules that allow all

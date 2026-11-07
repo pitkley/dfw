@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+* Update dependencies and switch to Rust edition 2024. The minimum supported Rust version is now 1.88.0.
+* Replace `failure` with `anyhow` and `thiserror`. Rust consumers implementing `FirewallBackend` or `Process` should use `dfw::errors::Result` in their method signatures.
+
 ## 1.3.2 (2026-11-07)
 
 * Check additional nftables matches before marking packets so rules in custom chains cannot accept a packet based on a failed match.

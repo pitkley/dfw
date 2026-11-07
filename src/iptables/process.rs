@@ -8,12 +8,12 @@
 // except according to those terms.
 
 use super::{
+    DFW_FORWARD_CHAIN, DFW_INPUT_CHAIN, DFW_POSTROUTING_CHAIN, DFW_PREROUTING_CHAIN, Iptables,
+    IptablesRule, IptablesRuleDiscriminants, PolicyOrRule,
     rule::{BuiltRule, Rule},
-    Iptables, IptablesRule, IptablesRuleDiscriminants, PolicyOrRule, DFW_FORWARD_CHAIN,
-    DFW_INPUT_CHAIN, DFW_POSTROUTING_CHAIN, DFW_PREROUTING_CHAIN,
 };
-use crate::{errors::*, process::*, types::*, FirewallBackend};
-use failure::{format_err, ResultExt};
+use crate::{FirewallBackend, errors::*, process::*, types::*};
+use anyhow::{Context, anyhow};
 use slog::{debug, info, o, trace};
 use std::collections::BTreeSet;
 use time::format_description::well_known::Rfc3339;
@@ -199,35 +199,34 @@ impl Process<Iptables> for GlobalDefaults {
         let mut rules = Vec::new();
 
         // Enforce policy for default Docker-bridge (usually docker0) to access host-resources
-        if let Some(bridge_network) = ctx.network_map.get("bridge") {
-            if let Some(bridge_name) = bridge_network
+        if let Some(bridge_network) = ctx.network_map.get("bridge")
+            && let Some(bridge_name) = bridge_network
                 .options
                 .as_ref()
-                .ok_or_else(|| format_err!("couldn't get network options"))?
+                .ok_or_else(|| anyhow!("couldn't get network options"))?
                 .get("com.docker.network.bridge.name")
-            {
-                // Set policy for input-chain
-                let rule = Rule::new("filter", DFW_INPUT_CHAIN)
-                    .in_interface(bridge_name)
-                    .jump(
-                        &self
-                            .default_docker_bridge_to_host_policy
-                            .to_string()
-                            .to_uppercase(),
-                    )
-                    .build()?;
-                rules.push(append_built_rule(IptablesRuleDiscriminants::V4, &rule));
+        {
+            // Set policy for input-chain
+            let rule = Rule::new("filter", DFW_INPUT_CHAIN)
+                .in_interface(bridge_name)
+                .jump(
+                    &self
+                        .default_docker_bridge_to_host_policy
+                        .to_string()
+                        .to_uppercase(),
+                )
+                .build()?;
+            rules.push(append_built_rule(IptablesRuleDiscriminants::V4, &rule));
 
-                // Set policy for forward-chain, divided by the external network interfaces.
-                if let Some(ref external_network_interfaces) = self.external_network_interfaces {
-                    for external_network_interface in external_network_interfaces {
-                        let rule = Rule::new("filter", DFW_FORWARD_CHAIN)
-                            .in_interface(bridge_name)
-                            .out_interface(external_network_interface)
-                            .jump("ACCEPT")
-                            .build()?;
-                        rules.push(append_built_rule(IptablesRuleDiscriminants::V4, &rule));
-                    }
+            // Set policy for forward-chain, divided by the external network interfaces.
+            if let Some(ref external_network_interfaces) = self.external_network_interfaces {
+                for external_network_interface in external_network_interfaces {
+                    let rule = Rule::new("filter", DFW_FORWARD_CHAIN)
+                        .in_interface(bridge_name)
+                        .out_interface(external_network_interface)
+                        .jump("ACCEPT")
+                        .build()?;
+                    rules.push(append_built_rule(IptablesRuleDiscriminants::V4, &rule));
                 }
             }
         }
@@ -379,7 +378,7 @@ impl Process<Iptables> for ContainerToContainerRule {
                         .expect("IPv4 address for container missing")
                         .split('/')
                         .next()
-                        .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+                        .ok_or_else(|| anyhow!("IPv4 address is empty"))?,
                 );
         }
 
@@ -408,7 +407,7 @@ impl Process<Iptables> for ContainerToContainerRule {
                     .expect("IPv4 address for container missing")
                     .split('/')
                     .next()
-                    .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+                    .ok_or_else(|| anyhow!("IPv4 address is empty"))?,
             );
         }
 
@@ -489,7 +488,7 @@ impl Process<Iptables> for ContainerToWiderWorldRule {
         let mut ipt_rule = Rule::new("filter", DFW_FORWARD_CHAIN);
 
         if self.network.is_none() && self.src_container.is_some() {
-            return Err(format_err!(
+            return Err(anyhow!(
                 "a container-to-wider-world rule with src_container requires network"
             ));
         }
@@ -638,7 +637,7 @@ impl Process<Iptables> for ContainerToHostRule {
                     .expect("IPv4 address for container missing")
                     .split('/')
                     .next()
-                    .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+                    .ok_or_else(|| anyhow!("IPv4 address is empty"))?,
             );
         }
 
@@ -731,7 +730,7 @@ impl Process<Iptables> for WiderWorldToContainerRule {
                     container_ipv4_address
                         .split('/')
                         .next()
-                        .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+                        .ok_or_else(|| anyhow!("IPv4 address is empty"))?,
                 );
 
                 let host_port = expose_port.host_port.to_string();
@@ -746,7 +745,7 @@ impl Process<Iptables> for WiderWorldToContainerRule {
                     container_ipv4_address
                         .split('/')
                         .next()
-                        .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+                        .ok_or_else(|| anyhow!("IPv4 address is empty"))?,
                     container_port
                 ));
                 ipt6_input_rule.destination_port(&host_port);
@@ -1015,7 +1014,7 @@ fn append_built_rule(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bollard::{models::Network, Docker, API_DEFAULT_VERSION};
+    use bollard::{API_DEFAULT_VERSION, Docker, models::Network};
     use slog::{Discard, Logger};
 
     #[test]

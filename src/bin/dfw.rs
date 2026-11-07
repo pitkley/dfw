@@ -9,32 +9,31 @@
 
 //! # DFW - binary
 
+use anyhow::{anyhow, bail};
 use bollard::{
+    API_DEFAULT_VERSION, Docker,
     models::{EventMessage, EventMessageTypeEnum},
-    system::EventsOptions,
-    Docker, API_DEFAULT_VERSION,
+    query_parameters::EventsOptions,
 };
-use clap::{crate_version, Parser};
-use crossbeam_channel::{select, Receiver, Sender};
+use clap::{Parser, crate_version};
+use crossbeam_channel::{Receiver, Sender, select};
 use dfw::{
     process::{ContainerFilter, Process, ProcessContext, ProcessingOptions},
     types::DFW,
     util::*,
 };
-use failure::{bail, format_err};
-use futures::{pin_mut, TryStreamExt};
-use maplit::hashmap;
-use slog::{debug, error, info, o, trace, warn, Logger};
+use futures::{TryStreamExt, pin_mut};
+use slog::{Logger, debug, error, info, o, trace, warn};
 use sloggers::{
+    Build,
     terminal::{Destination, TerminalLoggerBuilder},
     types::Severity,
-    Build,
 };
 use std::{fmt, process::ExitCode, thread, time::Duration};
 use time::format_description::well_known::Rfc3339;
 
 mod errors {
-    use failure::Error;
+    use anyhow::Error;
 
     pub type Result<E> = ::std::result::Result<E, Error>;
 }
@@ -43,7 +42,7 @@ use crate::errors::*;
 
 type Signal = libc::c_int;
 
-#[derive(Debug, Clone, clap::ArgEnum)]
+#[derive(Debug, Clone, clap::ValueEnum)]
 enum FirewallBackend {
     Nftables,
     Iptables,
@@ -58,7 +57,7 @@ impl fmt::Display for FirewallBackend {
     }
 }
 
-#[derive(Debug, Clone, clap::ArgEnum)]
+#[derive(Debug, Clone, clap::ValueEnum)]
 enum LoadMode {
     Once,
     Always,
@@ -68,7 +67,7 @@ fn container_filter_try_from_str(s: &str) -> Result<ContainerFilter> {
     match &*s.to_ascii_lowercase() {
         "all" => Ok(ContainerFilter::All),
         "running" => Ok(ContainerFilter::Running),
-        _ => Err(format_err!("Unknown container filter '{}'", s)),
+        _ => Err(anyhow!("Unknown container filter '{}'", s)),
     }
 }
 
@@ -159,7 +158,9 @@ fn spawn_event_monitor(
                 }
                 let events = docker.events(Some(EventsOptions {
                     since: Some(since.clone()),
-                    filters: hashmap! { "type" => vec!["container", "network"] },
+                    filters: Some(
+                        [("type".into(), vec!["container".into(), "network".into()])].into(),
+                    ),
                     ..Default::default()
                 }));
                 pin_mut!(events);
@@ -346,7 +347,7 @@ where
                 info!(root_logger, "Load interval ticked, starting processing");
             },
             recv(event_trigger) -> trigger => {
-                trigger.map_err(|_| format_err!("Docker event monitor stopped"))?;
+                trigger.map_err(|_| anyhow!("Docker event monitor stopped"))?;
                 info!(root_logger, "Received Docker events, starting processing");
             },
             recv(retry) -> _ => {
@@ -387,17 +388,17 @@ where
 }
 
 #[derive(Debug, Parser)]
-#[clap(author, version, about)]
+#[command(author, version, about)]
 struct Args {
-    #[clap(
+    #[arg(
         long = "log-level",
         value_name = "SEVERITY",
         default_value = "info",
         help = "Define the log level"
     )]
     log_level: Severity,
-    #[clap(
-        arg_enum,
+    #[arg(
+        value_enum,
         long = "firewall-backend",
         value_name = "BACKEND",
         default_value_t = FirewallBackend::Nftables,
@@ -405,29 +406,29 @@ struct Args {
         help = "Select the firewall-backend to use"
     )]
     firewall_backend: FirewallBackend,
-    #[clap(
-        required_unless_present = "config-path",
+    #[arg(
+        required_unless_present = "config_path",
         short = 'c',
         long = "config-file",
         value_name = "FILE",
         help = "Set the configuration file"
     )]
     config_file: Option<String>,
-    #[clap(
-        required_unless_present = "config-file",
+    #[arg(
+        required_unless_present = "config_file",
         long = "config-path",
         value_name = "PATH",
         help = "Set a path with multiple TOML configuration files"
     )]
     config_path: Option<String>,
-    #[clap(
+    #[arg(
         short = 'd',
         long = "docker-url",
         value_name = "URL",
         help = "Set the URL to the Docker instance (e.g. unix:///tmp/docker.sock)"
     )]
     docker_url: Option<String>,
-    #[clap(
+    #[arg(
         short = 'i',
         long = "load-interval",
         value_name = "INTERVAL",
@@ -435,8 +436,8 @@ struct Args {
         help = "Interval between rule processing runs, in seconds (0 = disabled)"
     )]
     load_interval: u64,
-    #[clap(
-        arg_enum,
+    #[arg(
+        value_enum,
         short = 'm',
         long = "load-mode",
         value_name = "MODE",
@@ -445,32 +446,32 @@ struct Args {
         help = "Define if the config-fields get loaded once, or before every run"
     )]
     load_mode: LoadMode,
-    #[clap(
+    #[arg(
         long = "burst-timeout",
         value_name = "TIMEOUT",
         default_value_t = 500,
         help = "Time to wait after a event was received before processing the rules, in milliseconds"
     )]
     burst_timeout: u64,
-    #[clap(
-        parse(try_from_str = container_filter_try_from_str),
+    #[arg(
+        value_parser = container_filter_try_from_str,
         long = "container-filter",
         value_name = "FILTER",
         default_value = "running",
         help = "Filter the containers to be included during processing"
     )]
     container_filter: ContainerFilter,
-    #[clap(long = "disable-event-monitoring", help = "Disable event monitoring")]
+    #[arg(long = "disable-event-monitoring", help = "Disable event monitoring")]
     disable_event_monitoring: bool,
-    #[clap(long = "run-once", help = "Process rules once, then exit.")]
+    #[arg(long = "run-once", help = "Process rules once, then exit.")]
     run_once: bool,
-    #[clap(
+    #[arg(
         long = "dry-run",
         help = "Don't touch firewall-rules, just show what would be done",
         long_help = "Don't touch firewall-rules, just show what would be done. Note that this requires Docker and the containers/networks referenced in the configuration to be available. If you want to check the config for validity, specify --check-config instead."
     )]
     dry_run: bool,
-    #[clap(
+    #[arg(
         long = "check-config",
         help = "Verify if the provided configuration is valid, exit afterwards."
     )]

@@ -8,8 +8,8 @@
 // except according to those terms.
 
 use crate::{errors::*, nftables::DFW_MARK, types::RuleVerdict};
+use anyhow::bail;
 use derive_builder::Builder;
-use failure::bail;
 
 #[derive(Debug, Clone, Builder)]
 #[builder(derive(Debug), pattern = "mutable", build_fn(skip))]
@@ -99,7 +99,9 @@ impl RuleBuilder {
 
         // Bail if none of the above was initialized
         if args.is_empty() {
-            bail!("one of `{source,destination}_{port,address{,_v6}}`, `{in,out}_interface` must be initialized");
+            bail!(
+                "one of `{{source,destination}}_{{port,address{{,_v6}}}}`, `{{in,out}}_interface` must be initialized"
+            );
         }
 
         if let Some(matches) = &self.matches {
