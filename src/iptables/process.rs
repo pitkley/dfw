@@ -209,7 +209,12 @@ impl Process<Iptables> for GlobalDefaults {
                 // Set policy for input-chain
                 let rule = Rule::new("filter", DFW_INPUT_CHAIN)
                     .in_interface(bridge_name)
-                    .jump("ACCEPT")
+                    .jump(
+                        &self
+                            .default_docker_bridge_to_host_policy
+                            .to_string()
+                            .to_uppercase(),
+                    )
                     .build()?;
                 rules.push(append_built_rule(IptablesRuleDiscriminants::V4, &rule));
 
