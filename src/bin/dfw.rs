@@ -9,7 +9,11 @@
 
 //! # DFW - binary
 
-use bollard::{system::EventsOptions, Docker, API_DEFAULT_VERSION};
+use bollard::{
+    models::{EventMessage, EventMessageTypeEnum},
+    system::EventsOptions,
+    Docker, API_DEFAULT_VERSION,
+};
 use clap::{crate_version, Parser};
 use crossbeam_channel::{select, Receiver, Sender};
 use dfw::{
@@ -117,6 +121,19 @@ fn spawn_burst_monitor(
     })
 }
 
+fn affects_firewall(event: &EventMessage) -> bool {
+    matches!(
+        (event.typ, event.action.as_deref()),
+        (
+            Some(EventMessageTypeEnum::CONTAINER),
+            Some("create" | "destroy" | "start" | "restart" | "die" | "stop")
+        ) | (
+            Some(EventMessageTypeEnum::NETWORK),
+            Some("connect" | "disconnect" | "create" | "destroy" | "remove")
+        )
+    )
+}
+
 fn spawn_event_monitor(
     docker_url: Option<String>,
     mut since: String,
@@ -142,17 +159,13 @@ fn spawn_event_monitor(
                 }
                 let events = docker.events(Some(EventsOptions {
                     since: Some(since.clone()),
-                    filters: hashmap! { "type" => vec!["container"] },
+                    filters: hashmap! { "type" => vec!["container", "network"] },
                     ..Default::default()
                 }));
                 pin_mut!(events);
                 while let Some(event) = events.try_next().await? {
                     trace!(logger, "Received event"; "event" => format!("{:?}", event));
-                    if matches!(
-                        event.action.as_deref(),
-                        Some("create" | "destroy" | "start" | "restart" | "die" | "stop")
-                    ) && s_event.send(()).is_err()
-                    {
+                    if affects_firewall(&event) && s_event.send(()).is_err() {
                         return Ok(true);
                     }
                 }
@@ -554,6 +567,22 @@ mod tests {
         drop(events);
         server.join().unwrap();
         monitor.join().unwrap();
+    }
+
+    #[test]
+    fn docker_network_changes_trigger_firewall_refresh() {
+        for action in ["connect", "disconnect", "create", "destroy", "remove"] {
+            assert!(affects_firewall(&EventMessage {
+                typ: Some(EventMessageTypeEnum::NETWORK),
+                action: Some(action.to_owned()),
+                ..Default::default()
+            }));
+        }
+        assert!(!affects_firewall(&EventMessage {
+            typ: Some(EventMessageTypeEnum::CONTAINER),
+            action: Some("exec_start".to_owned()),
+            ..Default::default()
+        }));
     }
 
     #[test]
