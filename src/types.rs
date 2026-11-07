@@ -732,6 +732,10 @@ impl FromStr for ExposePort {
 
 /// The container-DNAT section, defining how containers can communicate with each other over
 /// non-common networks.
+///
+/// These rules translate traffic sent to a host address from a Docker bridge.
+/// Forwarding policy still applies to translated traffic. If forwarding between
+/// the source and destination is denied by default, allow it explicitly.
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ContainerDNAT {

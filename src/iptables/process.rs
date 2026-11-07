@@ -908,122 +908,31 @@ impl Process<Iptables> for ContainerDNATRule {
         trace!(ctx.logger, "Process rule";
                o!("part" => "container_dnat_rule",
                   "rule" => format!("{:?}", self)));
-        if self.src_network.is_none() && self.src_container.is_some() {
-            return Err(format_err!(
-                "a container-DNAT rule with src_container requires src_network"
-            ));
-        }
+        let Some(endpoints) = container_dnat_endpoints(self, ctx)? else {
+            return Ok(None);
+        };
 
         let mut rules = Vec::new();
-        for expose_port in &self.expose_port {
-            let mut ipt_rule = Rule::new("nat", DFW_PREROUTING_CHAIN);
-
-            if let Some(ref network_name) = self.src_network {
-                let network = match ctx.network_map.get(network_name) {
-                    Some(network) => network,
-                    None => return Ok(None),
-                };
-                let network_id = network.id.as_ref().expect("Docker network ID missing");
-                let bridge_name = get_bridge_name(network_id)?;
-                trace!(ctx.logger, "Got bridge name";
-                       o!("network_name" => network_name,
-                          "bridge_name" => &bridge_name));
-
-                ipt_rule.in_interface(&bridge_name);
-
-                if let Some(ref src_container) = self.src_container {
-                    let src_network = match get_network_for_container(
-                        ctx.docker,
-                        &ctx.container_map,
-                        src_container,
-                        network_id,
-                    )? {
-                        Some(src_network) => src_network,
-                        None => return Ok(None),
-                    };
-
-                    ipt_rule.source(
-                        src_network
-                            .ipv4_address
-                            .expect("IPv4 address for container missing")
-                            .split('/')
-                            .next()
-                            .ok_or_else(|| format_err!("IPv4 address is empty"))?,
-                    );
+        for port in &self.expose_port {
+            let destination_port = port.container_port.unwrap_or(port.host_port);
+            for bridge in &endpoints.source_bridges {
+                let mut rule = Rule::new("nat", DFW_PREROUTING_CHAIN);
+                rule.in_interface(bridge)
+                    .protocol(&port.family)
+                    .destination_port(&port.host_port.to_string())
+                    .filter("-m addrtype --dst-type LOCAL")
+                    .jump(&format!(
+                        "DNAT --to-destination {}:{}",
+                        endpoints.destination_ip, destination_port
+                    ));
+                if let Some(source_ip) = endpoints.source_ip {
+                    rule.source(&source_ip.to_string());
                 }
+                rules.push(append_built_rule(
+                    IptablesRuleDiscriminants::V4,
+                    &rule.build()?,
+                ));
             }
-
-            let network = match ctx.network_map.get(&self.dst_network) {
-                Some(network) => network,
-                None => continue,
-            };
-            let network_id = network.id.as_ref().expect("Docker network ID missing");
-            let dst_network = match get_network_for_container(
-                ctx.docker,
-                &ctx.container_map,
-                &self.dst_container,
-                network_id,
-            )? {
-                Some(dst_network) => dst_network,
-                None => continue,
-            };
-            trace!(ctx.logger, "Got destination network";
-                   o!("network_name" => &network.name,
-                      "dst_network" => format!("{:?}", dst_network)));
-
-            let bridge_name = get_bridge_name(network_id)?;
-            trace!(ctx.logger, "Got bridge name";
-                   o!("network_name" => &network.name,
-                      "bridge_name" => &bridge_name));
-
-            ipt_rule.out_interface(&bridge_name);
-
-            let destination_port = match expose_port.container_port {
-                Some(destination_port) => destination_port.to_string(),
-                None => expose_port.host_port.to_string(),
-            };
-            ipt_rule.destination_port(&destination_port);
-            ipt_rule.jump(&format!(
-                "DNAT --to-destination {}:{}",
-                dst_network
-                    .ipv4_address
-                    .expect("IPv4 address for container missing")
-                    .split('/')
-                    .next()
-                    .ok_or_else(|| format_err!("IPv4 address is empty"))?,
-                destination_port
-            ));
-
-            // Try to build the rule without the out_interface defined to see if any of the
-            // other mandatory fields has been populated.
-            debug!(ctx.logger, "Build rule to verify contents";
-                   o!("args" => format!("{:?}", ipt_rule)));
-            ipt_rule.build()?;
-
-            if ipt_rule.out_interface.is_none() {
-                if let Some(ref primary_external_network_interface) =
-                    ctx.primary_external_network_interface
-                {
-                    trace!(ctx.logger, "Set primary external network interface";
-                           o!("external_network_interface"
-                              => primary_external_network_interface));
-
-                    ipt_rule
-                        .in_interface(primary_external_network_interface)
-                        .not_in_interface(true);
-                } else {
-                    // We need to specify a external network interface.
-                    // If it is not defined, skip the rule.
-                    continue;
-                }
-            }
-
-            let rule = ipt_rule.build()?;
-            debug!(ctx.logger, "Add prerouting rule";
-                   o!("part" => "container_dnat",
-                      "rule" => &rule.rule));
-
-            rules.push(append_built_rule(IptablesRuleDiscriminants::V4, &rule));
         }
 
         Ok(Some(rules))

@@ -983,99 +983,25 @@ impl Process<Nftables> for ContainerDNATRule {
         debug!(ctx.logger, "Process rule";
                    o!("part" => "container_dnat",
                       "rule" => format!("{:?}", self)));
-        if self.src_network.is_none() && self.src_container.is_some() {
-            return Err(format_err!(
-                "a container-DNAT rule with src_container requires src_network"
-            ));
-        }
+        let Some(endpoints) = container_dnat_endpoints(self, ctx)? else {
+            return Ok(None);
+        };
 
         let mut rules = Vec::new();
-        for expose_port in &self.expose_port {
-            let mut nft_rule = RuleBuilder::default();
-
-            if let Some(ref network_name) = self.src_network {
-                let network = match ctx.network_map.get(network_name) {
-                    Some(network) => network,
-                    None => return Ok(None),
-                };
-                let network_id = network.id.as_ref().expect("Docker network ID missing");
-                let bridge_name = get_bridge_name(network_id)?;
-                trace!(ctx.logger, "Got bridge name";
-                       o!("network_name" => network_name,
-                          "bridge_name" => &bridge_name));
-
-                nft_rule.in_interface(&bridge_name);
-
-                if let Some(ref src_container) = self.src_container {
-                    let src_network = match get_network_for_container(
-                        ctx.docker,
-                        &ctx.container_map,
-                        src_container,
-                        network_id,
-                    )? {
-                        Some(src_network) => src_network,
-                        None => return Ok(None),
-                    };
-
-                    nft_rule.source_address(
-                        src_network
-                            .ipv4_address
-                            .expect("IPv4 address for container missing")
-                            .split('/')
-                            .next()
-                            .ok_or_else(|| format_err!("IPv4 address is empty"))?,
-                    );
+        for port in &self.expose_port {
+            let destination_port = port.container_port.unwrap_or(port.host_port);
+            for bridge in &endpoints.source_bridges {
+                let mut rule = RuleBuilder::default();
+                rule.in_interface(bridge)
+                    .protocol(&port.family)
+                    .destination_port(port.host_port.to_string())
+                    .matches("fib daddr type local")
+                    .dnat(format!("{}:{}", endpoints.destination_ip, destination_port));
+                if let Some(source_ip) = endpoints.source_ip {
+                    rule.source_address(source_ip.to_string());
                 }
+                rules.push(add_rule(Family::Ip, "dfw", "prerouting", &rule.build()?));
             }
-
-            let network = match ctx.network_map.get(&self.dst_network) {
-                Some(network) => network,
-                None => return Ok(None),
-            };
-            let network_id = network.id.as_ref().expect("Docker network ID missing");
-            let dst_network = match get_network_for_container(
-                ctx.docker,
-                &ctx.container_map,
-                &self.dst_container,
-                network_id,
-            )? {
-                Some(dst_network) => dst_network,
-                None => return Ok(None),
-            };
-            trace!(ctx.logger, "Got destination network";
-                       o!("network_name" => &network.name,
-                          "dst_network" => format!("{:?}", dst_network)));
-
-            let bridge_name = get_bridge_name(network_id)?;
-            trace!(ctx.logger, "Got bridge name";
-                       o!("network_name" => &network.name,
-                          "bridge_name" => &bridge_name));
-
-            nft_rule.out_interface(&bridge_name);
-
-            let destination_port = match expose_port.container_port {
-                Some(destination_port) => destination_port.to_string(),
-                None => expose_port.host_port.to_string(),
-            };
-            nft_rule.destination_port(&destination_port);
-            nft_rule.dnat(format!(
-                "{}:{}",
-                dst_network
-                    .ipv4_address
-                    .expect("IPv4 address for container missing")
-                    .split('/')
-                    .next()
-                    .ok_or_else(|| format_err!("IPv4 address is empty"))?,
-                destination_port
-            ));
-
-            let rule = nft_rule.build()?;
-            debug!(ctx.logger, "Add prerouting rule";
-                       o!("part" => "container_dnat",
-                          "rule" => &rule));
-
-            // Apply the rule
-            rules.push(add_rule(Family::Ip, "dfw", "prerouting", &rule));
         }
 
         Ok(Some(rules))

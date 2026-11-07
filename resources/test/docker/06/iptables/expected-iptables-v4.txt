@@ -20,9 +20,11 @@ COMMIT
 :PREROUTING - [0:0]
 -F DFWRS_POSTROUTING
 -F DFWRS_PREROUTING
--A DFWRS_PREROUTING -o $output=bridge -p tcp --dport 80 -j DNAT --to-destination ${dst_ip=ip}:80
--A DFWRS_PREROUTING -s $src_ip=ip -i $input=bridge -o $output=bridge -p tcp --dport 80 -j DNAT --to-destination ${dst_ip=ip}:80	"$input" == "$output"
--A DFWRS_PREROUTING -s $src_ip=ip -i $input=bridge -o $output=bridge -p tcp --dport 443 -j DNAT --to-destination ${dst_ip=ip}:443	"$input" != "$output"
+-A DFWRS_PREROUTING -i $input=bridge -p tcp --dport 80 -m addrtype --dst-type LOCAL -j DNAT --to-destination ${dst_ip=ip}:80
+-A DFWRS_PREROUTING -i $input=bridge -p tcp --dport 80 -m addrtype --dst-type LOCAL -j DNAT --to-destination ${dst_ip=ip}:80
+-A DFWRS_PREROUTING -i docker0 -p tcp --dport 80 -m addrtype --dst-type LOCAL -j DNAT --to-destination ${dst_ip=ip}:80
+-A DFWRS_PREROUTING -s $src_ip=ip -i $input=bridge -p tcp --dport 8080 -m addrtype --dst-type LOCAL -j DNAT --to-destination ${dst_ip=ip}:80
+-A DFWRS_PREROUTING -s $src_ip=ip -i $input=bridge -p udp --dport 8443 -m addrtype --dst-type LOCAL -j DNAT --to-destination ${dst_ip=ip}:443
 -A POSTROUTING -j DFWRS_POSTROUTING
 -A PREROUTING -j DFWRS_PREROUTING
 COMMIT

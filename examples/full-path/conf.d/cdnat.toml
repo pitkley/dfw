@@ -12,7 +12,7 @@
 # Finally, the actual last section and one you might only need in very special
 # cases, is container_dnat. This section allows you to prohibit or allow
 # communication between containers that DO NOT share a Docker network. (There
-# is no default policy.)
+# is no default policy.) Forwarding rules still apply after translation.
 
 [[container_dnat.rules]]
 # You can use this section to for example allow any container to access some

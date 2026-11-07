@@ -222,6 +222,98 @@ pub(crate) fn get_bridge_name(network_id: &str) -> Result<String> {
     Ok(format!("br-{}", &network_id[..12]))
 }
 
+pub(crate) fn docker_bridge_name(network: &Network) -> Result<Option<String>> {
+    if network.driver.as_deref() != Some("bridge") {
+        return Ok(None);
+    }
+    if let Some(name) = network
+        .options
+        .as_ref()
+        .and_then(|options| options.get("com.docker.network.bridge.name"))
+        .filter(|name| !name.is_empty())
+    {
+        return Ok(Some(name.clone()));
+    }
+    network.id.as_deref().map(get_bridge_name).transpose()
+}
+
+pub(crate) struct ContainerDnatEndpoints {
+    pub source_bridges: Vec<String>,
+    pub source_ip: Option<std::net::Ipv4Addr>,
+    pub destination_ip: std::net::Ipv4Addr,
+}
+
+pub(crate) fn container_dnat_endpoints<B>(
+    rule: &ContainerDNATRule,
+    ctx: &ProcessContext<B>,
+) -> Result<Option<ContainerDnatEndpoints>>
+where
+    B: FirewallBackend,
+    DFW<B>: Process<B>,
+{
+    let (source_bridges, source_ip) = if let Some(network_name) = &rule.src_network {
+        let Some(network) = ctx.network_map.get(network_name) else {
+            return Ok(None);
+        };
+        let Some(bridge) = docker_bridge_name(network)? else {
+            return Ok(None);
+        };
+        let source_ip = if let Some(container) = &rule.src_container {
+            let Some(network_id) = network.id.as_deref() else {
+                return Ok(None);
+            };
+            let Some(ip) =
+                get_network_for_container(ctx.docker, &ctx.container_map, container, network_id)?
+                    .as_ref()
+                    .and_then(container_ipv4)
+            else {
+                return Ok(None);
+            };
+            Some(ip)
+        } else {
+            None
+        };
+        (vec![bridge], source_ip)
+    } else {
+        if rule.src_container.is_some() {
+            bail!("a container-DNAT rule with src_container requires src_network");
+        }
+        let mut bridges = Vec::new();
+        for network in ctx.network_map.values() {
+            if let Some(name) = docker_bridge_name(network)? {
+                bridges.push(name);
+            }
+        }
+        bridges.sort_unstable();
+        bridges.dedup();
+        (bridges, None)
+    };
+
+    let Some(network_id) = ctx
+        .network_map
+        .get(&rule.dst_network)
+        .and_then(|n| n.id.as_deref())
+    else {
+        return Ok(None);
+    };
+    let Some(destination_ip) = get_network_for_container(
+        ctx.docker,
+        &ctx.container_map,
+        &rule.dst_container,
+        network_id,
+    )?
+    .as_ref()
+    .and_then(container_ipv4) else {
+        return Ok(None);
+    };
+
+    Ok(Some(ContainerDnatEndpoints {
+        source_bridges,
+        source_ip,
+        destination_ip,
+    }))
+}
+
 pub(crate) fn get_network_for_container(
     docker: &Docker,
     container_map: &Map<String, ContainerSummary>,
