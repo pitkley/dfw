@@ -30,7 +30,7 @@ use sloggers::{
     types::Severity,
     Build,
 };
-use std::{fmt, thread, time::Duration};
+use std::{fmt, process::ExitCode, thread, time::Duration};
 use time::format_description::well_known::Rfc3339;
 
 mod errors {
@@ -467,7 +467,7 @@ struct Args {
     check_config: bool,
 }
 
-fn main() {
+fn main() -> ExitCode {
     let args = Args::parse();
 
     // Signals should be set up as early as possible, to set proper signal masks to all threads
@@ -500,7 +500,9 @@ fn main() {
         error!(root_logger, "Encountered error";
                o!("error" => format!("{}", e),
                   "backtrace" => format!("{}", e.backtrace())));
+        return ExitCode::FAILURE;
     }
+    ExitCode::SUCCESS
 }
 
 #[cfg(test)]
