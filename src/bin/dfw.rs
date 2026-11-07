@@ -18,18 +18,15 @@ use dfw::{
     util::*,
 };
 use failure::{bail, format_err};
-use futures::{future, stream::StreamExt};
+use futures::{pin_mut, TryStreamExt};
 use maplit::hashmap;
-use slog::{debug, error, info, o, trace, Logger};
+use slog::{debug, error, info, o, trace, warn, Logger};
 use sloggers::{
     terminal::{Destination, TerminalLoggerBuilder},
     types::Severity,
     Build,
 };
-use std::{
-    fmt, thread,
-    time::{Duration, Instant},
-};
+use std::{fmt, thread, time::Duration};
 use time::format_description::well_known::Rfc3339;
 
 mod errors {
@@ -98,49 +95,23 @@ fn spawn_burst_monitor(
 ) -> thread::JoinHandle<()> {
     let logger = logger.new(o!("thread" => "burst_monitor"));
 
-    #[derive(Debug)]
-    enum Trigger {
-        Event,
-        After,
-        None,
-    }
     thread::spawn(move || {
-        let dummy: Receiver<Instant> = {
-            let (s_dummy, r_dummy) = crossbeam_channel::bounded(0);
-            // Leak the send-channel so that it never gets closed and `recv` never synchronizes.
-            ::std::mem::forget(s_dummy);
-            r_dummy
-        };
-        let mut after: Receiver<Instant> = dummy.clone();
-
+        let mut after = crossbeam_channel::never();
         loop {
-            // The `unused_assignments` warning for the following variable is wrong, since
-            // `trigger` is read at the match-statement.
-            // Maybe related to:
-            //   https://github.com/rust-lang/rfcs/issues/1710
-            #[allow(unused_assignments)]
-            let mut trigger: Trigger = Trigger::None;
-
             select! {
-                recv(r_event) -> _ => {
-                    trace!(logger, "Received docker event");
-                    trigger = Trigger::Event;
+                recv(r_event) -> event => {
+                    if event.is_err() {
+                        break;
+                    }
+                    trace!(logger, "Received Docker event");
+                    after = crossbeam_channel::after(Duration::from_millis(burst_timeout));
                 },
                 recv(after) -> _ => {
-                    trace!(logger, "After timer ran out, sending trigger");
-                    trigger = Trigger::After;
-                    s_trigger.send(()).expect("Failed to send trigger event");
+                    if s_trigger.send(()).is_err() {
+                        break;
+                    }
+                    after = crossbeam_channel::never();
                 }
-            }
-
-            trace!(logger, "Resetting after channel";
-                   o!("trigger" => format!("{:?}", trigger)));
-            match trigger {
-                Trigger::Event => {
-                    after = crossbeam_channel::after(Duration::from_millis(burst_timeout))
-                }
-                Trigger::After => after = dummy.clone(),
-                Trigger::None => {}
             }
         }
     })
@@ -148,47 +119,56 @@ fn spawn_burst_monitor(
 
 fn spawn_event_monitor(
     docker_url: Option<String>,
+    mut since: String,
     s_event: Sender<()>,
     logger: &Logger,
 ) -> thread::JoinHandle<()> {
     let logger = logger.new(o!("thread" => "event_monitor"));
     thread::spawn(move || {
-        let docker = match docker_url {
-            Some(docker_url) => Docker::connect_with_http(&docker_url, 120, API_DEFAULT_VERSION),
-            None => Docker::connect_with_unix_defaults(),
-        }
-        .expect("Failed to setup connection to Docker")
-        .negotiate_version()
-        .sync()
-        .expect("Failed to negotiate version with Docker");
+        let mut reconnecting = false;
         loop {
-            trace!(logger, "Waiting for events");
-            docker
-                .events(Some(EventsOptions {
+            let result = async {
+                let docker = match docker_url.as_deref() {
+                    Some(url) => Docker::connect_with_http(url, 120, API_DEFAULT_VERSION),
+                    None => Docker::connect_with_unix_defaults(),
+                }?
+                .negotiate_version()
+                .await?;
+
+                // A daemon restart can discard its event history. Refresh even if it has no
+                // events to replay, and ask for events since before connecting.
+                if reconnecting && s_event.send(()).is_err() {
+                    return Ok(true);
+                }
+                let events = docker.events(Some(EventsOptions {
+                    since: Some(since.clone()),
                     filters: hashmap! { "type" => vec!["container"] },
                     ..Default::default()
-                }))
-                .for_each({
-                    let logger = logger.clone();
-                    let s_event = s_event.clone();
-                    move |event| {
-                        let event = event.expect("failure in getting Docker event");
-                        trace!(logger, "Received event";
-                               o!("event" => format!("{:?}", &event)));
-                        if let Some(action) = &event.action {
-                            match &**action {
-                                "create" | "destroy" | "start" | "restart" | "die" | "stop" => {
-                                    trace!(logger, "Trigger channel about event";
-                                           o!("event" => format!("{:?}", event)));
-                                    s_event.send(()).expect("Failed to send trigger event");
-                                }
-                                _ => {}
-                            }
-                        }
-                        future::ready(())
+                }));
+                pin_mut!(events);
+                while let Some(event) = events.try_next().await? {
+                    trace!(logger, "Received event"; "event" => format!("{:?}", event));
+                    if matches!(
+                        event.action.as_deref(),
+                        Some("create" | "destroy" | "start" | "restart" | "die" | "stop")
+                    ) && s_event.send(()).is_err()
+                    {
+                        return Ok(true);
                     }
-                })
-                .sync();
+                }
+                Ok::<_, bollard::errors::Error>(false)
+            }
+            .sync();
+
+            match result {
+                Ok(true) => break,
+                Ok(false) => warn!(logger, "Docker event stream closed; reconnecting"),
+                Err(error) => warn!(logger, "Docker event stream failed; reconnecting";
+                                    "error" => error.to_string()),
+            }
+            reconnecting = true;
+            since = time::OffsetDateTime::now_utc().unix_timestamp().to_string();
+            thread::sleep(Duration::from_secs(1));
         }
     })
 }
@@ -297,6 +277,9 @@ where
           "version" => crate_version!(),
           "started_at" => time::OffsetDateTime::now_utc().format(&Rfc3339).expect("failed to format time"));
 
+    // Replay events that arrive while the first snapshot is being processed.
+    let events_since = time::OffsetDateTime::now_utc().unix_timestamp().to_string();
+
     // Initial processing
     debug!(root_logger, "Start first processing");
     process()?;
@@ -326,7 +309,7 @@ where
 
         trace!(root_logger, "Start event monitoring thread";
                o!("docker_url" => &docker_url));
-        spawn_event_monitor(docker_url, s_event, root_logger);
+        spawn_event_monitor(docker_url, events_since, s_event, root_logger);
 
         // Note: we need both spawned threads for the entirety of the programs lifetime. As such we
         // do not bother cleaning them up, but rather let the OS handle the cleanup once we exit the
@@ -349,7 +332,8 @@ where
                 info!(root_logger, "Load interval ticked, starting processing");
                 process()?;
             },
-            recv(event_trigger) -> _ => {
+            recv(event_trigger) -> trigger => {
+                trigger.map_err(|_| format_err!("Docker event monitor stopped"))?;
                 info!(root_logger, "Received Docker events, starting processing");
                 process()?;
             },
@@ -503,5 +487,89 @@ fn main() {
         error!(root_logger, "Encountered error";
                o!("error" => format!("{}", e),
                   "backtrace" => format!("{}", e.backtrace())));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn event_monitor_reconnects_and_refreshes_after_invalid_response() {
+        use std::{
+            io::{BufRead, BufReader, Write},
+            net::TcpListener,
+        };
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let (subscribed, subscription) = crossbeam_channel::bounded(0);
+        let server = thread::spawn(move || {
+            for (index, body) in [
+                r#"{"ApiVersion":"1.43"}"#,
+                "invalid JSON\n",
+                r#"{"ApiVersion":"1.43"}"#,
+                "{\"Type\":\"container\",\"Action\":\"start\"}\n",
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                let (mut socket, _) = listener.accept().unwrap();
+                socket
+                    .set_read_timeout(Some(Duration::from_secs(5)))
+                    .unwrap();
+                let mut request = BufReader::new(&socket);
+                let mut line = String::new();
+                request.read_line(&mut line).unwrap();
+                if index % 2 == 0 {
+                    assert!(line.contains("/version "));
+                } else {
+                    assert!(line.contains("/events?"));
+                    assert!(line.contains("since="));
+                }
+                loop {
+                    line.clear();
+                    if request.read_line(&mut line).unwrap() == 0 || line == "\r\n" {
+                        break;
+                    }
+                }
+                if index == 3 {
+                    subscribed.send(()).unwrap();
+                }
+                write!(
+                    socket,
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                )
+                .unwrap();
+            }
+        });
+
+        let (send_event, events) = crossbeam_channel::bounded(0);
+        let logger = Logger::root(slog::Discard, o!());
+        let monitor = spawn_event_monitor(Some(url), "1".into(), send_event, &logger);
+        events.recv_timeout(Duration::from_secs(5)).unwrap();
+        subscription.recv_timeout(Duration::from_secs(5)).unwrap();
+        drop(events);
+        server.join().unwrap();
+        monitor.join().unwrap();
+    }
+
+    #[test]
+    fn burst_monitor_exits_when_event_channel_closes() {
+        let (send_event, events) = crossbeam_channel::bounded(0);
+        let (send_trigger, triggers) = crossbeam_channel::bounded(0);
+        let logger = Logger::root(slog::Discard, o!());
+        let monitor = spawn_burst_monitor(10, send_trigger, events, &logger);
+
+        send_event.send(()).unwrap();
+        triggers.recv_timeout(Duration::from_secs(1)).unwrap();
+        drop(send_event);
+        assert_eq!(
+            triggers.recv_timeout(Duration::from_secs(1)),
+            Err(crossbeam_channel::RecvTimeoutError::Disconnected)
+        );
+        monitor.join().unwrap();
     }
 }
