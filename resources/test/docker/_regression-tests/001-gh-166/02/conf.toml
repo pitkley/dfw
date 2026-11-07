@@ -2,6 +2,6 @@
 default_policy = "drop"
 
 [[container_to_wider_world.rules]]
-network = "dfwtest_regression-tests001-gh-16600_default"
+network = "PROJECT_default"
 src_container = "non-existent-container"
 verdict = "accept"

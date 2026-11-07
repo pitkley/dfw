@@ -418,4 +418,6 @@ dfw_tests!(
     R "002_gh_265_01" "002-gh-265/01";
     R "002_gh_265_02" "002-gh-265/02";
     R "002_gh_265_03" "002-gh-265/03";
+
+    R F "dnat_source_without_network" "dnat-source-without-network";
 );
