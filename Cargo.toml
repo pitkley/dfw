@@ -41,7 +41,7 @@ strum = { version = "^0.25", features = ["derive"] }
 tempfile = "^3.9"
 time = { version = "^0.3", features = ["formatting"] }
 tokio = "^1.35"
-toml = "^0.8"
+toml = "^0.9"
 url = "^2.5"
 
 [dev-dependencies]
