@@ -11,7 +11,7 @@
 //!
 //! [failure]: https://crates.io/crates/failure
 
-#![allow(missing_docs)]
+#![allow(missing_docs, non_local_definitions)]
 
 use failure::{Error, Fail};
 

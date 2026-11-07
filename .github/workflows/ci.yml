@@ -10,68 +10,70 @@ on:
     branches:
     - main
 
+permissions:
+  contents: read
+
 jobs:
   check-license-headers:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        persist-credentials: false
     - name: Check license headers
       run: |
         ./hack/check-license-headers.sh
 
   rustfmt:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
-        profile: minimal
-        toolchain: stable
-        override: true
-        components: rustfmt
+        persist-credentials: false
+    - name: Install Rust toolchain
+      run: |
+        rustup toolchain install stable --profile minimal --no-self-update --component rustfmt
+        rustup default stable
 
     - name: cargo fmt
-      uses: actions-rs/cargo@v1
-      with:
-        command: fmt
-        args: --all -- --check
+      run: cargo fmt --all -- --check
 
   clippy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
-        profile: minimal
-        toolchain: stable
-        override: true
-        components: clippy
+        persist-credentials: false
+    - name: Install Rust toolchain
+      run: |
+        rustup toolchain install stable --profile minimal --no-self-update --component clippy
+        rustup default stable
 
     - name: cargo clippy
-      uses: actions-rs/clippy-check@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: --workspace --lib --bins --tests --all-targets -- -Dwarnings
+      run: cargo clippy --locked --workspace --all-targets --features docker-tests -- -D warnings
 
   yamllint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        persist-credentials: false
     - name: yamllint
-      uses: ibiqlik/action-yamllint@v1.0.0
+      run: |
+        python3 -m venv "$RUNNER_TEMP/yamllint"
+        "$RUNNER_TEMP/yamllint/bin/pip" install yamllint
+        "$RUNNER_TEMP/yamllint/bin/yamllint" .
 
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     continue-on-error: ${{ matrix.continue-on-error }}
 
     strategy:
@@ -97,32 +99,30 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
-    - name: Retrieve cache
-      uses: actions/cache@v2
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-ci-${{ hashFiles('**/Cargo.lock') }}
+        persist-credentials: false
     - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: ${{ matrix.rust }}
-        override: true
+      run: |
+        rustup toolchain install ${{ matrix.rust }} --profile minimal --no-self-update
+        rustup default ${{ matrix.rust }}
+        if [ -n "${{ matrix.target }}" ]; then
+          rustup target add ${{ matrix.target }}
+        fi
 
     - name: cargo build
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-      env:
-        TARGET: ${{ matrix.target }}
+      run: cargo build --locked ${{ matrix.target && format('--target {0}', matrix.target) || '' }}
     - name: cargo test
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: -- --nocapture
+      run: cargo test --locked ${{ matrix.target && format('--target {0}', matrix.target) || '' }} -- --nocapture
+
+  required-ci:
+    name: Required CI
+    if: ${{ always() }}
+    needs: [check-license-headers, rustfmt, clippy, yamllint, build-and-test]
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+    - name: Check required job results
       env:
-        TARGET: ${{ matrix.target }}
+        JOB_RESULTS: ${{ toJSON(needs) }}
+      run: jq --exit-status 'all(.[]; .result == "success")' <<< "$JOB_RESULTS"

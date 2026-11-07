@@ -855,7 +855,7 @@ impl Process<Nftables> for WiderWorldToContainerRule {
                 };
                 nft_forward_rule.destination_port(&container_port);
                 nft_dnat_rule.destination_port(&host_port);
-                nft_dnat_rule.dnat(&format!(
+                nft_dnat_rule.dnat(format!(
                     "{}:{}",
                     container_ipv4_address
                         .split('/')
@@ -1069,7 +1069,7 @@ impl Process<Nftables> for ContainerDNATRule {
                 None => expose_port.host_port.to_string(),
             };
             nft_rule.destination_port(&destination_port);
-            nft_rule.dnat(&format!(
+            nft_rule.dnat(format!(
                 "{}:{}",
                 dst_network
                     .ipv4_address

@@ -143,9 +143,7 @@ build test binary for docker tests:
     - dfw-docker-test
     policy: pull
   script:
-  - # Shiplift apparently doesn't work with a tcp docker host
-    export DOCKER_HOST="${DOCKER_HOST/tcp:/http:}"
-  - RUST_TEST_THREADS=1 ./dfw-docker-test --nocapture
+  - DFW_TEST_LEGACY_COMPOSE=1 RUST_TEST_THREADS=1 ./dfw-docker-test --nocapture
 
 # API from 1.12.6 and below is not compatible.
 test on docker 1.13.1:

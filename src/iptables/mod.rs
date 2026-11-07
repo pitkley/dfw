@@ -167,7 +167,7 @@ impl Iptables {
                     writeln!(w, ":{} {} [0:0]", chain, policy)?;
                 }
             }
-            for (_, (_, rules)) in chains.iter() {
+            for (_, rules) in chains.values() {
                 for rule in rules {
                     writeln!(w, "{}", rule)?;
                 }
