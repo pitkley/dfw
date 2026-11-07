@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 1.3.1 (2026-11-07)
+
 * Preserve configured source restrictions when generating container-to-wider-world, container-to-host, and container DNAT rules for nftables and iptables. A missing Docker network or container no longer widens the rule to other sources.
 
 ## 1.3.0 (2024-01-07)
