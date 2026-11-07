@@ -5,82 +5,70 @@ on:
     branches:
     - main
     tags:
-    - '*'
+    - '[0-9]+.[0-9]+.[0-9]+'
+    - '[0-9]+.[0-9]+.[0-9]+-*'
+
+concurrency:
+  group: docs-pages
+  queue: max
+
+permissions:
+  contents: read
 
 jobs:
   docs:
-    runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 1
-
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
-    - name: Retrieve cache
-      uses: actions/cache@v2
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-doc-${{ hashFiles('**/Cargo.lock') }}
-    - name: Checkout existing gh-pages branch
-      uses: actions/checkout@v2
+        persist-credentials: false
+
+    - name: Checkout documentation archive
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
         ref: gh-pages
         path: gh-pages
 
-    - name: Get latest tag
-      id: tag
-      uses: jimschubert/query-tag-action@v1
-      with:
-        commit-ish: HEAD
-    - name: Get a pretty-printed version of the current branch or tag
-      id: branch-or-tag
-      run: |
-        REF="$(
-          git symbolic-ref -q --short HEAD \
-            || git describe --tags --exact-match
-        )"
-        if [ -z "${REF}" ]; then
-          echo "No ref available" >&2
-          exit 1
-        fi
-        echo "::set-output name=value::${REF}"
-    - name: Identify if tag is a prerelease
-      id: tag-prerelease
-      run: |
-        if [[ "${{ steps.branch-or-tag.outputs.value }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "::set-output name=value::false"
-        else
-          echo "::set-output name=value::true"
-        fi
-
-    - name: Create/update symlink for `/latest` to latest tag
-      if: ${{ steps.tag-prerelease.outputs.value == 'false' }}
-      run: |
-        rm gh-pages/latest || :
-        ln -sf "${{ steps.tag.outputs.tag }}" gh-pages/latest
-
     - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        override: true
-    - name: cargo doc
-      uses: actions-rs/cargo@v1
-      with:
-        command: doc
-        args: --no-deps
-    - name: Move generated docs to the correct location
-      run: |
-        rm -rf "gh-pages/${{ steps.branch-or-tag.outputs.value }}" || :
-        mv target/doc "gh-pages/${{ steps.branch-or-tag.outputs.value }}"
+      run: rustup toolchain install stable --profile minimal --no-self-update
 
-    - name: Deploy documentation to GitHub pages
-      if: success()
-      working-directory: ./gh-pages
-      run: ../hack/deploy-github-pages.sh
-      env:
-        COMMIT_MESSAGE: "Deploy documentation for ${{ steps.branch-or-tag.outputs.value }} to GitHub pages"
+    - name: Build docs
+      run: cargo +stable doc --locked --no-deps
+
+    - name: Update documentation archive
+      run: |
+        [[ "$GITHUB_REF_NAME" == main || "$GITHUB_REF_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]
+        rm -rf "gh-pages/$GITHUB_REF_NAME"
+        mv target/doc "gh-pages/$GITHUB_REF_NAME"
+        if [[ "$GITHUB_REF_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          ln -sfn "$GITHUB_REF_NAME" gh-pages/latest
+        fi
+        (
+          cd gh-pages
+          COMMIT_MESSAGE="Deploy documentation for $GITHUB_REF_NAME to GitHub Pages" ../hack/deploy-github-pages.sh
+        )
+
+    - name: Prepare Pages artifact
+      run: rsync -aL --exclude=.git gh-pages/ pages/
+
+    - name: Upload Pages artifact
+      uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+      with:
+        path: pages
+
+  deploy:
+    needs: docs
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - name: Deploy documentation
+      id: deployment
+      uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5

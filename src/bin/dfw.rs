@@ -27,7 +27,7 @@ use sloggers::{
     Build,
 };
 use std::{
-    thread,
+    fmt, thread,
     time::{Duration, Instant},
 };
 use time::format_description::well_known::Rfc3339;
@@ -48,12 +48,12 @@ enum FirewallBackend {
     Iptables,
 }
 
-impl ToString for FirewallBackend {
-    fn to_string(&self) -> String {
-        match self {
-            Self::Nftables => "nftables".to_owned(),
-            Self::Iptables => "iptables".to_owned(),
-        }
+impl fmt::Display for FirewallBackend {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Nftables => "nftables",
+            Self::Iptables => "iptables",
+        })
     }
 }
 
@@ -271,7 +271,6 @@ where
                     dry_run,
                 )?
                 .process()
-                .map_err(From::from)
             })
         }
         LoadMode::Always => {
@@ -289,7 +288,6 @@ where
                     dry_run,
                 )?
                 .process()
-                .map_err(From::from)
             })
         }
     };

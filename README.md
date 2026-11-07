@@ -333,14 +333,10 @@ At least Docker 1.13.0 is required.
 
 DFW is continuously and automatically tested with the following stable Docker versions (using the latest patch-version each):
 
-* `24.0`
-* `23.0`
-* `20.10`
-* `19.03`
-* `18.09`
-* `18.06`
-
-Docker versions between 18.03 and 1.13 should also work, but are not automatically tested anymore due to lacking Docker BuildKit support.
+* 20.10.24 (Debian 12's default)
+* 26.1.4 (Debian 13's default)
+* 29.1.3 (Ubuntu 24's default)
+* Latest 29.x release
 
 ## <a name="versionbumppolicy"></a> Version bump policy
 

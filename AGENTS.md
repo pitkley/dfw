@@ -8,7 +8,7 @@ DFW is a Rust 2021 tool that manages Docker firewall rules. `src/bin/dfw.rs` han
 
 - `cargo build` compiles DFW; `cargo build --release` builds the optimized binary.
 - `cargo run -- --check-config --config-file examples/minimal/dfw.toml` validates the sample configuration. Use `--dry-run` when exercising rule generation against a Docker environment without applying firewall changes.
-- Before submitting, run `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings`, and `./hack/check-license-headers.sh`. CI also checks YAML with `yamllint`.
+- Before submitting, run `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --features docker-tests -- -D warnings`, and `./hack/check-license-headers.sh`. CI also checks YAML with `yamllint`.
 
 ## Coding Style
 
@@ -16,7 +16,7 @@ Use rustfmt defaults, including four-space indentation. Use `snake_case` for mod
 
 ## Testing
 
-Run `cargo test` for the default suite; use `cargo test parse_conf_file` to filter by name. Name new tests for the behavior they cover. Add parsing cases in `tests/types.rs` and rule regressions under `resources/test/docker/_regression-tests/`. Keep expected rules in the corresponding backend's `expected-*.txt` files. Run `cargo test --features docker-tests --test dfw -- --test-threads=1` with a running Docker daemon and `docker-compose` on your PATH. No numeric coverage threshold is configured.
+Run `cargo test` for the default suite; use `cargo test parse_conf_file` to filter by name. Name new tests for the behavior they cover. Add parsing cases in `tests/types.rs` and rule regressions under `resources/test/docker/_regression-tests/`. Keep expected rules in the corresponding backend's `expected-*.txt` files. Run `cargo test --features docker-tests --test dfw -- --test-threads=1` with the Docker Compose plugin and `DOCKER_HOST` pointing to a test daemon (for example, `tcp://127.0.0.1:2375`). No numeric coverage threshold is configured.
 
 ## Commits and Pull Requests
 

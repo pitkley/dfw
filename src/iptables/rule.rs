@@ -73,36 +73,36 @@ impl Rule {
         }
     }
 
-    pub fn source<S: ?Sized>(&mut self, value: &S) -> &mut Self
+    pub fn source<S>(&mut self, value: &S) -> &mut Self
     where
-        S: AsRef<str>,
+        S: AsRef<str> + ?Sized,
     {
         let new = self;
         new.source = Some(value.as_ref().into());
         new
     }
 
-    pub fn destination<S: ?Sized>(&mut self, value: &S) -> &mut Self
+    pub fn destination<S>(&mut self, value: &S) -> &mut Self
     where
-        S: AsRef<str>,
+        S: AsRef<str> + ?Sized,
     {
         let new = self;
         new.destination = Some(value.as_ref().into());
         new
     }
 
-    pub fn in_interface<S: ?Sized>(&mut self, value: &S) -> &mut Self
+    pub fn in_interface<S>(&mut self, value: &S) -> &mut Self
     where
-        S: AsRef<str>,
+        S: AsRef<str> + ?Sized,
     {
         let new = self;
         new.in_interface = Some(value.as_ref().into());
         new
     }
 
-    pub fn out_interface<S: ?Sized>(&mut self, value: &S) -> &mut Self
+    pub fn out_interface<S>(&mut self, value: &S) -> &mut Self
     where
-        S: AsRef<str>,
+        S: AsRef<str> + ?Sized,
     {
         let new = self;
         new.out_interface = Some(value.as_ref().into());
@@ -121,54 +121,54 @@ impl Rule {
         new
     }
 
-    pub fn protocol<S: ?Sized>(&mut self, value: &S) -> &mut Self
+    pub fn protocol<S>(&mut self, value: &S) -> &mut Self
     where
-        S: AsRef<str>,
+        S: AsRef<str> + ?Sized,
     {
         let new = self;
         new.protocol = Some(value.as_ref().into());
         new
     }
 
-    pub fn source_port<S: ?Sized>(&mut self, value: &S) -> &mut Self
+    pub fn source_port<S>(&mut self, value: &S) -> &mut Self
     where
-        S: AsRef<str>,
+        S: AsRef<str> + ?Sized,
     {
         let new = self;
         new.source_port = Some(value.as_ref().into());
         new
     }
 
-    pub fn destination_port<S: ?Sized>(&mut self, value: &S) -> &mut Self
+    pub fn destination_port<S>(&mut self, value: &S) -> &mut Self
     where
-        S: AsRef<str>,
+        S: AsRef<str> + ?Sized,
     {
         let new = self;
         new.destination_port = Some(value.as_ref().into());
         new
     }
 
-    pub fn filter<S: ?Sized>(&mut self, value: &S) -> &mut Self
+    pub fn filter<S>(&mut self, value: &S) -> &mut Self
     where
-        S: AsRef<str>,
+        S: AsRef<str> + ?Sized,
     {
         let new = self;
         new.filter = Some(value.as_ref().into());
         new
     }
 
-    pub fn jump<S: ?Sized>(&mut self, value: &S) -> &mut Self
+    pub fn jump<S>(&mut self, value: &S) -> &mut Self
     where
-        S: AsRef<str>,
+        S: AsRef<str> + ?Sized,
     {
         let new = self;
         new.jump = Some(value.as_ref().into());
         new
     }
 
-    pub fn comment<S: ?Sized>(&mut self, value: &S) -> &mut Self
+    pub fn comment<S>(&mut self, value: &S) -> &mut Self
     where
-        S: AsRef<str>,
+        S: AsRef<str> + ?Sized,
     {
         let new = self;
         new.comment = Some(value.as_ref().into());

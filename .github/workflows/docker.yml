@@ -5,61 +5,68 @@ on:
     branches:
     - main
     tags:
-    - '*'
+    - '[0-9]+.[0-9]+.[0-9]+'
+    - '[0-9]+.[0-9]+.[0-9]+-*'
   pull_request:
     branches:
     - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
-  build-and-push-docker-image:
-    if: github.repository_owner == 'pitkley' && github.actor != 'dependabot[bot]'
-    runs-on: ubuntu-latest
+  build-per-architecture:
+    if: github.event_name == 'pull_request' || github.repository == 'pitkley/dfw'
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+        - platform: linux/amd64
+          runner: ubuntu-24.04
+          arch: amd64
+        - platform: linux/arm64
+          runner: ubuntu-24.04-arm
+          arch: arm64
+        # Cross-compile on ARM64 and use QEMU only to run ARMv7 code.
+        - platform: linux/arm/v7
+          runner: ubuntu-24.04-arm
+          arch: armv7
 
     steps:
-    - name: Set up Docker Buildx
-      id: buildx
-      uses: docker/setup-buildx-action@v1
-
-    - name: Setup connection to arm64-capable runner
-      run: |
-        echo "::group::ssh-agent: launch and export"
-        eval "$(ssh-agent)"
-        echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
-        echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
-        echo "::endgroup::"
-
-        echo "::group::ssh-agent: load private key"
-        ssh-add - <<< "${{ secrets.ARMRUNNER1_SSH_PRIVATE_KEY }}"
-        echo "::endgroup::"
-
-        echo "::group::ssh: pin runner public key"
-        mkdir ~/.ssh && chmod 0700 ~/.ssh || :
-        echo "[${{ secrets.ARMRUNNER1_HOSTNAME }}]:${{ secrets.ARMRUNNER1_SSH_PORT }} ${{ secrets.ARMRUNNER1_SSH_HOSTKEY }}" > ~/.ssh/known_hosts
-        echo "::endgroup::"
-
-    - name: Register arm64-capable runner with Buildx
-      env:
-        DOCKER_HOST: ssh://github-actions@${{ secrets.ARMRUNNER1_HOSTNAME }}:${{ secrets.ARMRUNNER1_SSH_PORT }}
-      run: docker buildx create --append --name ${{ steps.buildx.outputs.name }} --bootstrap
-
     - name: Checkout
-      uses: actions/checkout@v2
-
-    - name: Prepare Docker image tags
-      id: docker-image-tags
-      uses: haya14busa/action-cond@v1
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
-        cond: ${{ github.event_name == 'push' }}
-        if_true: |
-          pitkley/dfw
-          ghcr.io/pitkley/dfw
-        if_false: |
-          ghcr.io/pitkley/dfw
+        persist-credentials: false
+
+    - name: Set up QEMU
+      if: matrix.arch == 'armv7'
+      uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
+      with:
+        platforms: arm
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+
+    - name: Log in to GHCR
+      if: github.event_name == 'push'
+      env:
+        GHCR_TOKEN: ${{ github.token }}
+      run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_REPOSITORY_OWNER" --password-stdin
+
     - name: Prepare Docker image metadata
       id: meta
-      uses: docker/metadata-action@v3
-      with:
-        images: ${{ steps.docker-image-tags.outputs.value }}
+      uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
+      with: &image-metadata
+        images: |
+          pitkley/dfw
+          ghcr.io/pitkley/dfw
         tags: |
           type=ref,event=branch
           type=ref,event=pr
@@ -67,24 +74,96 @@ jobs:
           type=semver,pattern={{major}}.{{minor}}
           type=semver,pattern={{major}}
 
-    - name: Login to Docker Hub
-      if: github.event_name == 'push'
-      uses: docker/login-action@v1
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_ACCESSTOKEN }}
-    - name: Login to ghcr.io
-      uses: docker/login-action@v1
-      with:
-        registry: ghcr.io
-        username: ${{ github.repository_owner }}
-        password: ${{ github.token }}
-
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v2
+    - name: Build image
+      id: build
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
       with:
         context: .
-        platforms: linux/amd64,linux/arm64,linux/arm/v7
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
+        platforms: ${{ matrix.platform }}
         labels: ${{ steps.meta.outputs.labels }}
+        build-args: ${{ matrix.arch == 'armv7' && 'RUST_BUILD_PLATFORM=linux/arm64' || '' }}
+        outputs: ${{ github.event_name == 'push' && 'type=image,name=ghcr.io/pitkley/dfw,push-by-digest=true,name-canonical=true,push=true' || 'type=cacheonly' }}
+        cache-from: type=gha,scope=${{ matrix.arch }}
+        cache-to: type=gha,scope=${{ matrix.arch }}
+
+    - name: Export digest
+      if: github.event_name == 'push'
+      env:
+        DIGEST: ${{ steps.build.outputs.digest }}
+      run: |
+        mkdir -p /tmp/digests
+        [[ "$DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]
+        touch "/tmp/digests/${DIGEST#sha256:}"
+
+    - name: Upload digest
+      if: github.event_name == 'push'
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+      with:
+        name: digests-${{ matrix.arch }}
+        path: /tmp/digests/*
+        if-no-files-found: error
+        retention-days: 1
+
+  merge-manifests:
+    if: github.event_name == 'push' && github.repository == 'pitkley/dfw'
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-24.04
+    needs: build-per-architecture
+
+    steps:
+    - name: Download digests
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+      with:
+        path: /tmp/digests
+        pattern: digests-*
+        merge-multiple: true
+
+    - name: Log in to Docker Hub
+      env:
+        DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        DOCKERHUB_ACCESSTOKEN: ${{ secrets.DOCKERHUB_ACCESSTOKEN }}
+      run: printf '%s' "$DOCKERHUB_ACCESSTOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+
+    - name: Log in to GHCR
+      env:
+        GHCR_TOKEN: ${{ github.token }}
+      run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_REPOSITORY_OWNER" --password-stdin
+
+    - name: Prepare Docker image metadata
+      id: meta
+      uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
+      with: *image-metadata
+
+    - name: Publish multi-architecture image to GHCR
+      working-directory: /tmp/digests
+      env:
+        IMAGE_DESCRIPTION: ${{ github.event.repository.description }}
+        IMAGE_SOURCE: ${{ github.event.repository.html_url }}
+      run: |
+        mapfile -t tags < <(jq -r '.tags[] | select(startswith("ghcr.io/"))' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+        args=()
+        for tag in "${tags[@]}"; do
+          args+=(--tag "$tag")
+        done
+        for digest in *; do
+          args+=("ghcr.io/pitkley/dfw@sha256:$digest")
+        done
+        docker buildx imagetools create \
+          --annotation "index:org.opencontainers.image.description=$IMAGE_DESCRIPTION" \
+          --annotation "index:org.opencontainers.image.source=$IMAGE_SOURCE" \
+          "${args[@]}"
+
+    - name: Copy multi-architecture image to Docker Hub
+      env:
+        IMAGE_VERSION: ${{ steps.meta.outputs.version }}
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y skopeo
+        mapfile -t tags < <(jq -r '.tags[] | select(startswith("pitkley/dfw:"))' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+        for tag in "${tags[@]}"; do
+          skopeo copy --all --authfile "${DOCKER_CONFIG:-$HOME/.docker}/config.json" \
+            "docker://ghcr.io/pitkley/dfw:$IMAGE_VERSION" "docker://docker.io/$tag"
+        done
+        docker buildx imagetools inspect "pitkley/dfw:$IMAGE_VERSION"

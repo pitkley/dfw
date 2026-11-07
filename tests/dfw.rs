@@ -50,8 +50,7 @@ fn logger() -> Logger {
     }
 
     let drain = Fuse(NoopDrain);
-    let logger = Logger::root(drain, o!());
-    logger
+    Logger::root(drain, o!())
 }
 
 fn load_config_and_inject_project_name<T>(
@@ -102,37 +101,46 @@ fn compare_loglines(actual: &Vec<LogLine>, expected: &Vec<LogLine>) {
     assert_eq!(actual, expected);
 }
 
-fn with_compose_environment<F: FnOnce() -> ()>(compose_path: &str, project_name: &str, body: F)
+fn compose_command(compose_path: &str, project_name: &str) -> Command {
+    let mut command = if std::env::var_os("DFW_TEST_LEGACY_COMPOSE").is_some() {
+        Command::new("docker-compose")
+    } else {
+        let mut command = Command::new("docker");
+        // The fixtures expect Compose v1's underscore-separated container names.
+        command.args(["compose", "--compatibility"]);
+        command
+    };
+    command.args(["--project-name", project_name, "--file", compose_path]);
+    command
+}
+
+fn with_compose_environment<F>(compose_path: &str, project_name: &str, body: F)
 where
-    F: UnwindSafe,
+    F: FnOnce() + UnwindSafe,
 {
     // Create and start environment
-    let mut child = Command::new("docker-compose")
-        .args(&["--project-name", project_name])
-        .args(&["--file", compose_path])
-        .args(&["up", "-d"])
+    let mut child = compose_command(compose_path, project_name)
+        .args(["up", "-d"])
         .spawn()
-        .expect("failed to setup Docker environment using docker-compose");
+        .expect("failed to setup Docker environment using docker compose");
 
-    let up_exit_code = child.wait().expect("failed to wait on docker-compose");
+    let up_exit_code = child.wait().expect("failed to wait on docker compose");
 
     if !up_exit_code.success() {
-        panic!("docker-compose did not exit successfully");
+        panic!("docker compose did not exit successfully");
     }
 
     // Run the body, catching any potential panics
     let panic_result = panic::catch_unwind(body);
 
     // Cleanup started environment
-    let mut child = Command::new("docker-compose")
-        .args(&["--project-name", project_name])
-        .args(&["--file", compose_path])
-        .args(&["down", "--volumes"])
-        .args(&["--rmi", "local"])
+    let mut child = compose_command(compose_path, project_name)
+        .args(["down", "--volumes"])
+        .args(["--rmi", "local"])
         .spawn()
-        .expect("failed to stop Docker environment using docker-compose");
+        .expect("failed to stop Docker environment using docker compose");
 
-    child.wait().expect("failed to wait on docker-compose");
+    child.wait().expect("failed to wait on docker compose");
 
     // Resume unwinding potential panics
     if let Err(err) = panic_result {
@@ -140,12 +148,9 @@ where
     }
 }
 
-fn test_backend<B: FirewallBackend, F: FnOnce(&DFW<B>, ProcessContext<B>) -> ()>(
-    path: &str,
-    resource_prefix: &str,
-    body: F,
-) where
-    F: UnwindSafe,
+fn test_backend<B: FirewallBackend, F>(path: &str, resource_prefix: &str, body: F)
+where
+    F: FnOnce(&DFW<B>, ProcessContext<B>) + UnwindSafe,
     DFW<B>: Process<B>,
 {
     // Load toml
@@ -168,7 +173,11 @@ fn test_backend<B: FirewallBackend, F: FnOnce(&DFW<B>, ProcessContext<B>) -> ()>
     let logger = logger();
 
     // Setup docker instance
-    let docker = Docker::connect_with_http_defaults().expect("Failed to setup Docker instance");
+    let docker = Docker::connect_with_http_defaults()
+        .expect("Failed to setup Docker instance")
+        .negotiate_version()
+        .sync()
+        .expect("Failed to negotiate version with Docker");
     let ping = docker.ping().sync();
 
     assert!(ping.is_ok());

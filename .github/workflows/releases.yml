@@ -6,118 +6,148 @@ on:
     - '[0-9]+.[0-9]+.[0-9]+'
     - '[0-9]+.[0-9]+.[0-9]+-*'
 
+concurrency:
+  group: release-${{ github.ref }}
+
+permissions:
+  contents: read
+
 jobs:
-  build-and-publish:
-    runs-on: ubuntu-latest
+  build-binaries:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+        - target: x86_64-unknown-linux-musl
+          runner: ubuntu-24.04
+        - target: aarch64-unknown-linux-musl
+          runner: ubuntu-24.04-arm
+        # Cross-compile ARMv7 on the native ARM64 runner.
+        - target: armv7-unknown-linux-musleabihf
+          runner: ubuntu-24.04-arm
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
-    - name: Retrieve cache
-      uses: actions/cache@v2
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-ci-${{ hashFiles('**/Cargo.lock') }}
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        override: true
+        persist-credentials: false
 
-    - name: cargo build --release
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: --release
-      env:
-        TARGET: x86_64-unknown-linux-musl
-    - name: Create checksum
+    - name: Install Rust toolchain
       run: |
-        sha256sum target/release/dfw > target/release/dfw.sha256
+        rustup toolchain install stable --profile minimal --no-self-update
+        rustup default stable
+        rustup target add ${{ matrix.target }}
+
+    - name: Install ARMv7 cross linker
+      if: matrix.target == 'armv7-unknown-linux-musleabihf'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-arm-linux-gnueabihf
+        echo "CARGO_TARGET_ARMV7_UNKNOWN_LINUX_MUSLEABIHF_LINKER=arm-linux-gnueabihf-gcc" >> "$GITHUB_ENV"
+
+    - name: Build release binary
+      run: cargo build --locked --release --target ${{ matrix.target }}
+
+    - name: Upload binary artifact
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+      with:
+        name: binary-${{ matrix.target }}
+        path: target/${{ matrix.target }}/release/dfw
+        if-no-files-found: error
+        retention-days: 1
+
+  create-release:
+    runs-on: ubuntu-24.04
+    needs: build-binaries
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        persist-credentials: false
+
+    - name: Download all binary artifacts
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+      with:
+        path: binaries
+        pattern: binary-*
+        merge-multiple: false
 
     - name: Identify if tag is a prerelease
       id: tag
       run: |
-        if [[ "${{ github.ref }}" =~ ^refs/tags/(.+)$ ]]; then
-          echo "::set-output name=value::${BASH_REMATCH[1]}"
+        [[ "$GITHUB_REF_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]
+        if [[ "$GITHUB_REF_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "is-prerelease=false" >> "$GITHUB_OUTPUT"
         else
-          echo "::error ::Expected a tag"
-          exit 1
+          echo "is-prerelease=true" >> "$GITHUB_OUTPUT"
         fi
 
-        if [[ "${{ github.ref }}" =~ ^refs/tags/[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "::set-output name=is-prerelease::false"
-        else
-          echo "::set-output name=is-prerelease::true"
-        fi
     - name: Extract current changelog
-      id: changelog
-      run:
-        |
-        changelog="$(hack/extract-current-changelog.py CHANGELOG.md)"
-        # https://github.community/t/set-output-truncates-multiline-strings/16852/3
-        changelog="${changelog//'%'/'%25'}"
-        changelog="${changelog//$'\n'/'%0A'}"
-        changelog="${changelog//$'\r'/'%0D'}"
+      run: |
+        {
+          printf '## Changes\n\n'
+          hack/extract-current-changelog.py CHANGELOG.md
+        } > release-notes.md
 
-        echo "::set-output name=value::$changelog"
+    - name: Prepare release binaries
+      run: |
+        mkdir -p release-assets
+        for target_dir in binaries/binary-*; do
+          target=${target_dir#binaries/binary-}
+          cp "$target_dir/dfw" "release-assets/dfw-$target"
+          (cd release-assets && sha256sum "dfw-$target" > "dfw-$target.sha256")
+        done
+        ls -lah release-assets/
 
-    - name: Prepare release
-      id: prepare-release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: v${{ github.ref }}
-        draft: true
-        prerelease: ${{ steps.tag.outputs.is-prerelease }}
-        body: |
-          # Summary
-
-          TODO!
-
-          ## Changes
-
-          ${{ steps.changelog.outputs.value }}
+    - name: Append installation instructions
+      run: |
+        sed "s/DFW_RELEASE_TAG/$GITHUB_REF_NAME/g" <<'EOF' >> release-notes.md
 
           ## Installation
 
-          While you can use Cargo to install `dfw` as a binary, using the Docker image is the preferred way to go, especially if you don't want to install Rust and Cargo on your host:
+          ### Docker Image (recommended)
 
           ```console
-          $ docker pull pitkley/dfw:${{ steps.tag.outputs.value }}
+          $ docker pull ghcr.io/pitkley/dfw:DFW_RELEASE_TAG
           $ docker run -d \
                 --name=dfw \
                 --restart=unless-stopped \
                 -v /var/run/docker.sock:/var/run/docker.sock:ro \
                 -v /path/to/your/config:/config \
                 --net host --cap-add=NET_ADMIN \
-                pitkley/dfw:${{ steps.tag.outputs.value }} --config-path /config
+                ghcr.io/pitkley/dfw:DFW_RELEASE_TAG --config-path /config
           ```
 
-          This will download a lightweight image, coming in at around 20 MB, and subsequently run it using your configuration.
+          This will download a lightweight image and subsequently run it using your configuration.
           The image supports multiple architectures: `amd64`, `arm64`, `armv7` (specifically `armhf`).
 
-    - name: Upload static DFW binary
-      uses: actions/upload-release-asset@v1
+          ### Pre-built binaries
+
+          Pre-built static binaries are available below for the following platforms:
+
+          * `dfw-x86_64-unknown-linux-musl` - Linux x86_64 (amd64)
+          * `dfw-aarch64-unknown-linux-musl` - Linux ARM64 (aarch64)
+          * `dfw-armv7-unknown-linux-musleabihf` - Linux ARMv7 (armhf, for 32-bit Raspberry Pi OS)
+        EOF
+
+    - name: Create GitHub release draft
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.prepare-release.outputs.upload_url }}
-        asset_path: target/release/dfw
-        asset_name: dfw-x86_64-unknown-linux-musl
-        asset_content_type: application/octet-stream
-    - name: Upload static DFW binary checksum
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.prepare-release.outputs.upload_url }}
-        asset_path: target/release/dfw.sha256
-        asset_name: dfw-x86_64-unknown-linux-musl.sha256
-        asset_content_type: application/octet-stream
+        GH_TOKEN: ${{ github.token }}
+        PRERELEASE: ${{ steps.tag.outputs.is-prerelease }}
+      run: |
+        args=(--draft --verify-tag --title "$GITHUB_REF_NAME" --notes-file release-notes.md)
+        if [[ "$PRERELEASE" == true ]]; then
+          args+=(--prerelease)
+        fi
+        if draft=$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft); then
+          if [[ "$draft" != true ]]; then
+            echo "Release $GITHUB_REF_NAME is already published." >&2
+            exit 1
+          fi
+          gh release upload "$GITHUB_REF_NAME" --clobber release-assets/*
+        else
+          gh release create "$GITHUB_REF_NAME" "${args[@]}" release-assets/*
+        fi
