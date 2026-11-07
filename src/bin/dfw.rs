@@ -339,16 +339,18 @@ where
         r_dummy
     };
 
+    let mut retry = crossbeam_channel::never();
     loop {
         select! {
             recv(load_interval_chan) -> _ => {
                 info!(root_logger, "Load interval ticked, starting processing");
-                process()?;
             },
             recv(event_trigger) -> trigger => {
                 trigger.map_err(|_| format_err!("Docker event monitor stopped"))?;
                 info!(root_logger, "Received Docker events, starting processing");
-                process()?;
+            },
+            recv(retry) -> _ => {
+                info!(root_logger, "Retrying firewall processing");
             },
             recv(r_signal) -> signal => {
                 match signal.expect("received an error instead of a signal") {
@@ -361,12 +363,20 @@ where
                     libc::SIGHUP => {
                         info!(root_logger, "Received HUP-signal, starting processing";
                               o!("signal" => format!("{:?}", signal)));
-                        process()?;
                     }
                     _ => { bail!("got unexpected signal '{:?}'", signal); }
                 }
             }
         }
+
+        retry = match process() {
+            Ok(()) => crossbeam_channel::never(),
+            Err(error) => {
+                warn!(root_logger, "Firewall processing failed; retrying";
+                      "error" => error.to_string());
+                crossbeam_channel::after(Duration::from_secs(1))
+            }
+        };
     }
 
     info!(root_logger, "Application exiting";
