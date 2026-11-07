@@ -15,6 +15,7 @@ use super::{
 use crate::{errors::*, process::*, types::*, FirewallBackend};
 use failure::{format_err, ResultExt};
 use slog::{debug, info, o, trace};
+use std::collections::BTreeSet;
 use time::format_description::well_known::Rfc3339;
 
 impl Process<Iptables> for DFW<Iptables> {
@@ -276,13 +277,45 @@ impl Process<Iptables> for ContainerToContainer {
             }
         }
 
-        // Enforce default policy for container-to-container communication.
-        rules.push(append_rule(
-            IptablesRuleDiscriminants::V4,
-            "filter",
-            DFW_FORWARD_CHAIN,
-            &format!("-j {}", self.default_policy.to_string().to_uppercase()),
-        ));
+        // The shared FORWARD chain also carries host ingress and Internet egress.
+        // Apply this fallback only when both interfaces are Docker bridges.
+        let mut bridges = BTreeSet::new();
+        for network in ctx.network_map.values() {
+            if network.driver.as_deref() != Some("bridge") {
+                continue;
+            }
+            let bridge = match network
+                .options
+                .as_ref()
+                .and_then(|options| options.get("com.docker.network.bridge.name"))
+            {
+                Some(name) => name.clone(),
+                None => match network.id.as_deref() {
+                    Some(id) => get_bridge_name(id)?,
+                    None => continue,
+                },
+            };
+            bridges.insert(bridge);
+        }
+        if !bridges.is_empty() {
+            const DEFAULT_CHAIN: &str = "DFWRS_CTC_DEFAULT";
+            let family = IptablesRuleDiscriminants::V4;
+            rules.push(new_chain(family, "filter", DEFAULT_CHAIN));
+            rules.push(flush_chain(family, "filter", DEFAULT_CHAIN));
+            let verdict = self.default_policy.to_string().to_uppercase();
+            for bridge in &bridges {
+                let input = Rule::new("filter", DFW_FORWARD_CHAIN)
+                    .in_interface(bridge)
+                    .jump(DEFAULT_CHAIN)
+                    .build()?;
+                rules.push(append_built_rule(family, &input));
+                let output = Rule::new("filter", DEFAULT_CHAIN)
+                    .out_interface(bridge)
+                    .jump(&verdict)
+                    .build()?;
+                rules.push(append_built_rule(family, &output));
+            }
+        }
 
         Ok(Some(rules))
     }
@@ -1073,4 +1106,62 @@ fn append_built_rule(
     rule: &BuiltRule,
 ) -> IptablesRule {
     append_rule(rule_discriminant, &rule.table, &rule.chain, &rule.rule)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bollard::{models::Network, Docker, API_DEFAULT_VERSION};
+    use slog::{Discard, Logger};
+
+    #[test]
+    fn container_forwarding_default_requires_two_docker_bridges() {
+        let docker =
+            Docker::connect_with_http("http://127.0.0.1:2375", 1, API_DEFAULT_VERSION).unwrap();
+        let config: DFW<Iptables> =
+            toml::from_str("[container_to_container]\ndefault_policy = \"drop\"").unwrap();
+        let bridge = |name: &str| Network {
+            driver: Some("bridge".into()),
+            options: Some([("com.docker.network.bridge.name".into(), name.into())].into()),
+            ..Default::default()
+        };
+        let ctx = ProcessContext {
+            docker: &docker,
+            dfw: &config,
+            container_map: Default::default(),
+            network_map: [
+                ("bridge".into(), bridge("docker0")),
+                ("test".into(), bridge("custom0")),
+                (
+                    "host".into(),
+                    Network {
+                        driver: Some("host".into()),
+                        ..Default::default()
+                    },
+                ),
+            ]
+            .into(),
+            external_network_interfaces: None,
+            primary_external_network_interface: None,
+            logger: Logger::root(Discard, o!()),
+            dry_run: true,
+        };
+
+        let rules = Process::<Iptables>::process(&config.container_to_container, &ctx)
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            Iptables::get_rules(rules, IptablesRuleDiscriminants::V4),
+            [
+                "*filter",
+                ":DFWRS_CTC_DEFAULT - [0:0]",
+                "-F DFWRS_CTC_DEFAULT",
+                "-A DFWRS_CTC_DEFAULT -o custom0 -j DROP",
+                "-A DFWRS_CTC_DEFAULT -o docker0 -j DROP",
+                "-A DFWRS_FORWARD -i custom0 -j DFWRS_CTC_DEFAULT",
+                "-A DFWRS_FORWARD -i docker0 -j DFWRS_CTC_DEFAULT",
+                "COMMIT",
+            ]
+        );
+    }
 }

@@ -1,14 +1,19 @@
 *filter
+:DFWRS_CTC_DEFAULT - [0:0]
 :DFWRS_FORWARD - [0:0]
 :DFWRS_INPUT - [0:0]
 :FORWARD - [0:0]
 :INPUT - [0:0]
+-F DFWRS_CTC_DEFAULT
+-A DFWRS_CTC_DEFAULT -o $output=bridge -j DROP
+-A DFWRS_CTC_DEFAULT -o docker0 -j DROP
 -F DFWRS_FORWARD
 -A DFWRS_FORWARD -m state --state INVALID -j DROP
 -A DFWRS_FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
 -A DFWRS_FORWARD -i $input=bridge -o $output=bridge -j REJECT	"$input" == "$output"
 -A DFWRS_FORWARD -s $src_ip=ip -d $dst_ip=ip -i $input=bridge -o $output=bridge -m state --state RELATED -j ACCEPT	"$input" == "$output"
--A DFWRS_FORWARD -j DROP
+-A DFWRS_FORWARD -i $input=bridge -j DFWRS_CTC_DEFAULT
+-A DFWRS_FORWARD -i docker0 -j DFWRS_CTC_DEFAULT
 -F DFWRS_INPUT
 -A DFWRS_INPUT -m state --state INVALID -j DROP
 -A DFWRS_INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
