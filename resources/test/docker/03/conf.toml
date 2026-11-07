@@ -4,3 +4,13 @@ default_policy = "drop"
 [[container_to_wider_world.rules]]
 network = "PROJECT_default"
 verdict = "reject"
+
+# A removed source network or endpoint must not prevent the remaining rules from loading.
+[[container_to_wider_world.rules]]
+network = "PROJECT_missing"
+verdict = "accept"
+
+[[container_to_wider_world.rules]]
+network = "PROJECT_default"
+src_container = "PROJECT_missing_1"
+verdict = "accept"

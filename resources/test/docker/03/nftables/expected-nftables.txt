@@ -16,4 +16,4 @@ add chain ip6 dfw prerouting { type nat hook prerouting priority -105 ; }
 add chain ip6 dfw postrouting { type nat hook postrouting priority 95 ; }
 add rule inet dfw input meta iifname docker0 meta mark set 0xdf accept
 add rule inet dfw forward meta iifname $input=bridge meta mark set 0xdf reject
-add rule inet dfw forward ip saddr $src_ip=ip meta iifname $input=bridge oifname eni meta mark set 0xdf ct state related accept
+add rule inet dfw forward ip saddr $src_ip=ip meta iifname $input=bridge oifname eni ct state related meta mark set 0xdf accept

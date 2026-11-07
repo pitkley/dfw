@@ -1,2 +1,3 @@
 [global_defaults]
 external_network_interfaces = "eni"
+default_docker_bridge_to_host_policy = "drop"

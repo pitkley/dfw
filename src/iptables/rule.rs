@@ -21,7 +21,6 @@ pub(super) struct Rule {
     pub in_interface: Option<String>,
     pub out_interface: Option<String>,
 
-    pub not_in_interface: bool,
     pub not_out_interface: bool,
 
     pub protocol: Option<String>,
@@ -62,7 +61,6 @@ impl Rule {
             destination: None,
             in_interface: None,
             out_interface: None,
-            not_in_interface: false,
             not_out_interface: false,
             protocol: None,
             source_port: None,
@@ -106,12 +104,6 @@ impl Rule {
     {
         let new = self;
         new.out_interface = Some(value.as_ref().into());
-        new
-    }
-
-    pub fn not_in_interface(&mut self, value: bool) -> &mut Self {
-        let new = self;
-        new.not_in_interface = value;
         new
     }
 
@@ -187,9 +179,6 @@ impl Rule {
             args.push(destination.to_owned());
         }
         if let Some(ref in_interface) = self.in_interface {
-            if self.not_in_interface {
-                args.push("!".to_owned());
-            }
             args.push("-i".to_owned());
             args.push(in_interface.to_owned());
         }

@@ -102,15 +102,12 @@ impl RuleBuilder {
             bail!("one of `{source,destination}_{port,address{,_v6}}`, `{in,out}_interface` must be initialized");
         }
 
-        // Unconditionally set mark
-        args.push("meta".to_owned());
-        args.push("mark".to_owned());
-        args.push("set".to_owned());
-        args.push(DFW_MARK.to_owned());
-
         if let Some(matches) = &self.matches {
             args.push(matches.to_owned());
         }
+
+        // Mark only packets that satisfy every match.
+        args.extend(["meta", "mark", "set", DFW_MARK].map(str::to_owned));
 
         if let Some(verdict) = &self.verdict {
             args.push(verdict.to_string());
@@ -142,5 +139,19 @@ mod test {
         let mut rule = RuleBuilder::default();
         rule.source_port("1");
         assert!(rule.build().is_ok());
+    }
+
+    #[test]
+    fn additional_matches_precede_the_packet_mark() {
+        let rule = RuleBuilder::default()
+            .in_interface("docker0")
+            .matches("tcp dport 443")
+            .verdict(RuleVerdict::Accept)
+            .build()
+            .unwrap();
+        assert_eq!(
+            rule,
+            "meta iifname docker0 tcp dport 443 meta mark set 0xdf accept"
+        );
     }
 }

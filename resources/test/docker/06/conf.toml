@@ -19,7 +19,7 @@ src_network = "PROJECT_default"
 src_container = "PROJECT_a_1"
 dst_network = "PROJECT_other"
 dst_container = "PROJECT_b_1"
-expose_port = { host_port = 8443, container_port = 443, family = "tcp" }
+expose_port = { host_port = 8443, container_port = 443, family = "udp" }
 
 # A configured source that cannot be resolved must not become unrestricted.
 [[container_dnat.rules]]

@@ -15,6 +15,7 @@ use super::{
 use crate::{errors::*, process::*, types::*, FirewallBackend};
 use failure::{format_err, ResultExt};
 use slog::{debug, info, o, trace};
+use std::collections::BTreeSet;
 use time::format_description::well_known::Rfc3339;
 
 impl Process<Iptables> for DFW<Iptables> {
@@ -208,7 +209,12 @@ impl Process<Iptables> for GlobalDefaults {
                 // Set policy for input-chain
                 let rule = Rule::new("filter", DFW_INPUT_CHAIN)
                     .in_interface(bridge_name)
-                    .jump("ACCEPT")
+                    .jump(
+                        &self
+                            .default_docker_bridge_to_host_policy
+                            .to_string()
+                            .to_uppercase(),
+                    )
                     .build()?;
                 rules.push(append_built_rule(IptablesRuleDiscriminants::V4, &rule));
 
@@ -276,13 +282,45 @@ impl Process<Iptables> for ContainerToContainer {
             }
         }
 
-        // Enforce default policy for container-to-container communication.
-        rules.push(append_rule(
-            IptablesRuleDiscriminants::V4,
-            "filter",
-            DFW_FORWARD_CHAIN,
-            &format!("-j {}", self.default_policy.to_string().to_uppercase()),
-        ));
+        // The shared FORWARD chain also carries host ingress and Internet egress.
+        // Apply this fallback only when both interfaces are Docker bridges.
+        let mut bridges = BTreeSet::new();
+        for network in ctx.network_map.values() {
+            if network.driver.as_deref() != Some("bridge") {
+                continue;
+            }
+            let bridge = match network
+                .options
+                .as_ref()
+                .and_then(|options| options.get("com.docker.network.bridge.name"))
+            {
+                Some(name) => name.clone(),
+                None => match network.id.as_deref() {
+                    Some(id) => get_bridge_name(id)?,
+                    None => continue,
+                },
+            };
+            bridges.insert(bridge);
+        }
+        if !bridges.is_empty() {
+            const DEFAULT_CHAIN: &str = "DFWRS_CTC_DEFAULT";
+            let family = IptablesRuleDiscriminants::V4;
+            rules.push(new_chain(family, "filter", DEFAULT_CHAIN));
+            rules.push(flush_chain(family, "filter", DEFAULT_CHAIN));
+            let verdict = self.default_policy.to_string().to_uppercase();
+            for bridge in &bridges {
+                let input = Rule::new("filter", DFW_FORWARD_CHAIN)
+                    .in_interface(bridge)
+                    .jump(DEFAULT_CHAIN)
+                    .build()?;
+                rules.push(append_built_rule(family, &input));
+                let output = Rule::new("filter", DEFAULT_CHAIN)
+                    .out_interface(bridge)
+                    .jump(&verdict)
+                    .build()?;
+                rules.push(append_built_rule(family, &output));
+            }
+        }
 
         Ok(Some(rules))
     }
@@ -457,10 +495,9 @@ impl Process<Iptables> for ContainerToWiderWorldRule {
         }
 
         if let Some(ref network_name) = self.network {
-            let network = ctx
-                .network_map
-                .get(network_name)
-                .ok_or_else(|| format_err!("source network `{}` does not exist", network_name))?;
+            let Some(network) = ctx.network_map.get(network_name) else {
+                return Ok(None);
+            };
             let network_id = network.id.as_ref().expect("Docker network ID missing");
             let bridge_name = get_bridge_name(network_id)?;
             trace!(ctx.logger, "Got bridge name";
@@ -470,28 +507,19 @@ impl Process<Iptables> for ContainerToWiderWorldRule {
             ipt_rule.in_interface(&bridge_name);
 
             if let Some(ref src_container) = self.src_container {
-                let src_network = get_network_for_container(
+                let Some(src_network) = get_network_for_container(
                     ctx.docker,
                     &ctx.container_map,
                     src_container,
                     network_id,
                 )?
-                .ok_or_else(|| {
-                    format_err!(
-                        "source container `{}` is not attached to network `{}`",
-                        src_container,
-                        network_name
-                    )
-                })?;
-
-                ipt_rule.source(
-                    src_network
-                        .ipv4_address
-                        .expect("IPv4 address for container missing")
-                        .split('/')
-                        .next()
-                        .ok_or_else(|| format_err!("IPv4 address is empty"))?,
-                );
+                else {
+                    return Ok(None);
+                };
+                let Some(address) = container_ipv4(&src_network) else {
+                    return Ok(None);
+                };
+                ipt_rule.source(&address.to_string());
             }
         }
 
@@ -880,122 +908,31 @@ impl Process<Iptables> for ContainerDNATRule {
         trace!(ctx.logger, "Process rule";
                o!("part" => "container_dnat_rule",
                   "rule" => format!("{:?}", self)));
-        if self.src_network.is_none() && self.src_container.is_some() {
-            return Err(format_err!(
-                "a container-DNAT rule with src_container requires src_network"
-            ));
-        }
+        let Some(endpoints) = container_dnat_endpoints(self, ctx)? else {
+            return Ok(None);
+        };
 
         let mut rules = Vec::new();
-        for expose_port in &self.expose_port {
-            let mut ipt_rule = Rule::new("nat", DFW_PREROUTING_CHAIN);
-
-            if let Some(ref network_name) = self.src_network {
-                let network = match ctx.network_map.get(network_name) {
-                    Some(network) => network,
-                    None => return Ok(None),
-                };
-                let network_id = network.id.as_ref().expect("Docker network ID missing");
-                let bridge_name = get_bridge_name(network_id)?;
-                trace!(ctx.logger, "Got bridge name";
-                       o!("network_name" => network_name,
-                          "bridge_name" => &bridge_name));
-
-                ipt_rule.in_interface(&bridge_name);
-
-                if let Some(ref src_container) = self.src_container {
-                    let src_network = match get_network_for_container(
-                        ctx.docker,
-                        &ctx.container_map,
-                        src_container,
-                        network_id,
-                    )? {
-                        Some(src_network) => src_network,
-                        None => return Ok(None),
-                    };
-
-                    ipt_rule.source(
-                        src_network
-                            .ipv4_address
-                            .expect("IPv4 address for container missing")
-                            .split('/')
-                            .next()
-                            .ok_or_else(|| format_err!("IPv4 address is empty"))?,
-                    );
+        for port in &self.expose_port {
+            let destination_port = port.container_port.unwrap_or(port.host_port);
+            for bridge in &endpoints.source_bridges {
+                let mut rule = Rule::new("nat", DFW_PREROUTING_CHAIN);
+                rule.in_interface(bridge)
+                    .protocol(&port.family)
+                    .destination_port(&port.host_port.to_string())
+                    .filter("-m addrtype --dst-type LOCAL")
+                    .jump(&format!(
+                        "DNAT --to-destination {}:{}",
+                        endpoints.destination_ip, destination_port
+                    ));
+                if let Some(source_ip) = endpoints.source_ip {
+                    rule.source(&source_ip.to_string());
                 }
+                rules.push(append_built_rule(
+                    IptablesRuleDiscriminants::V4,
+                    &rule.build()?,
+                ));
             }
-
-            let network = match ctx.network_map.get(&self.dst_network) {
-                Some(network) => network,
-                None => continue,
-            };
-            let network_id = network.id.as_ref().expect("Docker network ID missing");
-            let dst_network = match get_network_for_container(
-                ctx.docker,
-                &ctx.container_map,
-                &self.dst_container,
-                network_id,
-            )? {
-                Some(dst_network) => dst_network,
-                None => continue,
-            };
-            trace!(ctx.logger, "Got destination network";
-                   o!("network_name" => &network.name,
-                      "dst_network" => format!("{:?}", dst_network)));
-
-            let bridge_name = get_bridge_name(network_id)?;
-            trace!(ctx.logger, "Got bridge name";
-                   o!("network_name" => &network.name,
-                      "bridge_name" => &bridge_name));
-
-            ipt_rule.out_interface(&bridge_name);
-
-            let destination_port = match expose_port.container_port {
-                Some(destination_port) => destination_port.to_string(),
-                None => expose_port.host_port.to_string(),
-            };
-            ipt_rule.destination_port(&destination_port);
-            ipt_rule.jump(&format!(
-                "DNAT --to-destination {}:{}",
-                dst_network
-                    .ipv4_address
-                    .expect("IPv4 address for container missing")
-                    .split('/')
-                    .next()
-                    .ok_or_else(|| format_err!("IPv4 address is empty"))?,
-                destination_port
-            ));
-
-            // Try to build the rule without the out_interface defined to see if any of the
-            // other mandatory fields has been populated.
-            debug!(ctx.logger, "Build rule to verify contents";
-                   o!("args" => format!("{:?}", ipt_rule)));
-            ipt_rule.build()?;
-
-            if ipt_rule.out_interface.is_none() {
-                if let Some(ref primary_external_network_interface) =
-                    ctx.primary_external_network_interface
-                {
-                    trace!(ctx.logger, "Set primary external network interface";
-                           o!("external_network_interface"
-                              => primary_external_network_interface));
-
-                    ipt_rule
-                        .in_interface(primary_external_network_interface)
-                        .not_in_interface(true);
-                } else {
-                    // We need to specify a external network interface.
-                    // If it is not defined, skip the rule.
-                    continue;
-                }
-            }
-
-            let rule = ipt_rule.build()?;
-            debug!(ctx.logger, "Add prerouting rule";
-                   o!("part" => "container_dnat",
-                      "rule" => &rule.rule));
-
-            rules.push(append_built_rule(IptablesRuleDiscriminants::V4, &rule));
         }
 
         Ok(Some(rules))
@@ -1073,4 +1010,62 @@ fn append_built_rule(
     rule: &BuiltRule,
 ) -> IptablesRule {
     append_rule(rule_discriminant, &rule.table, &rule.chain, &rule.rule)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bollard::{models::Network, Docker, API_DEFAULT_VERSION};
+    use slog::{Discard, Logger};
+
+    #[test]
+    fn container_forwarding_default_requires_two_docker_bridges() {
+        let docker =
+            Docker::connect_with_http("http://127.0.0.1:2375", 1, API_DEFAULT_VERSION).unwrap();
+        let config: DFW<Iptables> =
+            toml::from_str("[container_to_container]\ndefault_policy = \"drop\"").unwrap();
+        let bridge = |name: &str| Network {
+            driver: Some("bridge".into()),
+            options: Some([("com.docker.network.bridge.name".into(), name.into())].into()),
+            ..Default::default()
+        };
+        let ctx = ProcessContext {
+            docker: &docker,
+            dfw: &config,
+            container_map: Default::default(),
+            network_map: [
+                ("bridge".into(), bridge("docker0")),
+                ("test".into(), bridge("custom0")),
+                (
+                    "host".into(),
+                    Network {
+                        driver: Some("host".into()),
+                        ..Default::default()
+                    },
+                ),
+            ]
+            .into(),
+            external_network_interfaces: None,
+            primary_external_network_interface: None,
+            logger: Logger::root(Discard, o!()),
+            dry_run: true,
+        };
+
+        let rules = Process::<Iptables>::process(&config.container_to_container, &ctx)
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            Iptables::get_rules(rules, IptablesRuleDiscriminants::V4),
+            [
+                "*filter",
+                ":DFWRS_CTC_DEFAULT - [0:0]",
+                "-F DFWRS_CTC_DEFAULT",
+                "-A DFWRS_CTC_DEFAULT -o custom0 -j DROP",
+                "-A DFWRS_CTC_DEFAULT -o docker0 -j DROP",
+                "-A DFWRS_FORWARD -i custom0 -j DFWRS_CTC_DEFAULT",
+                "-A DFWRS_FORWARD -i docker0 -j DFWRS_CTC_DEFAULT",
+                "COMMIT",
+            ]
+        );
+    }
 }
