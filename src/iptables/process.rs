@@ -495,10 +495,9 @@ impl Process<Iptables> for ContainerToWiderWorldRule {
         }
 
         if let Some(ref network_name) = self.network {
-            let network = ctx
-                .network_map
-                .get(network_name)
-                .ok_or_else(|| format_err!("source network `{}` does not exist", network_name))?;
+            let Some(network) = ctx.network_map.get(network_name) else {
+                return Ok(None);
+            };
             let network_id = network.id.as_ref().expect("Docker network ID missing");
             let bridge_name = get_bridge_name(network_id)?;
             trace!(ctx.logger, "Got bridge name";
@@ -508,28 +507,19 @@ impl Process<Iptables> for ContainerToWiderWorldRule {
             ipt_rule.in_interface(&bridge_name);
 
             if let Some(ref src_container) = self.src_container {
-                let src_network = get_network_for_container(
+                let Some(src_network) = get_network_for_container(
                     ctx.docker,
                     &ctx.container_map,
                     src_container,
                     network_id,
                 )?
-                .ok_or_else(|| {
-                    format_err!(
-                        "source container `{}` is not attached to network `{}`",
-                        src_container,
-                        network_name
-                    )
-                })?;
-
-                ipt_rule.source(
-                    src_network
-                        .ipv4_address
-                        .expect("IPv4 address for container missing")
-                        .split('/')
-                        .next()
-                        .ok_or_else(|| format_err!("IPv4 address is empty"))?,
-                );
+                else {
+                    return Ok(None);
+                };
+                let Some(address) = container_ipv4(&src_network) else {
+                    return Ok(None);
+                };
+                ipt_rule.source(&address.to_string());
             }
         }
 

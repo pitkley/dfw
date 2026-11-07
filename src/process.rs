@@ -229,19 +229,32 @@ pub(crate) fn get_network_for_container(
     network_id: &str,
 ) -> Result<Option<NetworkContainer>> {
     if let Some(container) = container_map.get(container_name) {
-        Ok(docker
-            .inspect_network::<String>(network_id, None)
-            .sync()?
-            .containers
-            .and_then(|containers| {
-                container
-                    .id
-                    .as_ref()
-                    .and_then(|container_id| containers.get(container_id).cloned())
-            }))
+        let network = match docker.inspect_network::<String>(network_id, None).sync() {
+            Ok(network) => network,
+            Err(bollard::errors::Error::DockerResponseServerError {
+                status_code: 404, ..
+            }) => return Ok(None),
+            Err(error) => return Err(error.into()),
+        };
+        Ok(network.containers.and_then(|containers| {
+            container
+                .id
+                .as_ref()
+                .and_then(|container_id| containers.get(container_id).cloned())
+        }))
     } else {
         Ok(None)
     }
+}
+
+pub(crate) fn container_ipv4(endpoint: &NetworkContainer) -> Option<std::net::Ipv4Addr> {
+    endpoint
+        .ipv4_address
+        .as_deref()?
+        .split('/')
+        .next()?
+        .parse()
+        .ok()
 }
 
 pub(crate) fn get_container_map(containers: &[ContainerSummary]) -> Map<String, ContainerSummary> {
