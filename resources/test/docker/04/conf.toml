@@ -4,3 +4,9 @@ default_policy = "drop"
 [[container_to_host.rules]]
 network = "PROJECT_default"
 verdict = "reject"
+
+# An absent source must not add an accept rule for the whole bridge.
+[[container_to_host.rules]]
+network = "PROJECT_default"
+src_container = "PROJECT_missing_1"
+verdict = "accept"

@@ -509,49 +509,48 @@ impl Process<Nftables> for ContainerToWiderWorldRule {
                       "rule" => format!("{:?}", self)));
         let mut nft_rule = RuleBuilder::default();
 
-        if let Some(ref network) = self.network {
-            if let Some(network) = ctx.network_map.get(network) {
-                let network_id = network.id.as_ref().expect("Docker network ID missing");
-                let bridge_name = get_bridge_name(network_id)?;
-                trace!(ctx.logger, "Got bridge name";
-                           o!("network_name" => &network.name,
-                              "bridge_name" => &bridge_name));
+        if self.network.is_none() && self.src_container.is_some() {
+            return Err(format_err!(
+                "a container-to-wider-world rule with src_container requires network"
+            ));
+        }
 
-                nft_rule.in_interface(&bridge_name);
+        if let Some(ref network_name) = self.network {
+            let network = ctx
+                .network_map
+                .get(network_name)
+                .ok_or_else(|| format_err!("source network `{}` does not exist", network_name))?;
+            let network_id = network.id.as_ref().expect("Docker network ID missing");
+            let bridge_name = get_bridge_name(network_id)?;
+            trace!(ctx.logger, "Got bridge name";
+                   o!("network_name" => network_name,
+                      "bridge_name" => &bridge_name));
 
-                if let Some(ref src_container) = self.src_container {
-                    if let Some(src_network) = get_network_for_container(
-                        ctx.docker,
-                        &ctx.container_map,
+            nft_rule.in_interface(&bridge_name);
+
+            if let Some(ref src_container) = self.src_container {
+                let src_network = get_network_for_container(
+                    ctx.docker,
+                    &ctx.container_map,
+                    src_container,
+                    network_id,
+                )?
+                .ok_or_else(|| {
+                    format_err!(
+                        "source container `{}` is not attached to network `{}`",
                         src_container,
-                        network_id,
-                    )? {
-                        trace!(ctx.logger, "Got source network";
-                                   o!("network_name" => &network.name,
-                                      "src_network" => format!("{:?}", src_network)));
+                        network_name
+                    )
+                })?;
 
-                        let bridge_name = get_bridge_name(network_id)?;
-                        trace!(ctx.logger, "Got bridge name";
-                                   o!("network_name" => &network.name,
-                                      "bridge_name" => &bridge_name));
-
-                        nft_rule.in_interface(&bridge_name).source_address(
-                            src_network
-                                .ipv4_address
-                                .expect("IPv4 address for container missing")
-                                .split('/')
-                                .next()
-                                .ok_or_else(|| format_err!("IPv4 address is empty"))?,
-                        );
-                    }
-                } else {
-                    let bridge_name = get_bridge_name(network_id)?;
-                    trace!(ctx.logger, "Got bridge name";
-                               o!("network_name" => &network.name,
-                                  "bridge_name" => &bridge_name));
-
-                    nft_rule.in_interface(&bridge_name);
-                }
+                nft_rule.source_address(
+                    src_network
+                        .ipv4_address
+                        .expect("IPv4 address for container missing")
+                        .split('/')
+                        .next()
+                        .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+                );
             }
         }
 
@@ -650,24 +649,26 @@ impl Process<Nftables> for ContainerToHostRule {
         nft_rule.in_interface(&bridge_name);
 
         if let Some(ref src_container) = self.src_container {
-            if let Some(src_network) = get_network_for_container(
+            let src_network = match get_network_for_container(
                 ctx.docker,
                 &ctx.container_map,
                 src_container,
                 network_id,
             )? {
-                trace!(ctx.logger, "Got source network";
-                           o!("network_name" => &network.name,
-                              "src_network" => format!("{:?}", src_network)));
-                nft_rule.source_address(
-                    src_network
-                        .ipv4_address
-                        .expect("IPv4 address for container missing")
-                        .split('/')
-                        .next()
-                        .ok_or_else(|| format_err!("IPv4 address is empty"))?,
-                );
-            }
+                Some(src_network) => src_network,
+                None => return Ok(None),
+            };
+            trace!(ctx.logger, "Got source network";
+                       o!("network_name" => &network.name,
+                          "src_network" => format!("{:?}", src_network)));
+            nft_rule.source_address(
+                src_network
+                    .ipv4_address
+                    .expect("IPv4 address for container missing")
+                    .split('/')
+                    .next()
+                    .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+            );
         }
 
         if let Some(ref matches) = self.matches {
@@ -992,50 +993,48 @@ impl Process<Nftables> for ContainerDNATRule {
         debug!(ctx.logger, "Process rule";
                    o!("part" => "container_dnat",
                       "rule" => format!("{:?}", self)));
+        if self.src_network.is_none() && self.src_container.is_some() {
+            return Err(format_err!(
+                "a container-DNAT rule with src_container requires src_network"
+            ));
+        }
+
         let mut rules = Vec::new();
         for expose_port in &self.expose_port {
             let mut nft_rule = RuleBuilder::default();
 
-            if let Some(ref network) = self.src_network {
-                if let Some(network) = ctx.network_map.get(network) {
-                    trace!(ctx.logger, "Got network";
-                               o!("network_name" => &network.name,
-                                  "network" => format!("{:?}", network)));
+            if let Some(ref network_name) = self.src_network {
+                let network = match ctx.network_map.get(network_name) {
+                    Some(network) => network,
+                    None => return Ok(None),
+                };
+                let network_id = network.id.as_ref().expect("Docker network ID missing");
+                let bridge_name = get_bridge_name(network_id)?;
+                trace!(ctx.logger, "Got bridge name";
+                       o!("network_name" => network_name,
+                          "bridge_name" => &bridge_name));
 
-                    let network_id = network.id.as_ref().expect("Docker network ID missing");
-                    let bridge_name = get_bridge_name(network_id)?;
-                    trace!(ctx.logger, "Got bridge name";
-                               o!("network_name" => &network.name,
-                                  "bridge_name" => &bridge_name));
+                nft_rule.in_interface(&bridge_name);
 
-                    nft_rule.in_interface(&bridge_name);
+                if let Some(ref src_container) = self.src_container {
+                    let src_network = match get_network_for_container(
+                        ctx.docker,
+                        &ctx.container_map,
+                        src_container,
+                        network_id,
+                    )? {
+                        Some(src_network) => src_network,
+                        None => return Ok(None),
+                    };
 
-                    if let Some(ref src_container) = self.src_container {
-                        if let Some(src_network) = get_network_for_container(
-                            ctx.docker,
-                            &ctx.container_map,
-                            src_container,
-                            network_id,
-                        )? {
-                            trace!(ctx.logger, "Got source network";
-                                       o!("network_name" => &network.name,
-                                          "src_network" => format!("{:?}", src_network)));
-
-                            let bridge_name = get_bridge_name(network_id)?;
-                            trace!(ctx.logger, "Got bridge name";
-                                       o!("network_name" => &network.name,
-                                          "bridge_name" => &bridge_name));
-
-                            nft_rule.in_interface(&bridge_name).source_address(
-                                src_network
-                                    .ipv4_address
-                                    .expect("IPv4 address for container missing")
-                                    .split('/')
-                                    .next()
-                                    .ok_or_else(|| format_err!("IPv4 address is empty"))?,
-                            );
-                        }
-                    }
+                    nft_rule.source_address(
+                        src_network
+                            .ipv4_address
+                            .expect("IPv4 address for container missing")
+                            .split('/')
+                            .next()
+                            .ok_or_else(|| format_err!("IPv4 address is empty"))?,
+                    );
                 }
             }
 

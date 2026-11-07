@@ -346,7 +346,7 @@ pub struct ContainerToWiderWorld {
 pub struct ContainerToWiderWorldRule {
     /// Network of the source container to apply the rule to.
     pub network: Option<String>,
-    /// Source container to apply the rule to.
+    /// Source container to apply the rule to. Requires `network`.
     pub src_container: Option<String>,
     /// Additional match-string, which will be added to the nftables command.
     pub matches: Option<String>,
@@ -772,7 +772,7 @@ pub struct ContainerDNATRule {
     /// Network of the source container to apply the rule to.
     pub src_network: Option<String>,
 
-    /// Source container to apply the rule to.
+    /// Source container to apply the rule to. Requires `src_network`.
     pub src_container: Option<String>,
 
     /// Network of the destination container to apply the rule to.

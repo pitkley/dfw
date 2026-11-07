@@ -20,3 +20,24 @@ src_container = "PROJECT_a_1"
 dst_network = "PROJECT_other"
 dst_container = "PROJECT_b_1"
 expose_port = { host_port = 8443, container_port = 443, family = "tcp" }
+
+# A configured source that cannot be resolved must not become unrestricted.
+[[container_dnat.rules]]
+src_network = "PROJECT_missing"
+dst_network = "PROJECT_default"
+dst_container = "PROJECT_b_1"
+expose_port = "9001/tcp"
+
+[[container_dnat.rules]]
+src_network = "PROJECT_default"
+src_container = "PROJECT_missing_1"
+dst_network = "PROJECT_default"
+dst_container = "PROJECT_b_1"
+expose_port = "9002/tcp"
+
+[[container_dnat.rules]]
+src_network = "PROJECT_other"
+src_container = "PROJECT_a_1"
+dst_network = "PROJECT_default"
+dst_container = "PROJECT_b_1"
+expose_port = "9003/tcp"
