@@ -114,3 +114,15 @@ jobs:
       run: cargo build --locked ${{ matrix.target && format('--target {0}', matrix.target) || '' }}
     - name: cargo test
       run: cargo test --locked ${{ matrix.target && format('--target {0}', matrix.target) || '' }} -- --nocapture
+
+  required-ci:
+    name: Required CI
+    if: ${{ always() }}
+    needs: [check-license-headers, rustfmt, clippy, yamllint, build-and-test]
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+    - name: Check required job results
+      env:
+        JOB_RESULTS: ${{ toJSON(needs) }}
+      run: jq --exit-status 'all(.[]; .result == "success")' <<< "$JOB_RESULTS"

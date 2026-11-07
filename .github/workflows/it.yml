@@ -86,3 +86,15 @@ jobs:
         timeout 60 bash -c 'until docker info >/dev/null 2>&1; do sleep 2; done'
         chmod +x ./dfw-docker-test
         ./dfw-docker-test --nocapture
+
+  required-integration:
+    name: Required Docker integration
+    if: ${{ always() }}
+    needs: [build-test-binary, test-on-docker]
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+    - name: Check required job results
+      env:
+        JOB_RESULTS: ${{ toJSON(needs) }}
+      run: jq --exit-status 'all(.[]; .result == "success")' <<< "$JOB_RESULTS"

@@ -104,6 +104,18 @@ jobs:
         if-no-files-found: error
         retention-days: 1
 
+  required-images:
+    name: Required Docker images
+    if: ${{ always() && github.event_name == 'pull_request' }}
+    needs: build-per-architecture
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+    - name: Check required job results
+      env:
+        BUILD_RESULT: ${{ needs.build-per-architecture.result }}
+      run: test "$BUILD_RESULT" = success
+
   merge-manifests:
     if: github.event_name == 'push' && github.repository == 'pitkley/dfw'
     permissions:
