@@ -21,3 +21,5 @@ Run `cargo test` for the default suite; use `cargo test parse_conf_file` to filt
 ## Commits and Pull Requests
 
 Use short, imperative commit subjects such as `Update reverseproxy example`. History also uses prefixes like `fix(ci):` and `chore:` where helpful. In pull requests, describe the problem, the behavior change, and how you verified it. Link related issues and update the relevant examples or documentation when configuration changes.
+
+Follow the [AI disclosure policy](README.md#aidisclosure). If Codex authors any part of a commit, add `Co-Authored-By: Codex <codex@users.noreply.github.com>` as a trailer in the commit body. This applies to commits written partly or entirely by Codex.
