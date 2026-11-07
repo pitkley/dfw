@@ -346,7 +346,7 @@
 <a href=#346 id=346 data-nosnippet>346</a></span><span class="kw">pub struct </span>ContainerToWiderWorldRule {
 <a href=#347 id=347 data-nosnippet>347</a>    <span class="doccomment">/// Network of the source container to apply the rule to.
 <a href=#348 id=348 data-nosnippet>348</a>    </span><span class="kw">pub </span>network: <span class="prelude-ty">Option</span>&lt;String&gt;,
-<a href=#349 id=349 data-nosnippet>349</a>    <span class="doccomment">/// Source container to apply the rule to.
+<a href=#349 id=349 data-nosnippet>349</a>    <span class="doccomment">/// Source container to apply the rule to. Requires `network`.
 <a href=#350 id=350 data-nosnippet>350</a>    </span><span class="kw">pub </span>src_container: <span class="prelude-ty">Option</span>&lt;String&gt;,
 <a href=#351 id=351 data-nosnippet>351</a>    <span class="doccomment">/// Additional match-string, which will be added to the nftables command.
 <a href=#352 id=352 data-nosnippet>352</a>    </span><span class="kw">pub </span>matches: <span class="prelude-ty">Option</span>&lt;String&gt;,
@@ -772,7 +772,7 @@
 <a href=#772 id=772 data-nosnippet>772</a>    <span class="doccomment">/// Network of the source container to apply the rule to.
 <a href=#773 id=773 data-nosnippet>773</a>    </span><span class="kw">pub </span>src_network: <span class="prelude-ty">Option</span>&lt;String&gt;,
 <a href=#774 id=774 data-nosnippet>774</a>
-<a href=#775 id=775 data-nosnippet>775</a>    <span class="doccomment">/// Source container to apply the rule to.
+<a href=#775 id=775 data-nosnippet>775</a>    <span class="doccomment">/// Source container to apply the rule to. Requires `src_network`.
 <a href=#776 id=776 data-nosnippet>776</a>    </span><span class="kw">pub </span>src_container: <span class="prelude-ty">Option</span>&lt;String&gt;,
 <a href=#777 id=777 data-nosnippet>777</a>
 <a href=#778 id=778 data-nosnippet>778</a>    <span class="doccomment">/// Network of the destination container to apply the rule to.
