@@ -140,6 +140,7 @@ mod test {
         rule.source_port("1");
         assert!(rule.build().is_ok());
     }
+
     #[test]
     fn additional_matches_precede_the_packet_mark() {
         let rule = RuleBuilder::default()
