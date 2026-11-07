@@ -12,7 +12,8 @@
 7. [Supported architectures](#supportedarchitectures)
 8. [Supported Docker versions](#supporteddockerversions)
 9. [Version bump policy](#versionbumppolicy)
-10. [License](#license)
+10. [AI disclosure](#aidisclosure)
+11. [License](#license)
     1. [Contribution](#license-contribution)
 
 -----
@@ -354,6 +355,15 @@ Special cases:
     The target audience of DFW are the users of the binary, and support for the library's public API is only provided on a best-effort basis.
 
     Thus, changes that break the API of the library will be done in minor version updates, i.e. consumers of the library might have to expect breaking changes in non-major releases.
+
+## <a name="aidisclosure"></a> AI disclosure
+
+All work on DFW up until and including commit `891b37c08c2c62f02e1342f4e833516717d20e02` was done without the use of GenAI/LLMs.
+
+Commits after may have been assisted by or entirely written by AIs.
+This information is disclosed per commit through a `Co-Authored-By` trailer in the commit body.
+
+Still, every commit that reaches DFW's `main` branch has been and will be reviewed by a human.
 
 ## <a name="license"></a> License
 
