@@ -732,243 +732,247 @@
 <a href=#732 id=732 data-nosnippet>732</a>
 <a href=#733 id=733 data-nosnippet>733</a><span class="doccomment">/// The container-DNAT section, defining how containers can communicate with each other over
 <a href=#734 id=734 data-nosnippet>734</a>/// non-common networks.
-<a href=#735 id=735 data-nosnippet>735</a></span><span class="attr">#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-<a href=#736 id=736 data-nosnippet>736</a>#[serde(deny_unknown_fields)]
-<a href=#737 id=737 data-nosnippet>737</a></span><span class="kw">pub struct </span>ContainerDNAT {
-<a href=#738 id=738 data-nosnippet>738</a>    <span class="doccomment">/// An optional list of rules, see
-<a href=#739 id=739 data-nosnippet>739</a>    /// [`ContainerDNATRule`](struct.ContainerDNATRule.html).
-<a href=#740 id=740 data-nosnippet>740</a>    ///
-<a href=#741 id=741 data-nosnippet>741</a>    /// # Example
-<a href=#742 id=742 data-nosnippet>742</a>    ///
-<a href=#743 id=743 data-nosnippet>743</a>    /// The easiest way to define the rules is using TOMLs [arrays of tables][toml-aot]:
+<a href=#735 id=735 data-nosnippet>735</a>///
+<a href=#736 id=736 data-nosnippet>736</a>/// These rules translate traffic sent to a host address from a Docker bridge.
+<a href=#737 id=737 data-nosnippet>737</a>/// Forwarding policy still applies to translated traffic. If forwarding between
+<a href=#738 id=738 data-nosnippet>738</a>/// the source and destination is denied by default, allow it explicitly.
+<a href=#739 id=739 data-nosnippet>739</a></span><span class="attr">#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+<a href=#740 id=740 data-nosnippet>740</a>#[serde(deny_unknown_fields)]
+<a href=#741 id=741 data-nosnippet>741</a></span><span class="kw">pub struct </span>ContainerDNAT {
+<a href=#742 id=742 data-nosnippet>742</a>    <span class="doccomment">/// An optional list of rules, see
+<a href=#743 id=743 data-nosnippet>743</a>    /// [`ContainerDNATRule`](struct.ContainerDNATRule.html).
 <a href=#744 id=744 data-nosnippet>744</a>    ///
-<a href=#745 id=745 data-nosnippet>745</a>    /// ```
-<a href=#746 id=746 data-nosnippet>746</a>    /// # use dfw::nftables::Nftables;
-<a href=#747 id=747 data-nosnippet>747</a>    /// # use dfw::types::*;
-<a href=#748 id=748 data-nosnippet>748</a>    /// # use toml;
-<a href=#749 id=749 data-nosnippet>749</a>    /// # toml::from_str::&lt;DFW&lt;Nftables&gt;&gt;(r#"
-<a href=#750 id=750 data-nosnippet>750</a>    /// [[container_dnat.rules]]
-<a href=#751 id=751 data-nosnippet>751</a>    /// ## first rule here
-<a href=#752 id=752 data-nosnippet>752</a>    /// # dst_network = ""
-<a href=#753 id=753 data-nosnippet>753</a>    /// # dst_container = ""
-<a href=#754 id=754 data-nosnippet>754</a>    /// # expose_port = 0
-<a href=#755 id=755 data-nosnippet>755</a>    /// [[container_dnat.rules]]
-<a href=#756 id=756 data-nosnippet>756</a>    /// ## second rule here
-<a href=#757 id=757 data-nosnippet>757</a>    /// # dst_network = ""
-<a href=#758 id=758 data-nosnippet>758</a>    /// # dst_container = ""
-<a href=#759 id=759 data-nosnippet>759</a>    /// # expose_port = 0
-<a href=#760 id=760 data-nosnippet>760</a>    /// # "#).unwrap();
-<a href=#761 id=761 data-nosnippet>761</a>    /// ```
-<a href=#762 id=762 data-nosnippet>762</a>    ///
-<a href=#763 id=763 data-nosnippet>763</a>    /// [toml-aot]:
-<a href=#764 id=764 data-nosnippet>764</a>    ///  https://github.com/toml-lang/toml/blob/master/versions/en/toml-v0.4.0.md#array-of-tables
-<a href=#765 id=765 data-nosnippet>765</a>    </span><span class="kw">pub </span>rules: <span class="prelude-ty">Option</span>&lt;Vec&lt;ContainerDNATRule&gt;&gt;,
-<a href=#766 id=766 data-nosnippet>766</a>}
-<a href=#767 id=767 data-nosnippet>767</a>
-<a href=#768 id=768 data-nosnippet>768</a><span class="doccomment">/// Definition for a rule to be used in the container-DNAT section.
-<a href=#769 id=769 data-nosnippet>769</a></span><span class="attr">#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-<a href=#770 id=770 data-nosnippet>770</a>#[serde(deny_unknown_fields)]
-<a href=#771 id=771 data-nosnippet>771</a></span><span class="kw">pub struct </span>ContainerDNATRule {
-<a href=#772 id=772 data-nosnippet>772</a>    <span class="doccomment">/// Network of the source container to apply the rule to.
-<a href=#773 id=773 data-nosnippet>773</a>    </span><span class="kw">pub </span>src_network: <span class="prelude-ty">Option</span>&lt;String&gt;,
-<a href=#774 id=774 data-nosnippet>774</a>
-<a href=#775 id=775 data-nosnippet>775</a>    <span class="doccomment">/// Source container to apply the rule to. Requires `src_network`.
-<a href=#776 id=776 data-nosnippet>776</a>    </span><span class="kw">pub </span>src_container: <span class="prelude-ty">Option</span>&lt;String&gt;,
-<a href=#777 id=777 data-nosnippet>777</a>
-<a href=#778 id=778 data-nosnippet>778</a>    <span class="doccomment">/// Network of the destination container to apply the rule to.
-<a href=#779 id=779 data-nosnippet>779</a>    </span><span class="kw">pub </span>dst_network: String,
-<a href=#780 id=780 data-nosnippet>780</a>
-<a href=#781 id=781 data-nosnippet>781</a>    <span class="doccomment">/// Destination container to apply the rule to.
-<a href=#782 id=782 data-nosnippet>782</a>    </span><span class="kw">pub </span>dst_container: String,
-<a href=#783 id=783 data-nosnippet>783</a>
-<a href=#784 id=784 data-nosnippet>784</a>    <span class="doccomment">/// Ports to apply the rule to.
-<a href=#785 id=785 data-nosnippet>785</a>    ///
-<a href=#786 id=786 data-nosnippet>786</a>    /// Defined as:
-<a href=#787 id=787 data-nosnippet>787</a>    ///
-<a href=#788 id=788 data-nosnippet>788</a>    /// * a single integer
+<a href=#745 id=745 data-nosnippet>745</a>    /// # Example
+<a href=#746 id=746 data-nosnippet>746</a>    ///
+<a href=#747 id=747 data-nosnippet>747</a>    /// The easiest way to define the rules is using TOMLs [arrays of tables][toml-aot]:
+<a href=#748 id=748 data-nosnippet>748</a>    ///
+<a href=#749 id=749 data-nosnippet>749</a>    /// ```
+<a href=#750 id=750 data-nosnippet>750</a>    /// # use dfw::nftables::Nftables;
+<a href=#751 id=751 data-nosnippet>751</a>    /// # use dfw::types::*;
+<a href=#752 id=752 data-nosnippet>752</a>    /// # use toml;
+<a href=#753 id=753 data-nosnippet>753</a>    /// # toml::from_str::&lt;DFW&lt;Nftables&gt;&gt;(r#"
+<a href=#754 id=754 data-nosnippet>754</a>    /// [[container_dnat.rules]]
+<a href=#755 id=755 data-nosnippet>755</a>    /// ## first rule here
+<a href=#756 id=756 data-nosnippet>756</a>    /// # dst_network = ""
+<a href=#757 id=757 data-nosnippet>757</a>    /// # dst_container = ""
+<a href=#758 id=758 data-nosnippet>758</a>    /// # expose_port = 0
+<a href=#759 id=759 data-nosnippet>759</a>    /// [[container_dnat.rules]]
+<a href=#760 id=760 data-nosnippet>760</a>    /// ## second rule here
+<a href=#761 id=761 data-nosnippet>761</a>    /// # dst_network = ""
+<a href=#762 id=762 data-nosnippet>762</a>    /// # dst_container = ""
+<a href=#763 id=763 data-nosnippet>763</a>    /// # expose_port = 0
+<a href=#764 id=764 data-nosnippet>764</a>    /// # "#).unwrap();
+<a href=#765 id=765 data-nosnippet>765</a>    /// ```
+<a href=#766 id=766 data-nosnippet>766</a>    ///
+<a href=#767 id=767 data-nosnippet>767</a>    /// [toml-aot]:
+<a href=#768 id=768 data-nosnippet>768</a>    ///  https://github.com/toml-lang/toml/blob/master/versions/en/toml-v0.4.0.md#array-of-tables
+<a href=#769 id=769 data-nosnippet>769</a>    </span><span class="kw">pub </span>rules: <span class="prelude-ty">Option</span>&lt;Vec&lt;ContainerDNATRule&gt;&gt;,
+<a href=#770 id=770 data-nosnippet>770</a>}
+<a href=#771 id=771 data-nosnippet>771</a>
+<a href=#772 id=772 data-nosnippet>772</a><span class="doccomment">/// Definition for a rule to be used in the container-DNAT section.
+<a href=#773 id=773 data-nosnippet>773</a></span><span class="attr">#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+<a href=#774 id=774 data-nosnippet>774</a>#[serde(deny_unknown_fields)]
+<a href=#775 id=775 data-nosnippet>775</a></span><span class="kw">pub struct </span>ContainerDNATRule {
+<a href=#776 id=776 data-nosnippet>776</a>    <span class="doccomment">/// Network of the source container to apply the rule to.
+<a href=#777 id=777 data-nosnippet>777</a>    </span><span class="kw">pub </span>src_network: <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#778 id=778 data-nosnippet>778</a>
+<a href=#779 id=779 data-nosnippet>779</a>    <span class="doccomment">/// Source container to apply the rule to. Requires `src_network`.
+<a href=#780 id=780 data-nosnippet>780</a>    </span><span class="kw">pub </span>src_container: <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#781 id=781 data-nosnippet>781</a>
+<a href=#782 id=782 data-nosnippet>782</a>    <span class="doccomment">/// Network of the destination container to apply the rule to.
+<a href=#783 id=783 data-nosnippet>783</a>    </span><span class="kw">pub </span>dst_network: String,
+<a href=#784 id=784 data-nosnippet>784</a>
+<a href=#785 id=785 data-nosnippet>785</a>    <span class="doccomment">/// Destination container to apply the rule to.
+<a href=#786 id=786 data-nosnippet>786</a>    </span><span class="kw">pub </span>dst_container: String,
+<a href=#787 id=787 data-nosnippet>787</a>
+<a href=#788 id=788 data-nosnippet>788</a>    <span class="doccomment">/// Ports to apply the rule to.
 <a href=#789 id=789 data-nosnippet>789</a>    ///
-<a href=#790 id=790 data-nosnippet>790</a>    /// * a single string
+<a href=#790 id=790 data-nosnippet>790</a>    /// Defined as:
 <a href=#791 id=791 data-nosnippet>791</a>    ///
-<a href=#792 id=792 data-nosnippet>792</a>    /// * a single struct
+<a href=#792 id=792 data-nosnippet>792</a>    /// * a single integer
 <a href=#793 id=793 data-nosnippet>793</a>    ///
-<a href=#794 id=794 data-nosnippet>794</a>    /// * a list of integers
+<a href=#794 id=794 data-nosnippet>794</a>    /// * a single string
 <a href=#795 id=795 data-nosnippet>795</a>    ///
-<a href=#796 id=796 data-nosnippet>796</a>    /// * a list of strings
+<a href=#796 id=796 data-nosnippet>796</a>    /// * a single struct
 <a href=#797 id=797 data-nosnippet>797</a>    ///
-<a href=#798 id=798 data-nosnippet>798</a>    /// * a list of structs
+<a href=#798 id=798 data-nosnippet>798</a>    /// * a list of integers
 <a href=#799 id=799 data-nosnippet>799</a>    ///
-<a href=#800 id=800 data-nosnippet>800</a>    /// # Example
+<a href=#800 id=800 data-nosnippet>800</a>    /// * a list of strings
 <a href=#801 id=801 data-nosnippet>801</a>    ///
-<a href=#802 id=802 data-nosnippet>802</a>    /// All of the following are legal TOML fragments:
+<a href=#802 id=802 data-nosnippet>802</a>    /// * a list of structs
 <a href=#803 id=803 data-nosnippet>803</a>    ///
-<a href=#804 id=804 data-nosnippet>804</a>    /// ```
-<a href=#805 id=805 data-nosnippet>805</a>    /// # use dfw::types::*;
-<a href=#806 id=806 data-nosnippet>806</a>    /// # use toml;
-<a href=#807 id=807 data-nosnippet>807</a>    /// # toml::from_str::&lt;ContainerDNATRule&gt;(r#"
-<a href=#808 id=808 data-nosnippet>808</a>    /// # dst_network = ""
-<a href=#809 id=809 data-nosnippet>809</a>    /// # dst_container = ""
-<a href=#810 id=810 data-nosnippet>810</a>    /// expose_port = 80
-<a href=#811 id=811 data-nosnippet>811</a>    /// # "#).unwrap();
-<a href=#812 id=812 data-nosnippet>812</a>    /// # toml::from_str::&lt;ContainerDNATRule&gt;(r#"
-<a href=#813 id=813 data-nosnippet>813</a>    /// # dst_network = ""
-<a href=#814 id=814 data-nosnippet>814</a>    /// # dst_container = ""
-<a href=#815 id=815 data-nosnippet>815</a>    /// expose_port = [80, 443]
-<a href=#816 id=816 data-nosnippet>816</a>    /// # "#).unwrap();
-<a href=#817 id=817 data-nosnippet>817</a>    /// # toml::from_str::&lt;ContainerDNATRule&gt;(r#"
-<a href=#818 id=818 data-nosnippet>818</a>    /// # dst_network = ""
-<a href=#819 id=819 data-nosnippet>819</a>    /// # dst_container = ""
-<a href=#820 id=820 data-nosnippet>820</a>    /// expose_port = "53/udp"
-<a href=#821 id=821 data-nosnippet>821</a>    /// # "#).unwrap();
-<a href=#822 id=822 data-nosnippet>822</a>    /// # toml::from_str::&lt;ContainerDNATRule&gt;(r#"
-<a href=#823 id=823 data-nosnippet>823</a>    /// # dst_network = ""
-<a href=#824 id=824 data-nosnippet>824</a>    /// # dst_container = ""
-<a href=#825 id=825 data-nosnippet>825</a>    /// expose_port = ["80/tcp", "53/udp"]
-<a href=#826 id=826 data-nosnippet>826</a>    /// # "#).unwrap();
-<a href=#827 id=827 data-nosnippet>827</a>    ///
-<a href=#828 id=828 data-nosnippet>828</a>    /// # toml::from_str::&lt;ContainerDNATRule&gt;(r#"
-<a href=#829 id=829 data-nosnippet>829</a>    /// ## The following four all result in the same definition
-<a href=#830 id=830 data-nosnippet>830</a>    /// # dst_network = ""
-<a href=#831 id=831 data-nosnippet>831</a>    /// # dst_container = ""
-<a href=#832 id=832 data-nosnippet>832</a>    /// expose_port = { host_port = 8080 }
-<a href=#833 id=833 data-nosnippet>833</a>    /// # "#).unwrap();
-<a href=#834 id=834 data-nosnippet>834</a>    /// # toml::from_str::&lt;ContainerDNATRule&gt;(r#"
-<a href=#835 id=835 data-nosnippet>835</a>    /// # dst_network = ""
-<a href=#836 id=836 data-nosnippet>836</a>    /// # dst_container = ""
-<a href=#837 id=837 data-nosnippet>837</a>    /// expose_port = { host_port = 8080, container_port = 8080 }
-<a href=#838 id=838 data-nosnippet>838</a>    /// # "#).unwrap();
-<a href=#839 id=839 data-nosnippet>839</a>    /// # toml::from_str::&lt;ContainerDNATRule&gt;(r#"
-<a href=#840 id=840 data-nosnippet>840</a>    /// # dst_network = ""
-<a href=#841 id=841 data-nosnippet>841</a>    /// # dst_container = ""
-<a href=#842 id=842 data-nosnippet>842</a>    /// expose_port = { host_port = 8080, family = "tcp" }
-<a href=#843 id=843 data-nosnippet>843</a>    /// # "#).unwrap();
-<a href=#844 id=844 data-nosnippet>844</a>    /// # toml::from_str::&lt;ContainerDNATRule&gt;(r#"
-<a href=#845 id=845 data-nosnippet>845</a>    /// # dst_network = ""
-<a href=#846 id=846 data-nosnippet>846</a>    /// # dst_container = ""
-<a href=#847 id=847 data-nosnippet>847</a>    /// expose_port = { host_port = 8080, container_port = 8080, family = "tcp" }
-<a href=#848 id=848 data-nosnippet>848</a>    /// # "#).unwrap();
-<a href=#849 id=849 data-nosnippet>849</a>    ///
-<a href=#850 id=850 data-nosnippet>850</a>    /// # toml::from_str::&lt;ContainerDNATRule&gt;(r#"
-<a href=#851 id=851 data-nosnippet>851</a>    /// # dst_network = ""
-<a href=#852 id=852 data-nosnippet>852</a>    /// # dst_container = ""
-<a href=#853 id=853 data-nosnippet>853</a>    /// expose_port = [
-<a href=#854 id=854 data-nosnippet>854</a>    ///     { host_port = 80 },
-<a href=#855 id=855 data-nosnippet>855</a>    ///     { host_port = 53, family = "udp" },
-<a href=#856 id=856 data-nosnippet>856</a>    ///     { host_port = 443, container_port = 8443 },
-<a href=#857 id=857 data-nosnippet>857</a>    /// ]
-<a href=#858 id=858 data-nosnippet>858</a>    /// # "#).unwrap();
-<a href=#859 id=859 data-nosnippet>859</a>    /// ```
-<a href=#860 id=860 data-nosnippet>860</a>    </span><span class="attr">#[serde(deserialize_with = <span class="string">"single_or_seq_string_or_struct"</span>)]
-<a href=#861 id=861 data-nosnippet>861</a>    </span><span class="kw">pub </span>expose_port: Vec&lt;ExposePort&gt;,
-<a href=#862 id=862 data-nosnippet>862</a>}
-<a href=#863 id=863 data-nosnippet>863</a>
-<a href=#864 id=864 data-nosnippet>864</a><span class="kw">fn </span>default_expose_port_family() -&gt; String {
-<a href=#865 id=865 data-nosnippet>865</a>    DEFAULT_PROTOCOL.to_owned()
+<a href=#804 id=804 data-nosnippet>804</a>    /// # Example
+<a href=#805 id=805 data-nosnippet>805</a>    ///
+<a href=#806 id=806 data-nosnippet>806</a>    /// All of the following are legal TOML fragments:
+<a href=#807 id=807 data-nosnippet>807</a>    ///
+<a href=#808 id=808 data-nosnippet>808</a>    /// ```
+<a href=#809 id=809 data-nosnippet>809</a>    /// # use dfw::types::*;
+<a href=#810 id=810 data-nosnippet>810</a>    /// # use toml;
+<a href=#811 id=811 data-nosnippet>811</a>    /// # toml::from_str::&lt;ContainerDNATRule&gt;(r#"
+<a href=#812 id=812 data-nosnippet>812</a>    /// # dst_network = ""
+<a href=#813 id=813 data-nosnippet>813</a>    /// # dst_container = ""
+<a href=#814 id=814 data-nosnippet>814</a>    /// expose_port = 80
+<a href=#815 id=815 data-nosnippet>815</a>    /// # "#).unwrap();
+<a href=#816 id=816 data-nosnippet>816</a>    /// # toml::from_str::&lt;ContainerDNATRule&gt;(r#"
+<a href=#817 id=817 data-nosnippet>817</a>    /// # dst_network = ""
+<a href=#818 id=818 data-nosnippet>818</a>    /// # dst_container = ""
+<a href=#819 id=819 data-nosnippet>819</a>    /// expose_port = [80, 443]
+<a href=#820 id=820 data-nosnippet>820</a>    /// # "#).unwrap();
+<a href=#821 id=821 data-nosnippet>821</a>    /// # toml::from_str::&lt;ContainerDNATRule&gt;(r#"
+<a href=#822 id=822 data-nosnippet>822</a>    /// # dst_network = ""
+<a href=#823 id=823 data-nosnippet>823</a>    /// # dst_container = ""
+<a href=#824 id=824 data-nosnippet>824</a>    /// expose_port = "53/udp"
+<a href=#825 id=825 data-nosnippet>825</a>    /// # "#).unwrap();
+<a href=#826 id=826 data-nosnippet>826</a>    /// # toml::from_str::&lt;ContainerDNATRule&gt;(r#"
+<a href=#827 id=827 data-nosnippet>827</a>    /// # dst_network = ""
+<a href=#828 id=828 data-nosnippet>828</a>    /// # dst_container = ""
+<a href=#829 id=829 data-nosnippet>829</a>    /// expose_port = ["80/tcp", "53/udp"]
+<a href=#830 id=830 data-nosnippet>830</a>    /// # "#).unwrap();
+<a href=#831 id=831 data-nosnippet>831</a>    ///
+<a href=#832 id=832 data-nosnippet>832</a>    /// # toml::from_str::&lt;ContainerDNATRule&gt;(r#"
+<a href=#833 id=833 data-nosnippet>833</a>    /// ## The following four all result in the same definition
+<a href=#834 id=834 data-nosnippet>834</a>    /// # dst_network = ""
+<a href=#835 id=835 data-nosnippet>835</a>    /// # dst_container = ""
+<a href=#836 id=836 data-nosnippet>836</a>    /// expose_port = { host_port = 8080 }
+<a href=#837 id=837 data-nosnippet>837</a>    /// # "#).unwrap();
+<a href=#838 id=838 data-nosnippet>838</a>    /// # toml::from_str::&lt;ContainerDNATRule&gt;(r#"
+<a href=#839 id=839 data-nosnippet>839</a>    /// # dst_network = ""
+<a href=#840 id=840 data-nosnippet>840</a>    /// # dst_container = ""
+<a href=#841 id=841 data-nosnippet>841</a>    /// expose_port = { host_port = 8080, container_port = 8080 }
+<a href=#842 id=842 data-nosnippet>842</a>    /// # "#).unwrap();
+<a href=#843 id=843 data-nosnippet>843</a>    /// # toml::from_str::&lt;ContainerDNATRule&gt;(r#"
+<a href=#844 id=844 data-nosnippet>844</a>    /// # dst_network = ""
+<a href=#845 id=845 data-nosnippet>845</a>    /// # dst_container = ""
+<a href=#846 id=846 data-nosnippet>846</a>    /// expose_port = { host_port = 8080, family = "tcp" }
+<a href=#847 id=847 data-nosnippet>847</a>    /// # "#).unwrap();
+<a href=#848 id=848 data-nosnippet>848</a>    /// # toml::from_str::&lt;ContainerDNATRule&gt;(r#"
+<a href=#849 id=849 data-nosnippet>849</a>    /// # dst_network = ""
+<a href=#850 id=850 data-nosnippet>850</a>    /// # dst_container = ""
+<a href=#851 id=851 data-nosnippet>851</a>    /// expose_port = { host_port = 8080, container_port = 8080, family = "tcp" }
+<a href=#852 id=852 data-nosnippet>852</a>    /// # "#).unwrap();
+<a href=#853 id=853 data-nosnippet>853</a>    ///
+<a href=#854 id=854 data-nosnippet>854</a>    /// # toml::from_str::&lt;ContainerDNATRule&gt;(r#"
+<a href=#855 id=855 data-nosnippet>855</a>    /// # dst_network = ""
+<a href=#856 id=856 data-nosnippet>856</a>    /// # dst_container = ""
+<a href=#857 id=857 data-nosnippet>857</a>    /// expose_port = [
+<a href=#858 id=858 data-nosnippet>858</a>    ///     { host_port = 80 },
+<a href=#859 id=859 data-nosnippet>859</a>    ///     { host_port = 53, family = "udp" },
+<a href=#860 id=860 data-nosnippet>860</a>    ///     { host_port = 443, container_port = 8443 },
+<a href=#861 id=861 data-nosnippet>861</a>    /// ]
+<a href=#862 id=862 data-nosnippet>862</a>    /// # "#).unwrap();
+<a href=#863 id=863 data-nosnippet>863</a>    /// ```
+<a href=#864 id=864 data-nosnippet>864</a>    </span><span class="attr">#[serde(deserialize_with = <span class="string">"single_or_seq_string_or_struct"</span>)]
+<a href=#865 id=865 data-nosnippet>865</a>    </span><span class="kw">pub </span>expose_port: Vec&lt;ExposePort&gt;,
 <a href=#866 id=866 data-nosnippet>866</a>}
 <a href=#867 id=867 data-nosnippet>867</a>
-<a href=#868 id=868 data-nosnippet>868</a><span class="doccomment">/// Representation of chain policies.
-<a href=#869 id=869 data-nosnippet>869</a>///
-<a href=#870 id=870 data-nosnippet>870</a>/// ## Attribution
-<a href=#871 id=871 data-nosnippet>871</a>///
-<a href=#872 id=872 data-nosnippet>872</a>/// Parts of the documentation have been taken from
-<a href=#873 id=873 data-nosnippet>873</a>/// &lt;https://wiki.nftables.org/wiki-nftables/index.php/Configuring_chains&gt;.
-<a href=#874 id=874 data-nosnippet>874</a></span><span class="attr">#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Display, EnumString)]
-<a href=#875 id=875 data-nosnippet>875</a>#[serde(rename_all = <span class="string">"lowercase"</span>)]
-<a href=#876 id=876 data-nosnippet>876</a>#[strum(serialize_all = <span class="string">"snake_case"</span>)]
-<a href=#877 id=877 data-nosnippet>877</a></span><span class="kw">pub enum </span>ChainPolicy {
-<a href=#878 id=878 data-nosnippet>878</a>    <span class="doccomment">/// The accept verdict means that the packet will keep traversing the network stack.
-<a href=#879 id=879 data-nosnippet>879</a>    </span><span class="attr">#[strum(to_string = <span class="string">"accept"</span>, serialize = <span class="string">"ACCEPT"</span>)]
-<a href=#880 id=880 data-nosnippet>880</a>    #[serde(alias = <span class="string">"ACCEPT"</span>)]
-<a href=#881 id=881 data-nosnippet>881</a>    #[default]
-<a href=#882 id=882 data-nosnippet>882</a>    </span>Accept,
-<a href=#883 id=883 data-nosnippet>883</a>    <span class="doccomment">/// The drop verdict means that the packet is discarded if the packet reaches the end of the
-<a href=#884 id=884 data-nosnippet>884</a>    /// base chain.
-<a href=#885 id=885 data-nosnippet>885</a>    </span><span class="attr">#[strum(to_string = <span class="string">"drop"</span>, serialize = <span class="string">"DROP"</span>)]
-<a href=#886 id=886 data-nosnippet>886</a>    #[serde(alias = <span class="string">"DROP"</span>)]
-<a href=#887 id=887 data-nosnippet>887</a>    </span>Drop,
-<a href=#888 id=888 data-nosnippet>888</a>}
-<a href=#889 id=889 data-nosnippet>889</a>
-<a href=#890 id=890 data-nosnippet>890</a><span class="kw">impl </span>slog::Value <span class="kw">for </span>ChainPolicy {
-<a href=#891 id=891 data-nosnippet>891</a>    <span class="kw">fn </span>serialize(
-<a href=#892 id=892 data-nosnippet>892</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
-<a href=#893 id=893 data-nosnippet>893</a>        record: <span class="kw-2">&amp;</span>slog::Record,
-<a href=#894 id=894 data-nosnippet>894</a>        key: slog::Key,
-<a href=#895 id=895 data-nosnippet>895</a>        serializer: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>slog::Serializer,
-<a href=#896 id=896 data-nosnippet>896</a>    ) -&gt; slog::Result {
-<a href=#897 id=897 data-nosnippet>897</a>        <span class="self">self</span>.to_string().serialize(record, key, serializer)
-<a href=#898 id=898 data-nosnippet>898</a>    }
-<a href=#899 id=899 data-nosnippet>899</a>}
-<a href=#900 id=900 data-nosnippet>900</a>
-<a href=#901 id=901 data-nosnippet>901</a><span class="doccomment">/// Representation of rule policies.
-<a href=#902 id=902 data-nosnippet>902</a>///
-<a href=#903 id=903 data-nosnippet>903</a>/// ## Attribution
-<a href=#904 id=904 data-nosnippet>904</a>///
-<a href=#905 id=905 data-nosnippet>905</a>/// Parts of the documentation have been taken from
-<a href=#906 id=906 data-nosnippet>906</a>/// &lt;https://wiki.nftables.org/wiki-nftables/index.php/Configuring_chains&gt;.
-<a href=#907 id=907 data-nosnippet>907</a></span><span class="attr">#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Display, EnumString)]
-<a href=#908 id=908 data-nosnippet>908</a>#[serde(rename_all = <span class="string">"lowercase"</span>)]
-<a href=#909 id=909 data-nosnippet>909</a>#[strum(serialize_all = <span class="string">"snake_case"</span>)]
-<a href=#910 id=910 data-nosnippet>910</a></span><span class="kw">pub enum </span>RuleVerdict {
-<a href=#911 id=911 data-nosnippet>911</a>    <span class="doccomment">/// The accept verdict means that the packet will keep traversing the network stack.
-<a href=#912 id=912 data-nosnippet>912</a>    </span><span class="attr">#[serde(alias = <span class="string">"ACCEPT"</span>)]
-<a href=#913 id=913 data-nosnippet>913</a>    #[strum(to_string = <span class="string">"accept"</span>, serialize = <span class="string">"ACCEPT"</span>)]
-<a href=#914 id=914 data-nosnippet>914</a>    #[default]
-<a href=#915 id=915 data-nosnippet>915</a>    </span>Accept,
-<a href=#916 id=916 data-nosnippet>916</a>    <span class="doccomment">/// The drop verdict means that the packet is discarded if the packet reaches the end of the
-<a href=#917 id=917 data-nosnippet>917</a>    /// base chain.
-<a href=#918 id=918 data-nosnippet>918</a>    </span><span class="attr">#[serde(alias = <span class="string">"DROP"</span>)]
-<a href=#919 id=919 data-nosnippet>919</a>    #[strum(to_string = <span class="string">"drop"</span>, serialize = <span class="string">"DROP"</span>)]
-<a href=#920 id=920 data-nosnippet>920</a>    </span>Drop,
-<a href=#921 id=921 data-nosnippet>921</a>    <span class="doccomment">/// The reject verdict means that the packet is responded to with an ICMP message stating that
-<a href=#922 id=922 data-nosnippet>922</a>    /// it was rejected.
-<a href=#923 id=923 data-nosnippet>923</a>    </span><span class="attr">#[serde(alias = <span class="string">"REJECT"</span>)]
-<a href=#924 id=924 data-nosnippet>924</a>    #[strum(to_string = <span class="string">"reject"</span>, serialize = <span class="string">"REJECT"</span>)]
-<a href=#925 id=925 data-nosnippet>925</a>    </span>Reject,
-<a href=#926 id=926 data-nosnippet>926</a>}
-<a href=#927 id=927 data-nosnippet>927</a>
-<a href=#928 id=928 data-nosnippet>928</a><span class="kw">impl </span>slog::Value <span class="kw">for </span>RuleVerdict {
-<a href=#929 id=929 data-nosnippet>929</a>    <span class="kw">fn </span>serialize(
-<a href=#930 id=930 data-nosnippet>930</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
-<a href=#931 id=931 data-nosnippet>931</a>        record: <span class="kw-2">&amp;</span>slog::Record,
-<a href=#932 id=932 data-nosnippet>932</a>        key: slog::Key,
-<a href=#933 id=933 data-nosnippet>933</a>        serializer: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>slog::Serializer,
-<a href=#934 id=934 data-nosnippet>934</a>    ) -&gt; slog::Result {
-<a href=#935 id=935 data-nosnippet>935</a>        <span class="self">self</span>.to_string().serialize(record, key, serializer)
-<a href=#936 id=936 data-nosnippet>936</a>    }
-<a href=#937 id=937 data-nosnippet>937</a>}
-<a href=#938 id=938 data-nosnippet>938</a><span class="attr">#[cfg(test)]
-<a href=#939 id=939 data-nosnippet>939</a></span><span class="kw">mod </span>test {
-<a href=#940 id=940 data-nosnippet>940</a>    <span class="kw">use super</span>::{ChainPolicy, RuleVerdict};
-<a href=#941 id=941 data-nosnippet>941</a>    <span class="kw">use </span>std::str::FromStr;
-<a href=#942 id=942 data-nosnippet>942</a>
-<a href=#943 id=943 data-nosnippet>943</a>    <span class="attr">#[test]
-<a href=#944 id=944 data-nosnippet>944</a>    </span><span class="kw">fn </span>chainpolicy_fromstr() {
-<a href=#945 id=945 data-nosnippet>945</a>        <span class="macro">assert_eq!</span>(ChainPolicy::Accept, FromStr::from_str(<span class="string">"accept"</span>).unwrap());
-<a href=#946 id=946 data-nosnippet>946</a>        <span class="macro">assert_eq!</span>(ChainPolicy::Accept, FromStr::from_str(<span class="string">"ACCEPT"</span>).unwrap());
-<a href=#947 id=947 data-nosnippet>947</a>        <span class="macro">assert_eq!</span>(ChainPolicy::Drop, FromStr::from_str(<span class="string">"drop"</span>).unwrap());
-<a href=#948 id=948 data-nosnippet>948</a>        <span class="macro">assert_eq!</span>(ChainPolicy::Drop, FromStr::from_str(<span class="string">"DROP"</span>).unwrap());
-<a href=#949 id=949 data-nosnippet>949</a>    }
-<a href=#950 id=950 data-nosnippet>950</a>
-<a href=#951 id=951 data-nosnippet>951</a>    <span class="attr">#[test]
-<a href=#952 id=952 data-nosnippet>952</a>    </span><span class="kw">fn </span>chainpolicy_tostring() {
-<a href=#953 id=953 data-nosnippet>953</a>        <span class="macro">assert_eq!</span>(<span class="string">"accept"</span>, <span class="kw-2">&amp;</span>ChainPolicy::Accept.to_string());
-<a href=#954 id=954 data-nosnippet>954</a>        <span class="macro">assert_eq!</span>(<span class="string">"drop"</span>, <span class="kw-2">&amp;</span>ChainPolicy::Drop.to_string());
-<a href=#955 id=955 data-nosnippet>955</a>    }
-<a href=#956 id=956 data-nosnippet>956</a>
-<a href=#957 id=957 data-nosnippet>957</a>    <span class="attr">#[test]
-<a href=#958 id=958 data-nosnippet>958</a>    </span><span class="kw">fn </span>ruleverdict_fromstr() {
-<a href=#959 id=959 data-nosnippet>959</a>        <span class="macro">assert_eq!</span>(RuleVerdict::Accept, FromStr::from_str(<span class="string">"accept"</span>).unwrap());
-<a href=#960 id=960 data-nosnippet>960</a>        <span class="macro">assert_eq!</span>(RuleVerdict::Accept, FromStr::from_str(<span class="string">"ACCEPT"</span>).unwrap());
-<a href=#961 id=961 data-nosnippet>961</a>        <span class="macro">assert_eq!</span>(RuleVerdict::Drop, FromStr::from_str(<span class="string">"drop"</span>).unwrap());
-<a href=#962 id=962 data-nosnippet>962</a>        <span class="macro">assert_eq!</span>(RuleVerdict::Drop, FromStr::from_str(<span class="string">"DROP"</span>).unwrap());
-<a href=#963 id=963 data-nosnippet>963</a>        <span class="macro">assert_eq!</span>(RuleVerdict::Reject, FromStr::from_str(<span class="string">"reject"</span>).unwrap());
-<a href=#964 id=964 data-nosnippet>964</a>        <span class="macro">assert_eq!</span>(RuleVerdict::Reject, FromStr::from_str(<span class="string">"REJECT"</span>).unwrap());
-<a href=#965 id=965 data-nosnippet>965</a>    }
-<a href=#966 id=966 data-nosnippet>966</a>
-<a href=#967 id=967 data-nosnippet>967</a>    <span class="attr">#[test]
-<a href=#968 id=968 data-nosnippet>968</a>    </span><span class="kw">fn </span>ruleverdict_tostring() {
-<a href=#969 id=969 data-nosnippet>969</a>        <span class="macro">assert_eq!</span>(<span class="string">"accept"</span>, <span class="kw-2">&amp;</span>RuleVerdict::Accept.to_string());
-<a href=#970 id=970 data-nosnippet>970</a>        <span class="macro">assert_eq!</span>(<span class="string">"drop"</span>, <span class="kw-2">&amp;</span>RuleVerdict::Drop.to_string());
-<a href=#971 id=971 data-nosnippet>971</a>        <span class="macro">assert_eq!</span>(<span class="string">"reject"</span>, <span class="kw-2">&amp;</span>RuleVerdict::Reject.to_string());
-<a href=#972 id=972 data-nosnippet>972</a>    }
-<a href=#973 id=973 data-nosnippet>973</a>}
+<a href=#868 id=868 data-nosnippet>868</a><span class="kw">fn </span>default_expose_port_family() -&gt; String {
+<a href=#869 id=869 data-nosnippet>869</a>    DEFAULT_PROTOCOL.to_owned()
+<a href=#870 id=870 data-nosnippet>870</a>}
+<a href=#871 id=871 data-nosnippet>871</a>
+<a href=#872 id=872 data-nosnippet>872</a><span class="doccomment">/// Representation of chain policies.
+<a href=#873 id=873 data-nosnippet>873</a>///
+<a href=#874 id=874 data-nosnippet>874</a>/// ## Attribution
+<a href=#875 id=875 data-nosnippet>875</a>///
+<a href=#876 id=876 data-nosnippet>876</a>/// Parts of the documentation have been taken from
+<a href=#877 id=877 data-nosnippet>877</a>/// &lt;https://wiki.nftables.org/wiki-nftables/index.php/Configuring_chains&gt;.
+<a href=#878 id=878 data-nosnippet>878</a></span><span class="attr">#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Display, EnumString)]
+<a href=#879 id=879 data-nosnippet>879</a>#[serde(rename_all = <span class="string">"lowercase"</span>)]
+<a href=#880 id=880 data-nosnippet>880</a>#[strum(serialize_all = <span class="string">"snake_case"</span>)]
+<a href=#881 id=881 data-nosnippet>881</a></span><span class="kw">pub enum </span>ChainPolicy {
+<a href=#882 id=882 data-nosnippet>882</a>    <span class="doccomment">/// The accept verdict means that the packet will keep traversing the network stack.
+<a href=#883 id=883 data-nosnippet>883</a>    </span><span class="attr">#[strum(to_string = <span class="string">"accept"</span>, serialize = <span class="string">"ACCEPT"</span>)]
+<a href=#884 id=884 data-nosnippet>884</a>    #[serde(alias = <span class="string">"ACCEPT"</span>)]
+<a href=#885 id=885 data-nosnippet>885</a>    #[default]
+<a href=#886 id=886 data-nosnippet>886</a>    </span>Accept,
+<a href=#887 id=887 data-nosnippet>887</a>    <span class="doccomment">/// The drop verdict means that the packet is discarded if the packet reaches the end of the
+<a href=#888 id=888 data-nosnippet>888</a>    /// base chain.
+<a href=#889 id=889 data-nosnippet>889</a>    </span><span class="attr">#[strum(to_string = <span class="string">"drop"</span>, serialize = <span class="string">"DROP"</span>)]
+<a href=#890 id=890 data-nosnippet>890</a>    #[serde(alias = <span class="string">"DROP"</span>)]
+<a href=#891 id=891 data-nosnippet>891</a>    </span>Drop,
+<a href=#892 id=892 data-nosnippet>892</a>}
+<a href=#893 id=893 data-nosnippet>893</a>
+<a href=#894 id=894 data-nosnippet>894</a><span class="kw">impl </span>slog::Value <span class="kw">for </span>ChainPolicy {
+<a href=#895 id=895 data-nosnippet>895</a>    <span class="kw">fn </span>serialize(
+<a href=#896 id=896 data-nosnippet>896</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#897 id=897 data-nosnippet>897</a>        record: <span class="kw-2">&amp;</span>slog::Record,
+<a href=#898 id=898 data-nosnippet>898</a>        key: slog::Key,
+<a href=#899 id=899 data-nosnippet>899</a>        serializer: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>slog::Serializer,
+<a href=#900 id=900 data-nosnippet>900</a>    ) -&gt; slog::Result {
+<a href=#901 id=901 data-nosnippet>901</a>        <span class="self">self</span>.to_string().serialize(record, key, serializer)
+<a href=#902 id=902 data-nosnippet>902</a>    }
+<a href=#903 id=903 data-nosnippet>903</a>}
+<a href=#904 id=904 data-nosnippet>904</a>
+<a href=#905 id=905 data-nosnippet>905</a><span class="doccomment">/// Representation of rule policies.
+<a href=#906 id=906 data-nosnippet>906</a>///
+<a href=#907 id=907 data-nosnippet>907</a>/// ## Attribution
+<a href=#908 id=908 data-nosnippet>908</a>///
+<a href=#909 id=909 data-nosnippet>909</a>/// Parts of the documentation have been taken from
+<a href=#910 id=910 data-nosnippet>910</a>/// &lt;https://wiki.nftables.org/wiki-nftables/index.php/Configuring_chains&gt;.
+<a href=#911 id=911 data-nosnippet>911</a></span><span class="attr">#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Display, EnumString)]
+<a href=#912 id=912 data-nosnippet>912</a>#[serde(rename_all = <span class="string">"lowercase"</span>)]
+<a href=#913 id=913 data-nosnippet>913</a>#[strum(serialize_all = <span class="string">"snake_case"</span>)]
+<a href=#914 id=914 data-nosnippet>914</a></span><span class="kw">pub enum </span>RuleVerdict {
+<a href=#915 id=915 data-nosnippet>915</a>    <span class="doccomment">/// The accept verdict means that the packet will keep traversing the network stack.
+<a href=#916 id=916 data-nosnippet>916</a>    </span><span class="attr">#[serde(alias = <span class="string">"ACCEPT"</span>)]
+<a href=#917 id=917 data-nosnippet>917</a>    #[strum(to_string = <span class="string">"accept"</span>, serialize = <span class="string">"ACCEPT"</span>)]
+<a href=#918 id=918 data-nosnippet>918</a>    #[default]
+<a href=#919 id=919 data-nosnippet>919</a>    </span>Accept,
+<a href=#920 id=920 data-nosnippet>920</a>    <span class="doccomment">/// The drop verdict means that the packet is discarded if the packet reaches the end of the
+<a href=#921 id=921 data-nosnippet>921</a>    /// base chain.
+<a href=#922 id=922 data-nosnippet>922</a>    </span><span class="attr">#[serde(alias = <span class="string">"DROP"</span>)]
+<a href=#923 id=923 data-nosnippet>923</a>    #[strum(to_string = <span class="string">"drop"</span>, serialize = <span class="string">"DROP"</span>)]
+<a href=#924 id=924 data-nosnippet>924</a>    </span>Drop,
+<a href=#925 id=925 data-nosnippet>925</a>    <span class="doccomment">/// The reject verdict means that the packet is responded to with an ICMP message stating that
+<a href=#926 id=926 data-nosnippet>926</a>    /// it was rejected.
+<a href=#927 id=927 data-nosnippet>927</a>    </span><span class="attr">#[serde(alias = <span class="string">"REJECT"</span>)]
+<a href=#928 id=928 data-nosnippet>928</a>    #[strum(to_string = <span class="string">"reject"</span>, serialize = <span class="string">"REJECT"</span>)]
+<a href=#929 id=929 data-nosnippet>929</a>    </span>Reject,
+<a href=#930 id=930 data-nosnippet>930</a>}
+<a href=#931 id=931 data-nosnippet>931</a>
+<a href=#932 id=932 data-nosnippet>932</a><span class="kw">impl </span>slog::Value <span class="kw">for </span>RuleVerdict {
+<a href=#933 id=933 data-nosnippet>933</a>    <span class="kw">fn </span>serialize(
+<a href=#934 id=934 data-nosnippet>934</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#935 id=935 data-nosnippet>935</a>        record: <span class="kw-2">&amp;</span>slog::Record,
+<a href=#936 id=936 data-nosnippet>936</a>        key: slog::Key,
+<a href=#937 id=937 data-nosnippet>937</a>        serializer: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>slog::Serializer,
+<a href=#938 id=938 data-nosnippet>938</a>    ) -&gt; slog::Result {
+<a href=#939 id=939 data-nosnippet>939</a>        <span class="self">self</span>.to_string().serialize(record, key, serializer)
+<a href=#940 id=940 data-nosnippet>940</a>    }
+<a href=#941 id=941 data-nosnippet>941</a>}
+<a href=#942 id=942 data-nosnippet>942</a><span class="attr">#[cfg(test)]
+<a href=#943 id=943 data-nosnippet>943</a></span><span class="kw">mod </span>test {
+<a href=#944 id=944 data-nosnippet>944</a>    <span class="kw">use super</span>::{ChainPolicy, RuleVerdict};
+<a href=#945 id=945 data-nosnippet>945</a>    <span class="kw">use </span>std::str::FromStr;
+<a href=#946 id=946 data-nosnippet>946</a>
+<a href=#947 id=947 data-nosnippet>947</a>    <span class="attr">#[test]
+<a href=#948 id=948 data-nosnippet>948</a>    </span><span class="kw">fn </span>chainpolicy_fromstr() {
+<a href=#949 id=949 data-nosnippet>949</a>        <span class="macro">assert_eq!</span>(ChainPolicy::Accept, FromStr::from_str(<span class="string">"accept"</span>).unwrap());
+<a href=#950 id=950 data-nosnippet>950</a>        <span class="macro">assert_eq!</span>(ChainPolicy::Accept, FromStr::from_str(<span class="string">"ACCEPT"</span>).unwrap());
+<a href=#951 id=951 data-nosnippet>951</a>        <span class="macro">assert_eq!</span>(ChainPolicy::Drop, FromStr::from_str(<span class="string">"drop"</span>).unwrap());
+<a href=#952 id=952 data-nosnippet>952</a>        <span class="macro">assert_eq!</span>(ChainPolicy::Drop, FromStr::from_str(<span class="string">"DROP"</span>).unwrap());
+<a href=#953 id=953 data-nosnippet>953</a>    }
+<a href=#954 id=954 data-nosnippet>954</a>
+<a href=#955 id=955 data-nosnippet>955</a>    <span class="attr">#[test]
+<a href=#956 id=956 data-nosnippet>956</a>    </span><span class="kw">fn </span>chainpolicy_tostring() {
+<a href=#957 id=957 data-nosnippet>957</a>        <span class="macro">assert_eq!</span>(<span class="string">"accept"</span>, <span class="kw-2">&amp;</span>ChainPolicy::Accept.to_string());
+<a href=#958 id=958 data-nosnippet>958</a>        <span class="macro">assert_eq!</span>(<span class="string">"drop"</span>, <span class="kw-2">&amp;</span>ChainPolicy::Drop.to_string());
+<a href=#959 id=959 data-nosnippet>959</a>    }
+<a href=#960 id=960 data-nosnippet>960</a>
+<a href=#961 id=961 data-nosnippet>961</a>    <span class="attr">#[test]
+<a href=#962 id=962 data-nosnippet>962</a>    </span><span class="kw">fn </span>ruleverdict_fromstr() {
+<a href=#963 id=963 data-nosnippet>963</a>        <span class="macro">assert_eq!</span>(RuleVerdict::Accept, FromStr::from_str(<span class="string">"accept"</span>).unwrap());
+<a href=#964 id=964 data-nosnippet>964</a>        <span class="macro">assert_eq!</span>(RuleVerdict::Accept, FromStr::from_str(<span class="string">"ACCEPT"</span>).unwrap());
+<a href=#965 id=965 data-nosnippet>965</a>        <span class="macro">assert_eq!</span>(RuleVerdict::Drop, FromStr::from_str(<span class="string">"drop"</span>).unwrap());
+<a href=#966 id=966 data-nosnippet>966</a>        <span class="macro">assert_eq!</span>(RuleVerdict::Drop, FromStr::from_str(<span class="string">"DROP"</span>).unwrap());
+<a href=#967 id=967 data-nosnippet>967</a>        <span class="macro">assert_eq!</span>(RuleVerdict::Reject, FromStr::from_str(<span class="string">"reject"</span>).unwrap());
+<a href=#968 id=968 data-nosnippet>968</a>        <span class="macro">assert_eq!</span>(RuleVerdict::Reject, FromStr::from_str(<span class="string">"REJECT"</span>).unwrap());
+<a href=#969 id=969 data-nosnippet>969</a>    }
+<a href=#970 id=970 data-nosnippet>970</a>
+<a href=#971 id=971 data-nosnippet>971</a>    <span class="attr">#[test]
+<a href=#972 id=972 data-nosnippet>972</a>    </span><span class="kw">fn </span>ruleverdict_tostring() {
+<a href=#973 id=973 data-nosnippet>973</a>        <span class="macro">assert_eq!</span>(<span class="string">"accept"</span>, <span class="kw-2">&amp;</span>RuleVerdict::Accept.to_string());
+<a href=#974 id=974 data-nosnippet>974</a>        <span class="macro">assert_eq!</span>(<span class="string">"drop"</span>, <span class="kw-2">&amp;</span>RuleVerdict::Drop.to_string());
+<a href=#975 id=975 data-nosnippet>975</a>        <span class="macro">assert_eq!</span>(<span class="string">"reject"</span>, <span class="kw-2">&amp;</span>RuleVerdict::Reject.to_string());
+<a href=#976 id=976 data-nosnippet>976</a>    }
+<a href=#977 id=977 data-nosnippet>977</a>}
 </code></pre></div></section></main></body></html>
