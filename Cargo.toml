@@ -46,7 +46,7 @@ url = "^2.5"
 
 [dev-dependencies]
 eval = "^0.4"
-itertools = "^0.12"
+itertools = "^0.15"
 lazy_static = "^1"
 regex = "^1"
 paste = "^1"
