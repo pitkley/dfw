@@ -4,6 +4,14 @@
 
 ## Unreleased
 
+## 1.3.2 (2026-11-07)
+
+* Check additional nftables matches before marking packets so rules in custom chains cannot accept a packet based on a failed match.
+* Apply the iptables container-to-container default only between Docker bridges and honor the configured host access policy for the default Docker bridge.
+* Fix container DNAT in both backends. Match the original host port and configured protocol on Docker bridge ingress before translating to the destination container and port.
+* Reconnect after Docker event stream failures, refresh rules on network changes, skip egress rules whose configured source has disappeared, and retry failed refreshes.
+* Return a failing exit status for CLI errors, including invalid configuration.
+
 ## 1.3.1 (2026-11-07)
 
 * Preserve configured source restrictions when generating container-to-wider-world, container-to-host, and container DNAT rules for nftables and iptables. A missing Docker network or container no longer widens the rule to other sources.
