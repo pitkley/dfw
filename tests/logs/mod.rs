@@ -7,25 +7,27 @@
 // option. This file may not be copied, modified or distributed
 // except according to those terms.
 
-use lazy_static::lazy_static;
 use regex::Regex;
 use std::{
     collections::HashMap as Map,
     fs::File,
-    io::{prelude::*, BufReader},
+    io::{BufReader, prelude::*},
     str::FromStr,
+    sync::LazyLock,
 };
 
-lazy_static! {
-    static ref RE: Regex =
-        Regex::new(r"(^\$\{?|\$\{)(?P<group_name>\w+)=(?P<pattern>\w+)(\}?$|\})").unwrap();
-    static ref PATTERNS: Map<&'static str, &'static str> = {
-        let mut m = Map::new();
-        m.insert("ip", r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}");
-        m.insert("bridge", r"br-[a-f0-9]{12}");
-        m
-    };
-}
+static RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(^\$\{?|\$\{)(?P<group_name>\w+)=(?P<pattern>\w+)(\}?$|\})").unwrap()
+});
+static PATTERNS: LazyLock<Map<&'static str, &'static str>> = LazyLock::new(|| {
+    [
+        ("ip", r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}"),
+        ("bridge", r"br-[a-f0-9]{12}"),
+    ]
+    .into()
+});
+static COMPARISON: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"^"([^"]*)"\s*(==|!=)\s*"([^"]*)"$"#).unwrap());
 
 #[derive(Debug)]
 pub struct LogLine {
@@ -59,9 +61,12 @@ impl PartialEq for LogLine {
                 let mut expansion = String::new();
                 captures.expand(eval, &mut expansion);
 
-                // Evaluate the string
-                let e = eval::eval(&expansion);
-                e.is_ok() && e.unwrap() == eval::to_value(true)
+                // Fixtures compare captured values for equality or inequality.
+                let Some(comparison) = COMPARISON.captures(&expansion) else {
+                    return false;
+                };
+                let [left, operator, right] = comparison.extract().1;
+                (left == right) == (operator == "==")
             } else {
                 // Nothing to evaluate, `is_match` was successful.
                 true

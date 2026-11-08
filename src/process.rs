@@ -9,15 +9,14 @@
 
 //! This module holds the types related to configuration processing and rule creation.
 
-use crate::{errors::*, types::*, util::FutureExt, FirewallBackend};
+use crate::{FirewallBackend, errors::*, types::*, util::FutureExt};
+use anyhow::{anyhow, bail};
 use bollard::{
-    container::ListContainersOptions,
-    models::{ContainerSummary, Network, NetworkContainer},
     Docker,
+    models::{ContainerSummary, EndpointResource, Network},
+    query_parameters::ListContainersOptions,
 };
-use failure::{bail, format_err};
-use maplit::hashmap;
-use slog::{debug, o, trace, Logger};
+use slog::{Logger, debug, o, trace};
 use std::collections::HashMap as Map;
 
 /// This trait allows a type to define its own processing rules. It is expected to return a list
@@ -29,11 +28,12 @@ use std::collections::HashMap as Map;
 /// # use dfw::FirewallBackend;
 /// # use dfw::process::{Process, ProcessContext};
 /// # use dfw::types::DFW;
-/// # use failure::Error;
+/// # use anyhow::Error;
 /// struct MyBackend;
 /// impl FirewallBackend for MyBackend {
 ///     type Rule = String;
 /// #    type Defaults = ();
+///     type EgressRuleOptions = dfw::types::NoEgressRuleOptions;
 ///
 ///     fn apply(rules: Vec<String>, ctx: &ProcessContext<Self>) -> Result<(), Error> {
 ///         // Write code to apply the processed rules.
@@ -131,12 +131,13 @@ where
         logger: &'a Logger,
         dry_run: bool,
     ) -> Result<ProcessContext<'a, B>> {
+        B::validate_config(dfw)?;
         let logger = logger.new(o!());
 
         let list_containers_options = match processing_options.container_filter {
             ContainerFilter::All => None,
             ContainerFilter::Running => Some(ListContainersOptions {
-                filters: hashmap! { "status" => vec!["running"]},
+                filters: Some([("status".into(), vec!["running".into()])].into()),
                 ..Default::default()
             }),
         };
@@ -148,12 +149,11 @@ where
         trace!(logger, "Got map of containers";
                o!("container_map" => format!("{:#?}", container_map)));
 
-        let networks = docker.list_networks::<String>(None).sync()?;
+        let networks = docker.list_networks(None).sync()?;
         debug!(logger, "Got list of networks";
                o!("networks" => format!("{:#?}", networks)));
 
-        let network_map =
-            get_network_map(&networks).ok_or_else(|| format_err!("no networks found"))?;
+        let network_map = get_network_map(&networks).ok_or_else(|| anyhow!("no networks found"))?;
         trace!(logger, "Got map of networks";
                o!("container_map" => format!("{:#?}", container_map)));
 
@@ -319,9 +319,9 @@ pub(crate) fn get_network_for_container(
     container_map: &Map<String, ContainerSummary>,
     container_name: &str,
     network_id: &str,
-) -> Result<Option<NetworkContainer>> {
+) -> Result<Option<EndpointResource>> {
     if let Some(container) = container_map.get(container_name) {
-        let network = match docker.inspect_network::<String>(network_id, None).sync() {
+        let network = match docker.inspect_network(network_id, None).sync() {
             Ok(network) => network,
             Err(bollard::errors::Error::DockerResponseServerError {
                 status_code: 404, ..
@@ -339,7 +339,7 @@ pub(crate) fn get_network_for_container(
     }
 }
 
-pub(crate) fn container_ipv4(endpoint: &NetworkContainer) -> Option<std::net::Ipv4Addr> {
+pub(crate) fn container_ipv4(endpoint: &EndpointResource) -> Option<std::net::Ipv4Addr> {
     endpoint
         .ipv4_address
         .as_deref()?

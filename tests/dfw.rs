@@ -15,21 +15,21 @@ mod logs;
 use bollard::Docker;
 use common::*;
 use dfw::{
+    FirewallBackend,
     iptables::{Iptables, IptablesRuleDiscriminants},
     nftables::Nftables,
     process::{ContainerFilter, Process, ProcessContext, ProcessingOptions},
     types::*,
     util::FutureExt,
-    FirewallBackend,
 };
 use itertools::{EitherOrBoth, Itertools};
 use logs::*;
-use paste::paste;
+use pastey::paste;
 use serde::de::DeserializeOwned;
-use slog::{o, Drain, Fuse, Logger, OwnedKVList, Record};
+use slog::{Drain, Fuse, Logger, OwnedKVList, Record, o};
 use std::{
     fs::File,
-    io::{prelude::*, BufReader},
+    io::{BufReader, prelude::*},
     panic::{self, AssertUnwindSafe, UnwindSafe},
     process::Command,
 };
@@ -56,7 +56,7 @@ fn logger() -> Logger {
 fn load_config_and_inject_project_name<T>(
     files: &[&str],
     project_name: &str,
-) -> Result<T, failure::Error>
+) -> Result<T, anyhow::Error>
 where
     T: DeserializeOwned,
 {

@@ -57,6 +57,13 @@ where
     type Rule;
     /// Associated type representing the firewall backend defaults/configuration.
     type Defaults: Debug + DeserializeOwned;
+    /// Backend-specific options accepted by container-to-wider-world rules.
+    type EgressRuleOptions: Debug + DeserializeOwned;
+
+    /// Validate backend-specific configuration before discovering Docker state.
+    fn validate_config(_config: &DFW<Self>) -> Result<()> {
+        Ok(())
+    }
 
     /// Apply the processed rules.
     fn apply(rules: Vec<Self::Rule>, ctx: &ProcessContext<Self>) -> Result<()>;

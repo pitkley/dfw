@@ -9,8 +9,8 @@
 
 //! This module implements the iptables backend for DFW.
 
-use crate::{errors::*, FirewallBackend, ProcessContext};
-use failure::format_err;
+use crate::{FirewallBackend, ProcessContext, errors::*};
+use anyhow::anyhow;
 use slog::info;
 use std::{
     collections::BTreeMap,
@@ -43,6 +43,8 @@ pub struct Iptables;
 impl FirewallBackend for Iptables {
     type Rule = IptablesRule;
     type Defaults = types::Defaults;
+
+    type EgressRuleOptions = crate::types::NoEgressRuleOptions;
 
     fn apply(rules: Vec<Self::Rule>, ctx: &ProcessContext<Self>) -> Result<()> {
         if ctx.dry_run {
@@ -81,7 +83,7 @@ impl Iptables {
         // Get process stdin, write format as expected by iptables-restore
         match process.stdin.as_mut() {
             Some(s) => Self::write_rules(rules, rule_discriminant, s)?,
-            None => return Err(format_err!("cannot get stdin of {}", command)),
+            None => return Err(anyhow!("cannot get stdin of {}", command)),
         }
 
         // Check exit status of command
@@ -89,7 +91,7 @@ impl Iptables {
         if output.status.success() {
             Ok(())
         } else {
-            Err(format_err!(
+            Err(anyhow!(
                 "{} failed: '{}'",
                 command,
                 str::from_utf8(&output.stderr).unwrap_or("").trim(),

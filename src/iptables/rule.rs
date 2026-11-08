@@ -8,7 +8,7 @@
 // except according to those terms.
 
 use crate::errors::*;
-use failure::bail;
+use anyhow::bail;
 
 #[derive(Debug, Clone)]
 pub(super) struct Rule {

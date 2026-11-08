@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+* Add `backend_options.packet_mark` to egress rules so actions such as setting Tailscale's routing mark can run after DFW's own mark assignment. Move packet-mark assignments out of `matches` to use the new field. Custom Rust backends without egress options can use `dfw::types::NoEgressRuleOptions` for their `EgressRuleOptions` associated type.
+* Update dependencies and switch to Rust edition 2024. The minimum supported Rust version is now 1.88.0.
+* Replace `failure` with `anyhow` and `thiserror`. Rust consumers implementing `FirewallBackend` or `Process` should use `dfw::errors::Result` in their method signatures.
+
 ## 1.3.2 (2026-11-07)
 
 * Check additional nftables matches before marking packets so rules in custom chains cannot accept a packet based on a failed match.

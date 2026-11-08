@@ -2,7 +2,7 @@
 
 ## Project Structure
 
-DFW is a Rust 2021 tool that manages Docker firewall rules. `src/bin/dfw.rs` handles the CLI and Docker events. Shared configuration and rule processing live in `src/types.rs` and `src/process.rs`. The default nftables backend and the iptables backend live in `src/nftables/` and `src/iptables/`. Tests live in `tests/`, fixtures in `resources/test/`, and sample configurations and user guides in `examples/` and `docs/`.
+DFW is a Rust 2024 tool that manages Docker firewall rules. `src/bin/dfw.rs` handles the CLI and Docker events. Shared configuration and rule processing live in `src/types.rs` and `src/process.rs`. The default nftables backend and the iptables backend live in `src/nftables/` and `src/iptables/`. Tests live in `tests/`, fixtures in `resources/test/`, and sample configurations and user guides in `examples/` and `docs/`.
 
 ## Build and Development
 
