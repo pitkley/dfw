@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["Defaults","EgressRuleOptions","Initialization","NftablesPacketMark","Table"]};
