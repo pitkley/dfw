@@ -57,8 +57,15 @@
 <a href=#57 id=57 data-nosnippet>57</a>    </span><span class="kw">type </span>Rule;
 <a href=#58 id=58 data-nosnippet>58</a>    <span class="doccomment">/// Associated type representing the firewall backend defaults/configuration.
 <a href=#59 id=59 data-nosnippet>59</a>    </span><span class="kw">type </span>Defaults: Debug + DeserializeOwned;
-<a href=#60 id=60 data-nosnippet>60</a>
-<a href=#61 id=61 data-nosnippet>61</a>    <span class="doccomment">/// Apply the processed rules.
-<a href=#62 id=62 data-nosnippet>62</a>    </span><span class="kw">fn </span>apply(rules: Vec&lt;<span class="self">Self</span>::Rule&gt;, ctx: <span class="kw-2">&amp;</span>ProcessContext&lt;<span class="self">Self</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;;
-<a href=#63 id=63 data-nosnippet>63</a>}
+<a href=#60 id=60 data-nosnippet>60</a>    <span class="doccomment">/// Backend-specific options accepted by container-to-wider-world rules.
+<a href=#61 id=61 data-nosnippet>61</a>    </span><span class="kw">type </span>EgressRuleOptions: Debug + DeserializeOwned;
+<a href=#62 id=62 data-nosnippet>62</a>
+<a href=#63 id=63 data-nosnippet>63</a>    <span class="doccomment">/// Validate backend-specific configuration before discovering Docker state.
+<a href=#64 id=64 data-nosnippet>64</a>    </span><span class="kw">fn </span>validate_config(_config: <span class="kw-2">&amp;</span>DFW&lt;<span class="self">Self</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#65 id=65 data-nosnippet>65</a>        <span class="prelude-val">Ok</span>(())
+<a href=#66 id=66 data-nosnippet>66</a>    }
+<a href=#67 id=67 data-nosnippet>67</a>
+<a href=#68 id=68 data-nosnippet>68</a>    <span class="doccomment">/// Apply the processed rules.
+<a href=#69 id=69 data-nosnippet>69</a>    </span><span class="kw">fn </span>apply(rules: Vec&lt;<span class="self">Self</span>::Rule&gt;, ctx: <span class="kw-2">&amp;</span>ProcessContext&lt;<span class="self">Self</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;;
+<a href=#70 id=70 data-nosnippet>70</a>}
 </code></pre></div></section></main></body></html>

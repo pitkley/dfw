@@ -9,31 +9,31 @@
 <a href=#9 id=9 data-nosnippet>9</a>
 <a href=#10 id=10 data-nosnippet>10</a></span><span class="doccomment">//! This module holds the types related to configuration processing and rule creation.
 <a href=#11 id=11 data-nosnippet>11</a>
-<a href=#12 id=12 data-nosnippet>12</a></span><span class="kw">use crate</span>::{errors::<span class="kw-2">*</span>, types::<span class="kw-2">*</span>, util::FutureExt, FirewallBackend};
-<a href=#13 id=13 data-nosnippet>13</a><span class="kw">use </span>bollard::{
-<a href=#14 id=14 data-nosnippet>14</a>    container::ListContainersOptions,
-<a href=#15 id=15 data-nosnippet>15</a>    models::{ContainerSummary, Network, NetworkContainer},
-<a href=#16 id=16 data-nosnippet>16</a>    Docker,
-<a href=#17 id=17 data-nosnippet>17</a>};
-<a href=#18 id=18 data-nosnippet>18</a><span class="kw">use </span>failure::{bail, format_err};
-<a href=#19 id=19 data-nosnippet>19</a><span class="kw">use </span>maplit::hashmap;
-<a href=#20 id=20 data-nosnippet>20</a><span class="kw">use </span>slog::{debug, o, trace, Logger};
-<a href=#21 id=21 data-nosnippet>21</a><span class="kw">use </span>std::collections::HashMap <span class="kw">as </span>Map;
-<a href=#22 id=22 data-nosnippet>22</a>
-<a href=#23 id=23 data-nosnippet>23</a><span class="doccomment">/// This trait allows a type to define its own processing rules. It is expected to return a list
-<a href=#24 id=24 data-nosnippet>24</a>/// of rules that can be applied with nft.
-<a href=#25 id=25 data-nosnippet>25</a>///
-<a href=#26 id=26 data-nosnippet>26</a>/// # Example
-<a href=#27 id=27 data-nosnippet>27</a>///
-<a href=#28 id=28 data-nosnippet>28</a>/// ```
-<a href=#29 id=29 data-nosnippet>29</a>/// # use dfw::FirewallBackend;
-<a href=#30 id=30 data-nosnippet>30</a>/// # use dfw::process::{Process, ProcessContext};
-<a href=#31 id=31 data-nosnippet>31</a>/// # use dfw::types::DFW;
-<a href=#32 id=32 data-nosnippet>32</a>/// # use failure::Error;
-<a href=#33 id=33 data-nosnippet>33</a>/// struct MyBackend;
-<a href=#34 id=34 data-nosnippet>34</a>/// impl FirewallBackend for MyBackend {
-<a href=#35 id=35 data-nosnippet>35</a>///     type Rule = String;
-<a href=#36 id=36 data-nosnippet>36</a>/// #    type Defaults = ();
+<a href=#12 id=12 data-nosnippet>12</a></span><span class="kw">use crate</span>::{FirewallBackend, errors::<span class="kw-2">*</span>, types::<span class="kw-2">*</span>, util::FutureExt};
+<a href=#13 id=13 data-nosnippet>13</a><span class="kw">use </span>anyhow::{anyhow, bail};
+<a href=#14 id=14 data-nosnippet>14</a><span class="kw">use </span>bollard::{
+<a href=#15 id=15 data-nosnippet>15</a>    Docker,
+<a href=#16 id=16 data-nosnippet>16</a>    models::{ContainerSummary, EndpointResource, Network},
+<a href=#17 id=17 data-nosnippet>17</a>    query_parameters::ListContainersOptions,
+<a href=#18 id=18 data-nosnippet>18</a>};
+<a href=#19 id=19 data-nosnippet>19</a><span class="kw">use </span>slog::{Logger, debug, o, trace};
+<a href=#20 id=20 data-nosnippet>20</a><span class="kw">use </span>std::collections::HashMap <span class="kw">as </span>Map;
+<a href=#21 id=21 data-nosnippet>21</a>
+<a href=#22 id=22 data-nosnippet>22</a><span class="doccomment">/// This trait allows a type to define its own processing rules. It is expected to return a list
+<a href=#23 id=23 data-nosnippet>23</a>/// of rules that can be applied with nft.
+<a href=#24 id=24 data-nosnippet>24</a>///
+<a href=#25 id=25 data-nosnippet>25</a>/// # Example
+<a href=#26 id=26 data-nosnippet>26</a>///
+<a href=#27 id=27 data-nosnippet>27</a>/// ```
+<a href=#28 id=28 data-nosnippet>28</a>/// # use dfw::FirewallBackend;
+<a href=#29 id=29 data-nosnippet>29</a>/// # use dfw::process::{Process, ProcessContext};
+<a href=#30 id=30 data-nosnippet>30</a>/// # use dfw::types::DFW;
+<a href=#31 id=31 data-nosnippet>31</a>/// # use anyhow::Error;
+<a href=#32 id=32 data-nosnippet>32</a>/// struct MyBackend;
+<a href=#33 id=33 data-nosnippet>33</a>/// impl FirewallBackend for MyBackend {
+<a href=#34 id=34 data-nosnippet>34</a>///     type Rule = String;
+<a href=#35 id=35 data-nosnippet>35</a>/// #    type Defaults = ();
+<a href=#36 id=36 data-nosnippet>36</a>///     type EgressRuleOptions = dfw::types::NoEgressRuleOptions;
 <a href=#37 id=37 data-nosnippet>37</a>///
 <a href=#38 id=38 data-nosnippet>38</a>///     fn apply(rules: Vec&lt;String&gt;, ctx: &amp;ProcessContext&lt;Self&gt;) -&gt; Result&lt;(), Error&gt; {
 <a href=#39 id=39 data-nosnippet>39</a>///         // Write code to apply the processed rules.
@@ -131,29 +131,29 @@
 <a href=#131 id=131 data-nosnippet>131</a>        logger: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Logger,
 <a href=#132 id=132 data-nosnippet>132</a>        dry_run: bool,
 <a href=#133 id=133 data-nosnippet>133</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;ProcessContext&lt;<span class="lifetime">'a</span>, B&gt;&gt; {
-<a href=#134 id=134 data-nosnippet>134</a>        <span class="kw">let </span>logger = logger.new(<span class="macro">o!</span>());
-<a href=#135 id=135 data-nosnippet>135</a>
-<a href=#136 id=136 data-nosnippet>136</a>        <span class="kw">let </span>list_containers_options = <span class="kw">match </span>processing_options.container_filter {
-<a href=#137 id=137 data-nosnippet>137</a>            ContainerFilter::All =&gt; <span class="prelude-val">None</span>,
-<a href=#138 id=138 data-nosnippet>138</a>            ContainerFilter::Running =&gt; <span class="prelude-val">Some</span>(ListContainersOptions {
-<a href=#139 id=139 data-nosnippet>139</a>                filters: <span class="macro">hashmap!</span> { <span class="string">"status" </span>=&gt; <span class="macro">vec!</span>[<span class="string">"running"</span>]},
-<a href=#140 id=140 data-nosnippet>140</a>                ..Default::default()
-<a href=#141 id=141 data-nosnippet>141</a>            }),
-<a href=#142 id=142 data-nosnippet>142</a>        };
-<a href=#143 id=143 data-nosnippet>143</a>        <span class="kw">let </span>containers = docker.list_containers(list_containers_options).sync()<span class="question-mark">?</span>;
-<a href=#144 id=144 data-nosnippet>144</a>        <span class="macro">debug!</span>(logger, <span class="string">"Got list of containers"</span>;
-<a href=#145 id=145 data-nosnippet>145</a>               <span class="macro">o!</span>(<span class="string">"containers" </span>=&gt; <span class="macro">format!</span>(<span class="string">"{:#?}"</span>, containers)));
-<a href=#146 id=146 data-nosnippet>146</a>
-<a href=#147 id=147 data-nosnippet>147</a>        <span class="kw">let </span>container_map = get_container_map(<span class="kw-2">&amp;</span>containers);
-<a href=#148 id=148 data-nosnippet>148</a>        <span class="macro">trace!</span>(logger, <span class="string">"Got map of containers"</span>;
-<a href=#149 id=149 data-nosnippet>149</a>               <span class="macro">o!</span>(<span class="string">"container_map" </span>=&gt; <span class="macro">format!</span>(<span class="string">"{:#?}"</span>, container_map)));
-<a href=#150 id=150 data-nosnippet>150</a>
-<a href=#151 id=151 data-nosnippet>151</a>        <span class="kw">let </span>networks = docker.list_networks::&lt;String&gt;(<span class="prelude-val">None</span>).sync()<span class="question-mark">?</span>;
-<a href=#152 id=152 data-nosnippet>152</a>        <span class="macro">debug!</span>(logger, <span class="string">"Got list of networks"</span>;
-<a href=#153 id=153 data-nosnippet>153</a>               <span class="macro">o!</span>(<span class="string">"networks" </span>=&gt; <span class="macro">format!</span>(<span class="string">"{:#?}"</span>, networks)));
-<a href=#154 id=154 data-nosnippet>154</a>
-<a href=#155 id=155 data-nosnippet>155</a>        <span class="kw">let </span>network_map =
-<a href=#156 id=156 data-nosnippet>156</a>            get_network_map(<span class="kw-2">&amp;</span>networks).ok_or_else(|| <span class="macro">format_err!</span>(<span class="string">"no networks found"</span>))<span class="question-mark">?</span>;
+<a href=#134 id=134 data-nosnippet>134</a>        B::validate_config(dfw)<span class="question-mark">?</span>;
+<a href=#135 id=135 data-nosnippet>135</a>        <span class="kw">let </span>logger = logger.new(<span class="macro">o!</span>());
+<a href=#136 id=136 data-nosnippet>136</a>
+<a href=#137 id=137 data-nosnippet>137</a>        <span class="kw">let </span>list_containers_options = <span class="kw">match </span>processing_options.container_filter {
+<a href=#138 id=138 data-nosnippet>138</a>            ContainerFilter::All =&gt; <span class="prelude-val">None</span>,
+<a href=#139 id=139 data-nosnippet>139</a>            ContainerFilter::Running =&gt; <span class="prelude-val">Some</span>(ListContainersOptions {
+<a href=#140 id=140 data-nosnippet>140</a>                filters: <span class="prelude-val">Some</span>([(<span class="string">"status"</span>.into(), <span class="macro">vec!</span>[<span class="string">"running"</span>.into()])].into()),
+<a href=#141 id=141 data-nosnippet>141</a>                ..Default::default()
+<a href=#142 id=142 data-nosnippet>142</a>            }),
+<a href=#143 id=143 data-nosnippet>143</a>        };
+<a href=#144 id=144 data-nosnippet>144</a>        <span class="kw">let </span>containers = docker.list_containers(list_containers_options).sync()<span class="question-mark">?</span>;
+<a href=#145 id=145 data-nosnippet>145</a>        <span class="macro">debug!</span>(logger, <span class="string">"Got list of containers"</span>;
+<a href=#146 id=146 data-nosnippet>146</a>               <span class="macro">o!</span>(<span class="string">"containers" </span>=&gt; <span class="macro">format!</span>(<span class="string">"{:#?}"</span>, containers)));
+<a href=#147 id=147 data-nosnippet>147</a>
+<a href=#148 id=148 data-nosnippet>148</a>        <span class="kw">let </span>container_map = get_container_map(<span class="kw-2">&amp;</span>containers);
+<a href=#149 id=149 data-nosnippet>149</a>        <span class="macro">trace!</span>(logger, <span class="string">"Got map of containers"</span>;
+<a href=#150 id=150 data-nosnippet>150</a>               <span class="macro">o!</span>(<span class="string">"container_map" </span>=&gt; <span class="macro">format!</span>(<span class="string">"{:#?}"</span>, container_map)));
+<a href=#151 id=151 data-nosnippet>151</a>
+<a href=#152 id=152 data-nosnippet>152</a>        <span class="kw">let </span>networks = docker.list_networks(<span class="prelude-val">None</span>).sync()<span class="question-mark">?</span>;
+<a href=#153 id=153 data-nosnippet>153</a>        <span class="macro">debug!</span>(logger, <span class="string">"Got list of networks"</span>;
+<a href=#154 id=154 data-nosnippet>154</a>               <span class="macro">o!</span>(<span class="string">"networks" </span>=&gt; <span class="macro">format!</span>(<span class="string">"{:#?}"</span>, networks)));
+<a href=#155 id=155 data-nosnippet>155</a>
+<a href=#156 id=156 data-nosnippet>156</a>        <span class="kw">let </span>network_map = get_network_map(<span class="kw-2">&amp;</span>networks).ok_or_else(|| <span class="macro">anyhow!</span>(<span class="string">"no networks found"</span>))<span class="question-mark">?</span>;
 <a href=#157 id=157 data-nosnippet>157</a>        <span class="macro">trace!</span>(logger, <span class="string">"Got map of networks"</span>;
 <a href=#158 id=158 data-nosnippet>158</a>               <span class="macro">o!</span>(<span class="string">"container_map" </span>=&gt; <span class="macro">format!</span>(<span class="string">"{:#?}"</span>, container_map)));
 <a href=#159 id=159 data-nosnippet>159</a>
@@ -319,9 +319,9 @@
 <a href=#319 id=319 data-nosnippet>319</a>    container_map: <span class="kw-2">&amp;</span>Map&lt;String, ContainerSummary&gt;,
 <a href=#320 id=320 data-nosnippet>320</a>    container_name: <span class="kw-2">&amp;</span>str,
 <a href=#321 id=321 data-nosnippet>321</a>    network_id: <span class="kw-2">&amp;</span>str,
-<a href=#322 id=322 data-nosnippet>322</a>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;NetworkContainer&gt;&gt; {
+<a href=#322 id=322 data-nosnippet>322</a>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;EndpointResource&gt;&gt; {
 <a href=#323 id=323 data-nosnippet>323</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(container) = container_map.get(container_name) {
-<a href=#324 id=324 data-nosnippet>324</a>        <span class="kw">let </span>network = <span class="kw">match </span>docker.inspect_network::&lt;String&gt;(network_id, <span class="prelude-val">None</span>).sync() {
+<a href=#324 id=324 data-nosnippet>324</a>        <span class="kw">let </span>network = <span class="kw">match </span>docker.inspect_network(network_id, <span class="prelude-val">None</span>).sync() {
 <a href=#325 id=325 data-nosnippet>325</a>            <span class="prelude-val">Ok</span>(network) =&gt; network,
 <a href=#326 id=326 data-nosnippet>326</a>            <span class="prelude-val">Err</span>(bollard::errors::Error::DockerResponseServerError {
 <a href=#327 id=327 data-nosnippet>327</a>                status_code: <span class="number">404</span>, ..
@@ -339,7 +339,7 @@
 <a href=#339 id=339 data-nosnippet>339</a>    }
 <a href=#340 id=340 data-nosnippet>340</a>}
 <a href=#341 id=341 data-nosnippet>341</a>
-<a href=#342 id=342 data-nosnippet>342</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>container_ipv4(endpoint: <span class="kw-2">&amp;</span>NetworkContainer) -&gt; <span class="prelude-ty">Option</span>&lt;std::net::Ipv4Addr&gt; {
+<a href=#342 id=342 data-nosnippet>342</a><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>container_ipv4(endpoint: <span class="kw-2">&amp;</span>EndpointResource) -&gt; <span class="prelude-ty">Option</span>&lt;std::net::Ipv4Addr&gt; {
 <a href=#343 id=343 data-nosnippet>343</a>    endpoint
 <a href=#344 id=344 data-nosnippet>344</a>        .ipv4_address
 <a href=#345 id=345 data-nosnippet>345</a>        .as_deref()<span class="question-mark">?
