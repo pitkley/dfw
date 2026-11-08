@@ -109,7 +109,7 @@ where
     /// The `container_to_container` configuration section
     pub container_to_container: Option<ContainerToContainer>,
     /// The `container_to_wider_world` configuration section
-    pub container_to_wider_world: Option<ContainerToWiderWorld>,
+    pub container_to_wider_world: Option<ContainerToWiderWorld<B::EgressRuleOptions>>,
     /// The `container_to_host` configuration section
     pub container_to_host: Option<ContainerToHost>,
     /// The `wider_world_to_container` configuration section
@@ -117,6 +117,12 @@ where
     /// The `container_dnat` configuration section
     pub container_dnat: Option<ContainerDNAT>,
 }
+
+/// Rule options for backends that have no egress extensions.
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash, Default)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct NoEgressRuleOptions {}
 
 /// The default configuration section, used by DFW for rule processing.
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash, Default)]
@@ -308,7 +314,7 @@ pub struct ContainerToContainerRule {
 /// world.
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
-pub struct ContainerToWiderWorld {
+pub struct ContainerToWiderWorld<O> {
     /// The `default_policy` defines the default for when there is not a specific rule.
     pub default_policy: RuleVerdict,
     /// An optional list of rules, see
@@ -337,13 +343,13 @@ pub struct ContainerToWiderWorld {
     ///
     /// [toml-aot]:
     ///  https://github.com/toml-lang/toml/blob/master/versions/en/toml-v0.4.0.md#array-of-tables
-    pub rules: Option<Vec<ContainerToWiderWorldRule>>,
+    pub rules: Option<Vec<ContainerToWiderWorldRule<O>>>,
 }
 
 /// Definition for a rule to be used in the container-to-wider-world section.
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 #[serde(deny_unknown_fields)]
-pub struct ContainerToWiderWorldRule {
+pub struct ContainerToWiderWorldRule<O> {
     /// Network of the source container to apply the rule to.
     pub network: Option<String>,
     /// Source container to apply the rule to. Requires `network`.
@@ -355,6 +361,8 @@ pub struct ContainerToWiderWorldRule {
     pub verdict: RuleVerdict,
     /// Specific external network interface to target.
     pub external_network_interface: Option<String>,
+    /// Optional settings defined by the selected firewall backend.
+    pub backend_options: Option<O>,
 }
 
 /// The container-to-host section, defining how containers can communicate with the host.

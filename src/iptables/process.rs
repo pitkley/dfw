@@ -430,7 +430,7 @@ impl Process<Iptables> for ContainerToContainerRule {
     }
 }
 
-impl Process<Iptables> for ContainerToWiderWorld {
+impl Process<Iptables> for ContainerToWiderWorld<NoEgressRuleOptions> {
     fn process(&self, ctx: &ProcessContext<Iptables>) -> Result<Option<Vec<IptablesRule>>> {
         debug!(ctx.logger, "Starting sub-processing";
                o!("part" => "container_to_wider_world"));
@@ -479,7 +479,7 @@ impl Process<Iptables> for ContainerToWiderWorld {
     }
 }
 
-impl Process<Iptables> for ContainerToWiderWorldRule {
+impl Process<Iptables> for ContainerToWiderWorldRule<NoEgressRuleOptions> {
     fn process(&self, ctx: &ProcessContext<Iptables>) -> Result<Option<Vec<IptablesRule>>> {
         trace!(ctx.logger, "Process rule";
                o!("part" => "container_to_wider_world_rule",

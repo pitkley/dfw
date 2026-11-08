@@ -44,6 +44,8 @@ impl FirewallBackend for Iptables {
     type Rule = IptablesRule;
     type Defaults = types::Defaults;
 
+    type EgressRuleOptions = crate::types::NoEgressRuleOptions;
+
     fn apply(rules: Vec<Self::Rule>, ctx: &ProcessContext<Self>) -> Result<()> {
         if ctx.dry_run {
             info!(ctx.logger, "Performing dry-run, will not update any rules");

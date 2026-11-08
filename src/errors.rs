@@ -16,6 +16,17 @@ use thiserror::Error as ThisError;
 
 #[derive(Debug, ThisError)]
 pub enum DFWError {
+    #[error(
+        "backend_options.packet_mark.preserve_mask {preserve_mask:#x} must retain DFW mark bits {required_bits:#x}"
+    )]
+    InvalidPacketMarkMask {
+        preserve_mask: u32,
+        required_bits: u32,
+    },
+
+    #[error("backend_options.packet_mark requires a concrete external interface name")]
+    InvalidPacketMarkInterface,
+
     #[error("NFTables error: \n{stdout}\n{stderr}")]
     NFTablesError { stdout: String, stderr: String },
     #[error("trait method unimplemented: {method}")]

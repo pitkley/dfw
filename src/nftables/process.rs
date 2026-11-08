@@ -15,7 +15,7 @@ use super::{
 use crate::{FirewallBackend, errors::*, process::*, types::*};
 use anyhow::{Context, anyhow};
 use slog::{debug, info, o, trace, warn};
-use std::process::Command;
+use std::{collections::BTreeMap, process::Command};
 use time::format_description::well_known::Rfc3339;
 
 impl Process<Nftables> for DFW<Nftables> {
@@ -229,7 +229,7 @@ impl Process<Nftables> for <Nftables as FirewallBackend>::Defaults {
                     // Handle `meta mark ... accept` rule
                     m!(
                         "meta-mark",
-                        &format!("meta mark and {} == {} accept", DFW_MARK, DFW_MARK)
+                        &format!("meta mark and {DFW_MARK:#x} == {DFW_MARK:#x} accept")
                     );
 
                     // The rules above are not added at the end, but inserted at the top. We thus
@@ -263,8 +263,8 @@ impl Process<Nftables> for GlobalDefaults {
                 "dfw",
                 "input",
                 &format!(
-                    "meta iifname {} meta mark set {} {}",
-                    bridge_name, DFW_MARK, self.default_docker_bridge_to_host_policy,
+                    "meta iifname {} meta mark set {DFW_MARK:#x} {}",
+                    bridge_name, self.default_docker_bridge_to_host_policy,
                 ),
             ));
 
@@ -276,10 +276,9 @@ impl Process<Nftables> for GlobalDefaults {
                         "dfw",
                         "forward",
                         &format!(
-                            "meta iifname {} oifname {} meta mark set {} {}",
+                            "meta iifname {} oifname {} meta mark set {DFW_MARK:#x} {}",
                             bridge_name,
                             external_network_interface,
-                            DFW_MARK,
                             self.default_docker_bridge_to_host_policy,
                         ),
                     ));
@@ -287,28 +286,51 @@ impl Process<Nftables> for GlobalDefaults {
             }
         }
 
-        // Configure postrouting
-        if let Some(ref external_network_interfaces) = self.external_network_interfaces {
-            for external_network_interface in external_network_interfaces {
-                // Configure postrouting
-                rules.push(add_rule(
-                    Family::Ip,
-                    "dfw",
-                    "postrouting",
-                    &format!(
-                        "meta oifname {} meta mark set {} masquerade",
-                        external_network_interface, DFW_MARK,
-                    ),
-                ));
-                rules.push(add_rule(
-                    Family::Ip6,
-                    "dfw",
-                    "postrouting",
-                    &format!(
-                        "meta oifname {} meta mark set {} masquerade",
-                        external_network_interface, DFW_MARK,
-                    ),
-                ));
+        if let Some(interfaces) = &self.external_network_interfaces {
+            let primary = ctx.primary_external_network_interface.as_deref();
+            let mut extra_bits_by_interface = BTreeMap::new();
+            for (rule, mark) in super::packet_mark_rules(ctx.dfw) {
+                if let Some(interface) = super::egress_interface(rule, primary) {
+                    *extra_bits_by_interface.entry(interface).or_insert(0) |= mark.set_bits;
+                }
+            }
+
+            for selector in interfaces {
+                let mut add_masquerade = |selector: &str, extra_bits: u32| {
+                    let mark = if extra_bits == 0 {
+                        format!("{DFW_MARK:#x}")
+                    } else {
+                        format!("mark and {extra_bits:#x} or {DFW_MARK:#x}")
+                    };
+                    for family in [Family::Ip, Family::Ip6] {
+                        rules.push(add_rule(
+                            family,
+                            "dfw",
+                            "postrouting",
+                            &format!("{selector} meta mark set {mark} masquerade"),
+                        ));
+                    }
+                };
+
+                let selector_match = format!("meta oifname {selector}");
+                if super::is_concrete_interface(selector) {
+                    let extra_bits = extra_bits_by_interface
+                        .get(selector.as_str())
+                        .copied()
+                        .unwrap_or_default();
+                    add_masquerade(&selector_match, extra_bits);
+                } else {
+                    // Let nftables match the intersection before the general masquerade rule.
+                    for (interface, extra_bits) in &extra_bits_by_interface {
+                        if *extra_bits != 0 {
+                            add_masquerade(
+                                &format!("{selector_match} meta oifname \"{interface}\""),
+                                *extra_bits,
+                            );
+                        }
+                    }
+                    add_masquerade(&selector_match, 0);
+                }
             }
         }
         Ok(Some(rules))
@@ -453,7 +475,7 @@ impl Process<Nftables> for ContainerToContainerRule {
     }
 }
 
-impl Process<Nftables> for ContainerToWiderWorld {
+impl Process<Nftables> for ContainerToWiderWorld<super::types::EgressRuleOptions> {
     fn process(&self, ctx: &ProcessContext<Nftables>) -> Result<Option<Vec<String>>> {
         let mut rules = Vec::new();
 
@@ -500,7 +522,7 @@ impl Process<Nftables> for ContainerToWiderWorld {
     }
 }
 
-impl Process<Nftables> for ContainerToWiderWorldRule {
+impl Process<Nftables> for ContainerToWiderWorldRule<super::types::EgressRuleOptions> {
     fn process(&self, ctx: &ProcessContext<Nftables>) -> Result<Option<Vec<String>>> {
         let mut rules = Vec::new();
         debug!(ctx.logger, "Process rule";
@@ -547,6 +569,13 @@ impl Process<Nftables> for ContainerToWiderWorldRule {
             nft_rule.matches(matches);
         }
 
+        let packet_mark = self
+            .backend_options
+            .as_ref()
+            .and_then(|options| options.packet_mark);
+        if let Some(mark) = packet_mark {
+            nft_rule.packet_mark(mark);
+        }
         nft_rule.verdict(self.verdict);
 
         // Try to build the rule without the out_interface defined to see if any of the other
@@ -558,16 +587,15 @@ impl Process<Nftables> for ContainerToWiderWorldRule {
             self.network, self.src_container
         ))?;
 
-        if let Some(ref external_network_interface) = self.external_network_interface {
-            trace!(ctx.logger, "Rule has specific external network interface";
-                       o!("external_network_interface" => external_network_interface));
-            nft_rule.out_interface(external_network_interface);
-        } else if let Some(ref primary_external_network_interface) =
-            ctx.primary_external_network_interface
-        {
-            trace!(ctx.logger, "Rule uses primary external network interface";
-                       o!("external_network_interface" => primary_external_network_interface));
-            nft_rule.out_interface(primary_external_network_interface);
+        let interface =
+            super::egress_interface(self, ctx.primary_external_network_interface.as_deref());
+        if packet_mark.is_some() {
+            let interface = interface
+                .filter(|interface| super::is_concrete_interface(interface))
+                .ok_or(DFWError::InvalidPacketMarkInterface)?;
+            nft_rule.out_interface(format!(r#""{interface}""#));
+        } else if let Some(interface) = interface {
+            nft_rule.out_interface(interface);
         }
 
         let rule = nft_rule.build()?;
@@ -1065,4 +1093,113 @@ fn insert_rule(
         },
         rule
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bollard::{API_DEFAULT_VERSION, Docker};
+    use slog::{Discard, Logger};
+
+    #[test]
+    fn masquerade_preserves_packet_mark_bits_only_on_the_rules_egress() {
+        let docker =
+            Docker::connect_with_http("http://127.0.0.1:2375", 1, API_DEFAULT_VERSION).unwrap();
+
+        for (selector, primary, secondary) in [
+            (
+                "external_network_interface = \"tailscale0\"",
+                "eth0",
+                "tailscale0",
+            ),
+            ("", "tailscale0", "eth0"),
+        ] {
+            let config: DFW<Nftables> = toml::from_str(&format!(
+                r#"
+[global_defaults]
+external_network_interfaces = ["{primary}", "{secondary}"]
+
+[container_to_wider_world]
+default_policy = "drop"
+
+[[container_to_wider_world.rules]]
+network = "source-net"
+src_container = "source"
+{selector}
+verdict = "accept"
+backend_options = {{ packet_mark = {{ preserve_mask = 0xff00ffff, set_bits = 0x40000 }} }}
+"#
+            ))
+            .unwrap();
+            let ctx = ProcessContext {
+                docker: &docker,
+                dfw: &config,
+                container_map: Default::default(),
+                network_map: Default::default(),
+                external_network_interfaces: config
+                    .global_defaults
+                    .external_network_interfaces
+                    .clone(),
+                primary_external_network_interface: Some(primary.to_owned()),
+                logger: Logger::root(Discard, o!()),
+                dry_run: true,
+            };
+
+            let mut rules = config.global_defaults.process(&ctx).unwrap().unwrap();
+            rules.sort_unstable();
+            assert_eq!(
+                rules,
+                [
+                    "add rule ip dfw postrouting meta oifname eth0 meta mark set 0xdf masquerade",
+                    "add rule ip dfw postrouting meta oifname tailscale0 meta mark set mark and 0x40000 or 0xdf masquerade",
+                    "add rule ip6 dfw postrouting meta oifname eth0 meta mark set 0xdf masquerade",
+                    "add rule ip6 dfw postrouting meta oifname tailscale0 meta mark set mark and 0x40000 or 0xdf masquerade",
+                ]
+            );
+        }
+    }
+
+    #[test]
+    fn wildcard_masquerade_checks_the_exact_interface_before_falling_back() {
+        let docker =
+            Docker::connect_with_http("http://127.0.0.1:2375", 1, API_DEFAULT_VERSION).unwrap();
+        let config: DFW<Nftables> = toml::from_str(
+            r#"
+[global_defaults]
+external_network_interfaces = ['"tailscale*"']
+
+[container_to_wider_world]
+default_policy = "drop"
+
+[[container_to_wider_world.rules]]
+network = "source-net"
+src_container = "source"
+external_network_interface = "tailscale0"
+verdict = "accept"
+backend_options = { packet_mark = { preserve_mask = 0xff00ffff, set_bits = 0x40000 } }
+"#,
+        )
+        .unwrap();
+        Nftables::validate_config(&config).unwrap();
+        let ctx = ProcessContext {
+            docker: &docker,
+            dfw: &config,
+            container_map: Default::default(),
+            network_map: Default::default(),
+            external_network_interfaces: config.global_defaults.external_network_interfaces.clone(),
+            primary_external_network_interface: Some(r#""tailscale*""#.to_owned()),
+            logger: Logger::root(Discard, o!()),
+            dry_run: true,
+        };
+
+        assert_eq!(
+            config.global_defaults.process(&ctx).unwrap().unwrap(),
+            [
+                r#"add rule ip dfw postrouting meta oifname "tailscale*" meta oifname "tailscale0" meta mark set mark and 0x40000 or 0xdf masquerade"#,
+                r#"add rule ip6 dfw postrouting meta oifname "tailscale*" meta oifname "tailscale0" meta mark set mark and 0x40000 or 0xdf masquerade"#,
+                r#"add rule ip dfw postrouting meta oifname "tailscale*" meta mark set 0xdf masquerade"#,
+                r#"add rule ip6 dfw postrouting meta oifname "tailscale*" meta mark set 0xdf masquerade"#,
+            ]
+        );
+    }
 }

@@ -87,6 +87,7 @@ where
         bail!("neither config-file nor config-path specified");
     };
 
+    B::validate_config(&toml)?;
     Ok(toml)
 }
 

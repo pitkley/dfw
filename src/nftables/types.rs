@@ -29,6 +29,29 @@
 use crate::de::*;
 use serde::Deserialize;
 
+/// Backend-specific options for a container-to-wider-world rule.
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq, Hash, Default)]
+#[serde(deny_unknown_fields)]
+#[non_exhaustive]
+pub struct EgressRuleOptions {
+    /// Update the packet mark after matches and before the verdict.
+    ///
+    /// The rule must select a concrete external interface, either explicitly or
+    /// through the primary external interface. Global masquerade selectors may
+    /// still use wildcards.
+    pub packet_mark: Option<NftablesPacketMark>,
+}
+
+/// A masked packet-mark update for an nftables egress rule.
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[serde(deny_unknown_fields)]
+pub struct NftablesPacketMark {
+    /// AND mask applied to the mark set by DFW. Must retain all DFW mark bits.
+    pub preserve_mask: u32,
+    /// Bits to OR into the result of applying the mask.
+    pub set_bits: u32,
+}
+
 /// The defaults/configuration for the nftables backend.
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq, Default)]
 #[serde(deny_unknown_fields)]

@@ -33,6 +33,7 @@ use std::collections::HashMap as Map;
 /// impl FirewallBackend for MyBackend {
 ///     type Rule = String;
 /// #    type Defaults = ();
+///     type EgressRuleOptions = dfw::types::NoEgressRuleOptions;
 ///
 ///     fn apply(rules: Vec<String>, ctx: &ProcessContext<Self>) -> Result<(), Error> {
 ///         // Write code to apply the processed rules.
@@ -130,6 +131,7 @@ where
         logger: &'a Logger,
         dry_run: bool,
     ) -> Result<ProcessContext<'a, B>> {
+        B::validate_config(dfw)?;
         let logger = logger.new(o!());
 
         let list_containers_options = match processing_options.container_filter {

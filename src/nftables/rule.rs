@@ -7,7 +7,11 @@
 // option. This file may not be copied, modified or distributed
 // except according to those terms.
 
-use crate::{errors::*, nftables::DFW_MARK, types::RuleVerdict};
+use crate::{
+    errors::*,
+    nftables::{DFW_MARK, types::NftablesPacketMark, validate_packet_mark},
+    types::RuleVerdict,
+};
 use anyhow::bail;
 use derive_builder::Builder;
 
@@ -39,6 +43,7 @@ pub(crate) struct Rule {
     pub comment: String,
     #[builder(setter(into))]
     pub verdict: RuleVerdict,
+    pub packet_mark: NftablesPacketMark,
     #[builder(setter(into))]
     pub dnat: String,
 }
@@ -109,7 +114,14 @@ impl RuleBuilder {
         }
 
         // Mark only packets that satisfy every match.
-        args.extend(["meta", "mark", "set", DFW_MARK].map(str::to_owned));
+        args.push(format!("meta mark set {DFW_MARK:#x}"));
+        if let Some(mark) = self.packet_mark {
+            validate_packet_mark(mark)?;
+            args.push(format!(
+                "meta mark set mark and {:#x} or {:#x}",
+                mark.preserve_mask, mark.set_bits
+            ));
+        }
 
         if let Some(verdict) = &self.verdict {
             args.push(verdict.to_string());
@@ -154,6 +166,25 @@ mod test {
         assert_eq!(
             rule,
             "meta iifname docker0 tcp dport 443 meta mark set 0xdf accept"
+        );
+    }
+
+    #[test]
+    fn packet_mark_action_follows_matches_and_preserves_dfw_mark() {
+        let rule = RuleBuilder::default()
+            .in_interface("br-source")
+            .out_interface("tailscale0")
+            .matches("tcp dport 443")
+            .packet_mark(NftablesPacketMark {
+                preserve_mask: 0xff00ffff,
+                set_bits: 0x40000,
+            })
+            .verdict(RuleVerdict::Accept)
+            .build()
+            .unwrap();
+        assert_eq!(
+            rule,
+            "meta iifname br-source oifname tailscale0 tcp dport 443 meta mark set 0xdf meta mark set mark and 0xff00ffff or 0x40000 accept"
         );
     }
 }

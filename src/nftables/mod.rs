@@ -31,7 +31,49 @@ const NF_PRIORITY_INET_FILTER_ANY_DFW: i16 = NF_IP_PRI_FILTER - 5;
 const NF_PRIORITY_IP_NAT_POSTROUTING_DFW: i16 = NF_IP_PRI_NAT_SRC - 5;
 const NF_PRIORITY_IP6_NAT_POSTROUTING_DFW: i16 = NF_IP_PRI_NAT_SRC - 5;
 
-const DFW_MARK: &str = "0xdf";
+const DFW_MARK: u32 = 0xdf;
+
+fn packet_mark_rules(
+    config: &crate::types::DFW<Nftables>,
+) -> impl Iterator<
+    Item = (
+        &crate::types::ContainerToWiderWorldRule<types::EgressRuleOptions>,
+        types::NftablesPacketMark,
+    ),
+> {
+    config
+        .container_to_wider_world
+        .iter()
+        .flat_map(|section| section.rules.iter().flatten())
+        .filter_map(|rule| Some((rule, rule.backend_options.as_ref()?.packet_mark?)))
+}
+
+fn egress_interface<'a>(
+    rule: &'a crate::types::ContainerToWiderWorldRule<types::EgressRuleOptions>,
+    primary: Option<&'a str>,
+) -> Option<&'a str> {
+    rule.external_network_interface.as_deref().or(primary)
+}
+
+fn is_concrete_interface(interface: &str) -> bool {
+    // Linux interface names are at most 15 bytes, excluding the terminating NUL.
+    !matches!(interface, "" | "." | "..")
+        && interface.len() <= 15
+        && interface
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || b"_.-".contains(&byte))
+}
+
+fn validate_packet_mark(mark: types::NftablesPacketMark) -> Result<()> {
+    if mark.preserve_mask & DFW_MARK != DFW_MARK {
+        return Err(DFWError::InvalidPacketMarkMask {
+            preserve_mask: mark.preserve_mask,
+            required_bits: DFW_MARK,
+        }
+        .into());
+    }
+    Ok(())
+}
 
 /// Marker struct to implement nftables as a firewall backend.
 #[derive(Debug)]
@@ -39,6 +81,24 @@ pub struct Nftables;
 impl FirewallBackend for Nftables {
     type Rule = String;
     type Defaults = types::Defaults;
+    type EgressRuleOptions = types::EgressRuleOptions;
+
+    fn validate_config(config: &crate::types::DFW<Self>) -> Result<()> {
+        let primary = config
+            .global_defaults
+            .external_network_interfaces
+            .as_ref()
+            .and_then(|interfaces| interfaces.first())
+            .map(String::as_str);
+
+        for (rule, mark) in packet_mark_rules(config) {
+            validate_packet_mark(mark)?;
+            if !egress_interface(rule, primary).is_some_and(is_concrete_interface) {
+                return Err(DFWError::InvalidPacketMarkInterface.into());
+            }
+        }
+        Ok(())
+    }
 
     fn apply(rules: Vec<Self::Rule>, ctx: &ProcessContext<Nftables>) -> Result<()> {
         if ctx.dry_run {

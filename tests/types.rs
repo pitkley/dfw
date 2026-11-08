@@ -26,6 +26,7 @@ where
 {
     type Rule = String;
     type Defaults = TestBackendDefaults;
+    type EgressRuleOptions = NoEgressRuleOptions;
 
     fn apply(_rules: Vec<Self::Rule>, _ctx: &ProcessContext<Self>) -> dfw::errors::Result<()> {
         unimplemented!()
@@ -70,6 +71,7 @@ fn parse_conf_file() {
     let container_to_wider_world = ContainerToWiderWorld {
         default_policy: RuleVerdict::Accept,
         rules: Some(vec![ContainerToWiderWorldRule {
+            backend_options: None,
             network: Some("network".to_owned()),
             src_container: Some("src_container".to_owned()),
             matches: Some("FILTER".to_owned()),
@@ -174,6 +176,7 @@ fn parse_conf_path() {
     let container_to_wider_world = ContainerToWiderWorld {
         default_policy: RuleVerdict::Accept,
         rules: Some(vec![ContainerToWiderWorldRule {
+            backend_options: None,
             network: Some("network".to_owned()),
             src_container: Some("src_container".to_owned()),
             matches: Some("FILTER".to_owned()),
